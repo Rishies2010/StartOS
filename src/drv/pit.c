@@ -2,6 +2,7 @@
 #include "../cpu/isr.h"
 #include "vga.h"
 #include "../libk/ports.h"
+#include "../logic/log/logging.h"
 
 #define PIT_NATURAL_FREQ 1193180
 
@@ -13,7 +14,6 @@
 
 void init_pit(uint32_t frequency)
 {
-    prints("Initializing PIT timer\n");
     uint32_t divisor;
     if(frequency)
         divisor = PIT_NATURAL_FREQ / frequency;
@@ -24,4 +24,5 @@ void init_pit(uint32_t frequency)
     uint8_t high = (uint8_t)((divisor >> 8) & 0xFF);
     outportb(PIT_DATA0, low);
     outportb(PIT_DATA0, high);
+    log("PIT Driver Initialized.", 1, 0);
 }

@@ -28,5 +28,6 @@ void* memset(void* ptr, int value, size_t size);
 void* memcpy(void* dest, const void* src, size_t size);
 void* memmove(void* dest, const void* src, size_t size);
 int memcmp(const void* ptr1, const void* ptr2, size_t size);
+int snprintf(char *str, size_t size, const char *format, ...);
 
 #endif // STRING_H

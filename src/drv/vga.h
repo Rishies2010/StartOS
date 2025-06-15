@@ -31,8 +31,6 @@ void terminal_setcolor(uint8_t color);
 void printchar(char c);
 void print(const char* data, size_t size);
 void prints(const char* data);
-void eprint(const char* data);
-void wprint(const char* data);
 void clr(void);
 void boot(void);
 void vga_hide_cursor(void);

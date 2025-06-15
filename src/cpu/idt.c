@@ -5,6 +5,7 @@
 
 #include "idt.h"
 #include "../libk/string.h"
+#include "../logic/log/logging.h"
 #include <stdint.h>
 
 // A struct describing an interrupt gate.
@@ -146,6 +147,7 @@ void init_idt()
     idt_set_gate(46, (uint32_t)irq14, 0x08, 0x8E);
     idt_set_gate(47, (uint32_t)irq15, 0x08, 0x8E);
     load_idt(&idt_ptr);
+    log("IDT Installed", 1, 0);
 }
 
 static void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags)

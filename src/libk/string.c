@@ -1,4 +1,6 @@
 #include "string.h"
+#include <stddef.h>
+#include <stdarg.h>
 
 size_t strlen(const char* str) {
     size_t len = 0;
@@ -136,4 +138,78 @@ int memcmp(const void* ptr1, const void* ptr2, size_t size) {
         p2++;
     }
     return 0;
+}
+
+int atoi(const char* str) {
+    int result = 0;
+    int sign = 1;
+    size_t i = 0;
+    while (str[i] == ' ' || str[i] == '\t' || str[i] == '\n') {
+        i++;}
+    if (str[i] == '-') {
+        sign = -1;
+        i++;
+    } else if (str[i] == '+') {
+        i++;}
+    while (str[i] >= '0' && str[i] <= '9') {
+        result = result * 10 + (str[i] - '0');
+        i++;}
+    return result * sign;}
+
+void itoa(int value, char *str)
+{
+    char *p = str;
+    char *p1, *p2;
+    unsigned int abs = (value < 0) ? -value : value;
+    do
+    {
+        *p++ = '0' + (abs % 10);
+        abs /= 10;
+    } while (abs);
+    if (value < 0)
+        *p++ = '-';
+    *p = '\0';
+    p1 = str;
+    p2 = p - 1;
+    while (p1 < p2)
+    {
+        char tmp = *p1;
+        *p1++ = *p2;
+        *p2-- = tmp;
+    }
+}
+
+int vsnprintf(char *str, size_t size, const char *format, va_list args) {
+    size_t i = 0;
+    const char *p = format;
+    while (*p && i < size - 1) {
+        if (*p == '%' && *(p + 1) == 's') {
+            p += 2;
+            const char *arg = va_arg(args, const char *);
+            while (*arg && i < size - 1) {
+                str[i++] = *arg++;
+            }
+        } else if (*p == '%' && *(p + 1) == 'd') {
+            p += 2;
+            int value = va_arg(args, int);
+            char num_buffer[12];
+            itoa(value, num_buffer);
+            const char *arg = num_buffer;
+            while (*arg && i < size - 1) {
+                str[i++] = *arg++;
+            }
+        } else {
+            str[i++] = *p++;
+        }
+    }
+    str[i] = '\0';
+    return i;
+}
+
+int snprintf(char *str, size_t size, const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(str, size, format, args);
+    va_end(args);
+    return written;
 }

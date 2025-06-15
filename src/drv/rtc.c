@@ -1,5 +1,6 @@
 #include "../drv/rtc.h"
 #include "../libk/ports.h"
+#include "../logic/log/logging.h"
 #include <stdint.h>
 #define CMOS_ADDRESS 0x70
 #define CMOS_DATA 0x71

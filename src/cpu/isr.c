@@ -8,6 +8,7 @@
 #include "../drv/vga.h"
 #include "../drv/pic.h"
 #include "../libk/ports.h"
+#include "../logic/log/logging.h"
 #include "stdint.h"
 
 extern void halt();
@@ -17,6 +18,7 @@ isr_handler_t interrupt_handlers[256];
 void register_interrupt_handler(uint8_t interrupt, isr_handler_t handler)
 {
     interrupt_handlers[interrupt] = handler;
+    log("New interrupt handler registered.", 1, 0);
 }
 
 void isr_handler(registers_t regs)

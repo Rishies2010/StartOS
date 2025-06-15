@@ -1,5 +1,6 @@
 #include "gdt.h"
 #include <stdint.h>
+#include "../logic/log/logging.h"
 
 // This structure contains the value of one GDT entry.
 // We use the attribute 'packed' to tell GCC not to change
@@ -59,6 +60,7 @@ void init_gdt()
     gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF); //User mode code segment
     gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF); //User mode data segment
     load_gdt(&gdt_ptr);
+    log("GDT Installed", 1, 0);
 }
 
 static void gdt_set_gate(int32_t entry, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran)

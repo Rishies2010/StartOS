@@ -1,4 +1,5 @@
 #include "mem.h"
+#include "../logic/log/logging.h"
 
 typedef struct header {
     size_t size;
@@ -36,6 +37,7 @@ void* kmalloc(size_t size) {
         }
         curr = curr->next;
     }
+    log("Out Of Memory !", 3, 1);
     return NULL; // No memory
 }
 

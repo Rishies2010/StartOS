@@ -3,6 +3,7 @@
 #include "../cpu/isr.h"
 #include "pic.h"
 #include "../libk/ports.h"
+#include "../logic/log/logging.h"
 
 #define KEYBOARD_DATA_PORT 0x60
 #define KEYBOARD_STATUS_PORT 0x64
@@ -40,6 +41,7 @@ void keyboard_initialize(void)
         key_states[i] = false;
     }
     register_interrupt_handler(IRQ1, keyboard_handler);
+    log("Keyboard Initialized", 1, 0);
 }
 
 static inline bool is_letter(unsigned char scancode)

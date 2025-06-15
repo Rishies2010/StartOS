@@ -1,7 +1,5 @@
 #include "../drv/vga.h"
-
-//TEMPORARY INCLUDE 
-#include "rtc.h"
+#include "../logic/log/logging.h"
 
 static uint16_t* const VGA_MEMORY = (uint16_t*)0xB8000;
 static size_t terminal_row;
@@ -51,6 +49,7 @@ void initterm(void) {
     terminal_buffer = VGA_MEMORY;
     vga_show_cursor(15, 15);
     clr();
+    log("VGA Text Mode driver Initialized", 1, 0);
 }
 // Print a character onto the screen
 void printchar(char c) {
@@ -95,22 +94,6 @@ void print(const char* data, size_t size) {
 void prints(const char* data) {
     print(data, strlen(data));
 }
-// Print an error message.
-void eprint(const char* data) {
-    terminal_setcolor(vga_entry_color(4, bgcol));
-    prints(" [ERROR] ");
-    prints(data);
-    prints("\n");
-    terminal_setcolor(vga_entry_color(fgcol, bgcol));
-}
-// Print a warning message.
-void wprint(const char* data) {
-    terminal_setcolor(vga_entry_color(6, bgcol));
-    prints(" [WARN] ");
-    prints(data);
-    prints("\n");
-    terminal_setcolor(vga_entry_color(fgcol, bgcol));
-}
 // Clear the Terminal screen.
 void clr(void) {
     for (size_t y = 0; y < 25; y++) {
@@ -134,6 +117,7 @@ void boot(void) {
     vga_update_cursor();
     terminal_setcolor(vga_entry_color(15, bgcol));
     vga_show_cursor(14, 15);
+    log("Boot Animation Call Completed.", 4, 0);
 }
 
 // Print an unsigned integer to the screen
@@ -174,7 +158,8 @@ void print_hex(uint32_t num) {
 }
 void vga_draw_char(int x, int y, char c, uint8_t color) {
     if (x < 0 || x >= 80 || y < 0 || y >= 25) {
-        return; // Ignore out-of-bounds coordinates
+        log("Attempt to plot character beyond bounds.", 2, 1);
+        return;
     }
     const size_t index = y * 80 + x;
     VGA_MEMORY[index] = vga_entry(c, color);
