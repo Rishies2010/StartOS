@@ -2,6 +2,7 @@
 #include "../../drv/filesystem.h"
 #include "../../drv/vga.h"
 #include "../../libk/string.h"
+#include "../../libk/qemu.h"
 
 void log(char *logstr, int level, int visibility) {
     static char buffer[FS_SIZE_MAX + 1];
@@ -51,6 +52,7 @@ void log(char *logstr, int level, int visibility) {
         terminal_setcolor(vga_entry_color(4, bgcol));
         prints(" \t [LOGERROR] - Failed to write to logfile.\n");
     }
+    serial_write_string(new_log_entry);
     if(visibility == 1){
         prints(new_log_entry);}
         terminal_setcolor(vga_entry_color(fgcol, bgcol));

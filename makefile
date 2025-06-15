@@ -41,6 +41,9 @@ clean:
 run:
 	virtualboxvm --startvm "StartOS" &
 
+qemu:
+	qemu-system-i386 -cdrom StartOS.iso
+
 stop:
 	VBoxManage controlvm "StartOS" poweroff
 

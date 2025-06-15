@@ -9,6 +9,7 @@
 #include "../drv/filesystem.h"
 #include "../libk/ports.h"
 #include "../libk/mem.h"
+#include "../libk/qemu.h"
 #include "../cpu/gdt.h"
 #include "../cpu/idt.h"
 #include "../cpu/isr.h"
@@ -41,6 +42,7 @@ void kmain(void* multiboot_info){
     remap_pic();
     init_idt();
     init_pit(10);
+    serial_init();
     initterm();
     keyboard_initialize();
     boot();
