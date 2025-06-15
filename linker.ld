@@ -4,9 +4,13 @@ SECTIONS
 {
     . = 1M;
     
-    .text :
+    .multiboot :
     {
         *(.multiboot)
+    }
+    
+    .text :
+    {
         *(.text*)
         *(.rodata)
     }
@@ -21,4 +25,6 @@ SECTIONS
         *(COMMON)
         *(.bss)
     }
+
+    endmem = .;
 }

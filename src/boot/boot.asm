@@ -15,6 +15,10 @@ stack_bottom:
 stack_top:
 section .text
 global start
+extern gdt_install
+extern idt_install
+extern isrs_install
+extern irq_install
 extern kmain
 start:
     mov esp, stack_top
