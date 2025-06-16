@@ -60,7 +60,6 @@ void log(char *logstr, int level, int visibility) {
 
 void init_log(void) {
     fs_initialize();
-    fs_delete("logfile");
     fs_create("logfile");
     log("Logfile Initialized", 1, 0);
 }
