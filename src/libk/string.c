@@ -197,6 +197,14 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args) {
             const char *arg = num_buffer;
             while (*arg && i < size - 1) {
                 str[i++] = *arg++;
+        }} else if (*p == '%' && *(p + 1) == 'u') {
+            p += 2;
+            unsigned int value = va_arg(args, unsigned int);
+            char num_buffer[12];
+            itoa(value, num_buffer);
+            const char *arg = num_buffer;
+            while (*arg && i < size - 1) {
+                str[i++] = *arg++;
             }
         } else {
             str[i++] = *p++;

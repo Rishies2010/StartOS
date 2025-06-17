@@ -40,7 +40,7 @@ void keyboard_initialize(void)
     {
         key_states[i] = false;
     }
-    register_interrupt_handler(IRQ1, keyboard_handler);
+    register_interrupt_handler(IRQ1, keyboard_handler, "Keyboard Interrupts Handler");
     log("Keyboard Initialized", 1, 0);
 }
 
@@ -108,7 +108,7 @@ char keyboard_getchar(void)
         unsigned char scancode = inportb(KEYBOARD_DATA_PORT);
         c = process_scancode(scancode);
     }
-    printchar(c);
+    printc(c);
     return c;
 }
 
@@ -160,6 +160,6 @@ void keyboard_handler(registers_t regs)
     unsigned char scancode = inportb(KEYBOARD_DATA_PORT);
     char c = process_scancode(scancode);
     if (c)
-        printchar(c);
+        printc(c);
     send_eoi(IRQ1);
 }

@@ -5,6 +5,8 @@
 
 // Send one byte
 void serial_write_char(char c) {
+    if(c == '\t')c = '-';
+    if(c == '\n')serial_write_char('\r');
     while (!(inportb(COM1 + 5) & 0x20));
     outportb(COM1, c);
 }

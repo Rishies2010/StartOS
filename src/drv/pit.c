@@ -2,6 +2,7 @@
 #include "../cpu/isr.h"
 #include "vga.h"
 #include "../libk/ports.h"
+#include "../libk/string.h"
 #include "../logic/log/logging.h"
 
 #define PIT_NATURAL_FREQ 1193180
@@ -24,5 +25,7 @@ void init_pit(uint32_t frequency)
     uint8_t high = (uint8_t)((divisor >> 8) & 0xFF);
     outportb(PIT_DATA0, low);
     outportb(PIT_DATA0, high);
-    log("PIT Driver Initialized.", 1, 0);
+    char log_msg[48];
+    snprintf(log_msg, sizeof(log_msg), "PIT Driver Initialized at %uHz", frequency);
+    log(log_msg, 1, 0);
 }

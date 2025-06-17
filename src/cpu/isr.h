@@ -15,7 +15,7 @@ typedef struct registers
 // It's slower, but it prevents service routines from messing with them.
 // Maybe messing with them is useful, and we'll change this later.
 typedef void (*isr_handler_t)(registers_t);
-void register_interrupt_handler(uint8_t interrupt, isr_handler_t handler);
+void register_interrupt_handler(uint8_t interrupt, isr_handler_t handler, const char* handler_name);
 
 #define IRQ0 32
 #define IRQ1 33

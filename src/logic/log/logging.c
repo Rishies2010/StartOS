@@ -11,28 +11,28 @@ void log(char *logstr, int level, int visibility) {
     switch (level) {
         case 1:
             loglevel = " \t [INFO] - ";
-            terminal_setcolor(vga_entry_color(15, bgcol));
+            setcolor(makecolor(150, 150, 150));
             break;
         case 2:
             loglevel = " \t [WARN] - ";
-            terminal_setcolor(vga_entry_color(6, bgcol));
+            setcolor(makecolor(255, 90, 0));
             break;
         case 3:
             loglevel = " \t [ERROR] - ";
-            terminal_setcolor(vga_entry_color(4, bgcol));
+            setcolor(makecolor(255, 50, 50));
             break;
         case 4:
             loglevel = " \t [PASS] - ";
-            terminal_setcolor(vga_entry_color(10, bgcol));
+            setcolor(makecolor(50, 255, 50));
             break;
         default:
             loglevel = " \t [LOGERROR] - ";
-            terminal_setcolor(vga_entry_color(4, bgcol));
+            setcolor(makecolor(255, 50, 50));
             break;
     }
     size_t bytes_read = 0;
     if (!fs_read("logfile", buffer, FS_SIZE_MAX, &bytes_read)) {
-        terminal_setcolor(vga_entry_color(4, bgcol));
+        setcolor(makecolor(255, 50, 50));
         prints(" \t [LOGERROR] - Failed to read logfile.\n");
         return;
     }
@@ -49,13 +49,13 @@ void log(char *logstr, int level, int visibility) {
     }
     strcat(buffer, new_log_entry);
     if (!fs_write("logfile", buffer, strlen(buffer))) {
-        terminal_setcolor(vga_entry_color(4, bgcol));
+        setcolor(makecolor(255, 50, 50));
         prints(" \t [LOGERROR] - Failed to write to logfile.\n");
     }
     serial_write_string(new_log_entry);
     if(visibility == 1){
         prints(new_log_entry);}
-        terminal_setcolor(vga_entry_color(fgcol, bgcol));
+        setcolor(makecolor(255, 255, 255));
 }
 
 void init_log(void) {

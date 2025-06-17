@@ -8,6 +8,7 @@
 #include "../drv/vga.h"
 #include "../drv/pic.h"
 #include "../libk/ports.h"
+#include "../libk/string.h"
 #include "../logic/log/logging.h"
 #include "stdint.h"
 
@@ -15,10 +16,12 @@ extern void halt();
 
 isr_handler_t interrupt_handlers[256];
 
-void register_interrupt_handler(uint8_t interrupt, isr_handler_t handler)
+void register_interrupt_handler(uint8_t interrupt, isr_handler_t handler, const char* handler_name)
 {
     interrupt_handlers[interrupt] = handler;
-    log("New interrupt handler registered.", 1, 0);
+    char log_msg[128];
+    snprintf(log_msg, sizeof(log_msg), "New Interrupt Handler Registered : %s", handler_name);
+    log(log_msg, 1, 0);
 }
 
 void isr_handler(registers_t regs)
