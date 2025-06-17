@@ -1,6 +1,7 @@
 #include "../drv/vga.h"
 #include "../logic/log/logging.h"
 #include "../libk/font_8x16.h"
+#include "../libk/qemu.h"
 
 static size_t terminal_row = 0;
 static size_t terminal_column = 0;
@@ -48,6 +49,15 @@ void printc(char c) {
     
     uint32_t start_x = terminal_column * CHAR_WIDTH;
     uint32_t start_y = terminal_row * CHAR_HEIGHT;
+
+    if(c == '\b') {
+        terminal_column--;
+    for (int row = 0; row < CHAR_HEIGHT; row++) {
+        for (int col = 0; col < CHAR_WIDTH; col++) {
+                put_pixel(start_x - col - 1, start_y + row, 0x000000);
+        }
+    } return;
+    }
     
     for (int row = 0; row < CHAR_HEIGHT; row++) {
         uint8_t font_row = font_8x16[(unsigned char)c][row];
