@@ -11,7 +11,7 @@ extern uint32_t framebuffer_height;
 extern uint32_t framebuffer_pitch;
 extern uint8_t framebuffer_bpp;
 void printc(char c);
-void prints(const char* data);
+void prints(const char* data, ...);
 void clr(void);
 void print_hex(uint32_t num);
 void print_uint(uint32_t num);

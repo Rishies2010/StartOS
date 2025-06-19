@@ -2,6 +2,9 @@
 #include "../logic/log/logging.h"
 #include "../libk/font_8x16.h"
 #include "../libk/qemu.h"
+#include "../libk/mem.h"
+#include <stdarg.h>
+#include "../libk/string.h"
 
 static size_t terminal_row = 0;
 static size_t terminal_column = 0;
@@ -73,10 +76,23 @@ void printc(char c) {
     terminal_column++;
 }
 
-void prints(const char* data) {
-    for (size_t i = 0; i < strlen(data); i++) {
-        printc(data[i]);
+void prints(const char* data, ...) {
+    va_list args;
+    va_start(args, data);
+    int len = vsnprintf(NULL, 0, data, args);
+    va_end(args);
+    va_start(args, data);
+    char* buffer = (char*)kmalloc(len + 1);
+    if (!buffer) {
+        va_end(args);
+        return;
     }
+    vsnprintf(buffer, len + 1, data, args);
+    va_end(args);
+    for (int i = 0; i < len; i++) {
+        printc(buffer[i]);
+    }
+    kfree(buffer);
 }
 
 void clr(void) {

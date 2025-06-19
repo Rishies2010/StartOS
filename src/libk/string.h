@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 // String length
 size_t strlen(const char* str);
@@ -28,6 +29,7 @@ void* memset(void* ptr, int value, size_t size);
 void* memcpy(void* dest, const void* src, size_t size);
 void* memmove(void* dest, const void* src, size_t size);
 int memcmp(const void* ptr1, const void* ptr2, size_t size);
+int vsnprintf(char *str, size_t size, const char *format, va_list args);
 int snprintf(char *str, size_t size, const char *format, ...);
 
 #endif // STRING_H

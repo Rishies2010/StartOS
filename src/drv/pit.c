@@ -25,7 +25,5 @@ void init_pit(uint32_t frequency)
     uint8_t high = (uint8_t)((divisor >> 8) & 0xFF);
     outportb(PIT_DATA0, low);
     outportb(PIT_DATA0, high);
-    char log_msg[48];
-    snprintf(log_msg, sizeof(log_msg), "PIT Driver Initialized at %uHz", frequency);
-    log(log_msg, 1, 0);
+    log("PIT Driver Initialized at %uHz.", 1, 0, frequency);
 }

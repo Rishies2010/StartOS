@@ -11,7 +11,7 @@
 *      - PASS
 */
 
-void log(char *logstr, int level, int visibility);
+void log(char *logstr, int level, int visibility, ...);
 void init_log(void);
 
 #endif
