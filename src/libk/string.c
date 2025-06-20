@@ -178,6 +178,52 @@ void itoa(int value, char *str)
     }
 }
 
+void itoa_hex(unsigned int value, char *str) {
+    const char hex_chars[] = "0123456789abcdef";
+    char temp[12];
+    int i = 0;
+    
+    if (value == 0) {
+        str[0] = '0';
+        str[1] = '\0';
+        return;
+    }
+    
+    while (value > 0) {
+        temp[i++] = hex_chars[value % 16];
+        value /= 16;
+    }
+    
+    int j = 0;
+    while (i > 0) {
+        str[j++] = temp[--i];
+    }
+    str[j] = '\0';
+}
+
+void itoa_hex_upper(unsigned int value, char *str) {
+    const char hex_chars[] = "0123456789ABCDEF";
+    char temp[12];
+    int i = 0;
+    
+    if (value == 0) {
+        str[0] = '0';
+        str[1] = '\0';
+        return;
+    }
+    
+    while (value > 0) {
+        temp[i++] = hex_chars[value % 16];
+        value /= 16;
+    }
+    
+    int j = 0;
+    while (i > 0) {
+        str[j++] = temp[--i];
+    }
+    str[j] = '\0';
+}
+
 int vsnprintf(char *str, size_t size, const char *format, va_list args) {
     size_t i = 0;
     const char *p = format;
@@ -196,12 +242,31 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args) {
             const char *arg = num_buffer;
             while (*arg && i < size - 1) {
                 str[i++] = *arg++;
-        }} else if (*p == '%' && *(p + 1) == 'u') {
+            }
+        } else if (*p == '%' && *(p + 1) == 'u') {
             p += 2;
             unsigned int value = va_arg(args, unsigned int);
             char num_buffer[12];
             itoa(value, num_buffer);
             const char *arg = num_buffer;
+            while (*arg && i < size - 1) {
+                str[i++] = *arg++;
+            }
+        } else if (*p == '%' && *(p + 1) == 'x') {
+            p += 2;
+            unsigned int value = va_arg(args, unsigned int);
+            char hex_buffer[12];
+            itoa_hex(value, hex_buffer);
+            const char *arg = hex_buffer;
+            while (*arg && i < size - 1) {
+                str[i++] = *arg++;
+            }
+        } else if (*p == '%' && *(p + 1) == 'X') {
+            p += 2;
+            unsigned int value = va_arg(args, unsigned int);
+            char hex_buffer[12];
+            itoa_hex_upper(value, hex_buffer);
+            const char *arg = hex_buffer;
             while (*arg && i < size - 1) {
                 str[i++] = *arg++;
             }

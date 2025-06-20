@@ -34,6 +34,9 @@ static bool key_states[256] = {0};
 
 void keyboard_initialize(void)
 {
+    while (inportb(KEYBOARD_STATUS_PORT) & 1) {
+        inportb(KEYBOARD_DATA_PORT);
+    }
     shift_pressed = false;
     caps_lock = false;
     for (int i = 0; i < 256; i++)
@@ -108,7 +111,6 @@ char keyboard_getchar(void)
         unsigned char scancode = inportb(KEYBOARD_DATA_PORT);
         c = process_scancode(scancode);
     }
-    printc(c);
     return c;
 }
 
@@ -116,11 +118,13 @@ void keyboard_readline(char *buffer, size_t size)
 {
     size_t i = 0;
     char c;
-
+    while ((inportb(KEYBOARD_STATUS_PORT) & 1) != 0) {
+    inportb(KEYBOARD_DATA_PORT);
+    }
     while (i < size - 1)
     {
         c = keyboard_getchar();
-        if (c == '\n')
+        if (c == '\n' || c == '\r')
         {
             buffer[i] = '\0';
             return;
@@ -160,6 +164,6 @@ void keyboard_handler(registers_t regs)
     unsigned char scancode = inportb(KEYBOARD_DATA_PORT);
     char c = process_scancode(scancode);
     if (c)
-        printc(c);
+    printc(c);
     send_eoi(IRQ1);
 }

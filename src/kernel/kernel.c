@@ -14,7 +14,8 @@
 #include "../cpu/idt.h"
 #include "../cpu/isr.h"
 #include "../logic/log/logging.h"
-
+#include "shell.h"
+extern uint32_t endmem;
 /* Framebuffer stuff*/
 
 uint64_t framebuffer_addr = 0;
@@ -45,7 +46,7 @@ struct multiboot_tag {
     uint32_t size;
 };
 
-struct multiboot2_info_t {
+struct m2info_t {
     uint32_t total_size;
     uint32_t reserved;
     struct multiboot_tag tags[0];
@@ -78,7 +79,7 @@ struct multiboot_tag_mmap {
     struct multiboot_mmap_entry entries[0];
 };
 
-void parse_multiboot2_info(struct multiboot2_info_t* info) {
+void parse_m2(struct m2info_t* info) {
     struct multiboot_tag* tag;
     for (tag = (struct multiboot_tag*)(info + 1);
          tag->type != MULTIBOOT_TAG_TYPE_END;
@@ -108,24 +109,12 @@ void parse_multiboot2_info(struct multiboot2_info_t* info) {
 
 // End Multiboot2 stuff
 
-extern uint32_t endmem;
-void shutdown(void){
-    outportw(0x604, 0x2000);
-    outportw(0xB004, 0x2000);
-    outportw(0x4004, 0x3400);
-    outportb(0xB2, 0x0F);
-    outportw(0x8900, 0x2001);
-    outportw(0x8900, 0xFF00);
-    __asm__ __volatile__("cli");
-    __asm__ __volatile__("hlt");
-}
-
 void pit_handler(){
     send_eoi(IRQ0);
 }
 
-void kmain(uint32_t magic, struct multiboot2_info_t* info){
-    parse_multiboot2_info(info);
+void kmain(uint32_t magic, struct m2info_t* info){
+    parse_m2(info);
     init_kernel_heap((uint32_t)&endmem, 0x100000);
     init_log();
     log("Memory Initialized", 1, 0);
@@ -135,8 +124,8 @@ void kmain(uint32_t magic, struct multiboot2_info_t* info){
     init_pit(10);
     serial_init();
     keyboard_initialize();
-    prints("\n -> Welcome to StartOS !\n");
     register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");
     asm volatile("sti");
+    shell_run();
     for(;;)asm volatile("hlt");
 }
