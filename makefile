@@ -1,12 +1,15 @@
 # StartOS Makefile
 
-CFLAGS = -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Wextra -c -Os
-LDFLAGS = -m elf_i386 -T linker.ld
+CFLAGS = -mcmodel=kernel -m64 -ffreestanding -fno-stack-protector -Wall -Wextra -c -fno-pie -fno-pic
+LDFLAGS = -m elf_x86_64 -T linker.ld
 ASFLAGS = -f elf32
 
 SRC_DIR = src
 BUILD_DIR = build
 ISO_DIR = iso
+
+LIMINE_DIR = limine
+LIMINE_BINARIES = $(LIMINE_DIR)/limine-bios.sys $(LIMINE_DIR)/limine-bios-cd.bin
 
 C_SOURCES = $(shell find $(SRC_DIR) -name "*.c")
 ASM_SOURCES = $(shell find $(SRC_DIR) -name "*.asm")
@@ -20,29 +23,35 @@ ISO_IMAGE = StartOS.iso
 all: $(ISO_IMAGE)
 
 %.o: %.c
-	i686-elf-gcc $(CFLAGS) $< -o $@
+	clang $(CFLAGS) $< -o $@
 
 %.o: %.asm
 	nasm $(ASFLAGS) $< -o $@
 
 $(KERNEL): $(OBJ)
 	@mkdir -p $(BUILD_DIR)
-	i686-elf-ld $(LDFLAGS) $(OBJ) -o $@
+	ld $(LDFLAGS) $(OBJ) -o $@
 
-$(ISO_IMAGE): $(KERNEL)
-	@mkdir -p $(ISO_DIR)/boot/grub
+
+$(ISO_IMAGE): $(KERNEL) $(LIMINE_BINARIES)
+	@mkdir -p $(ISO_DIR)/boot
 	cp $(KERNEL) $(ISO_DIR)/boot/
-	cp src/boot/grub.cfg $(ISO_DIR)/boot/grub/
-	grub2-mkrescue -o $(ISO_IMAGE) $(ISO_DIR)
+	cp $(SRC_DIR)/boot/limine.conf $(ISO_DIR)/boot/
+	cp $(LIMINE_BINARIES) $(ISO_DIR)/boot/
+	xorriso -as mkisofs \
+		-b boot/limine-bios-cd.bin \
+		-no-emul-boot -boot-load-size 4 -boot-info-table \
+		-o $(ISO_IMAGE) $(ISO_DIR)
+	$(LIMINE_DIR)/limine bios-install $(ISO_IMAGE)
 
 clean:
-	rm -rf $(OBJ) $(KERNEL) $(ISO_IMAGE) $(ISO_DIR)/boot/kernel.bin
+	rm -rf $(OBJ) $(KERNEL) $(ISO_IMAGE) $(ISO_DIR) $(BUILD_DIR)
 
 run:
 	virtualboxvm --startvm "StartOS" &
 
 qemu:
-	qemu-system-i386 -cdrom StartOS.iso
+	qemu-system-x86_64 -cdrom StartOS.iso -m 1G
 
 stop:
 	VBoxManage controlvm "StartOS" poweroff

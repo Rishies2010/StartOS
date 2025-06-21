@@ -1,30 +1,24 @@
-ENTRY(start)
+OUTPUT_FORMAT(elf64-x86-64)
+ENTRY(kmain)
 
 SECTIONS
 {
-    . = 1M;
+    . = 0xFFFFFFFF80000000;
     
-    .multiboot :
-    {
-        *(.multiboot)
-    }
-    
-    .text :
-    {
+    .text ALIGN(4K) : AT(0x100000) {
         *(.text*)
-        *(.rodata)
     }
     
-    .data :
-    {
-        *(.data)
+    .rodata ALIGN(4K) : AT(0x100000 + SIZEOF(.text)) {
+        *(.rodata*)
     }
     
-    .bss :
-    {
+    .data ALIGN(4K) : AT(0x100000 + SIZEOF(.text) + SIZEOF(.rodata)) {
+        *(.data*)
+    }
+    
+    .bss ALIGN(4K) : AT(0x100000 + SIZEOF(.text) + SIZEOF(.rodata) + SIZEOF(.data)) {
         *(COMMON)
-        *(.bss)
+        *(.bss*)
     }
-
-    endmem = .;
 }
