@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include "serial.h"
+#include "../../drv/vga.h"
 #include "../string.h"
 #include "../core/mem.h"
 
@@ -9,11 +10,11 @@ void log(const char* fmt, int level, int visibility, ...) {
     if (!fmt) return;
     const char* loglevel;
     switch (level) {
-        case 1: loglevel = "\t[INFO] - "; break;
-        case 2: loglevel = "\t[WARN] - "; break;
-        case 3: loglevel = "\t[ERROR] - "; break;
-        case 4: loglevel = "\t[PASS] - "; break;
-        default: loglevel = "\t[LOGERROR] - "; break;
+        case 1: loglevel = "-[INFO] - ";  setcolor(makecolor(150, 150, 150)); break;
+        case 2: loglevel = "-[WARN] - ";  setcolor(makecolor(255, 90, 0));    break;
+        case 3: loglevel = "-[ERROR] - "; setcolor(makecolor(255, 50, 50));   break;
+        case 4: loglevel = "-[PASS] - ";  setcolor(makecolor(50, 255, 50));   break;
+        default:loglevel = "-[LOGERROR] - "; setcolor(makecolor(255, 50, 50)); break;
     }
     va_list args;
     va_start(args, visibility);
@@ -38,7 +39,8 @@ void log(const char* fmt, int level, int visibility, ...) {
     strcat(logline, "\n");
     serial_write_string(logline);
     if(visibility == 1){
-        //do prints here
+        prints(logline);
     }
     kfree(logline);
+    setcolor(makecolor(255, 255, 255));
 }

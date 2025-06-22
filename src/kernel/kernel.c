@@ -14,6 +14,7 @@
 #include "../drv/pic.h"
 #include "../drv/pit.h"
 #include "../drv/rtc.h"
+#include "../drv/vga.h"
 
 void pit_handler(){
     send_eoi(IRQ0);
@@ -39,8 +40,11 @@ void _start(void){
     remap_pic();
     init_pit(10);
     rtc_initialize();
+    vga_init();
     asm volatile("sti");
+    clr();
     register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");
+    prints("\n  Welcome to StartOS !\n\n");
     log("Get stick bugged lol", 3, 1);
     for(;;);
 }
