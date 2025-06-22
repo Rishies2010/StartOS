@@ -4,6 +4,18 @@
 
 #define COM1 0x3F8
 
+// Setup COM1
+void serial_init() {
+    outportb(COM1 + 1, 0x00);
+    outportb(COM1 + 3, 0x80);
+    outportb(COM1 + 0, 0x03);
+    outportb(COM1 + 1, 0x00);
+    outportb(COM1 + 3, 0x03);
+    outportb(COM1 + 2, 0xC7);
+    outportb(COM1 + 4, 0x0B);
+    serial_write_string("-[INFO] - SERIAL Out initialized.\n");
+}
+
 // Send one byte
 void serial_write_char(char c) {
     if(c == '\t')c = '-';
@@ -44,15 +56,4 @@ void serial_write_uint(unsigned int n) {
     while (i--) {
         serial_write_char(buffer[i]);
     }
-}
-
-// Setup COM1
-void serial_init() {
-    outportb(COM1 + 1, 0x00);
-    outportb(COM1 + 3, 0x80);
-    outportb(COM1 + 0, 0x03);
-    outportb(COM1 + 1, 0x00);
-    outportb(COM1 + 3, 0x03);
-    outportb(COM1 + 2, 0xC7);
-    outportb(COM1 + 4, 0x0B);
 }

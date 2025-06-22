@@ -1,5 +1,5 @@
 #include "mem.h"
-#include "../debug/serial.h"
+#include "../debug/log.h"
 #include "../string.h"
 #include "../limine.h"
 
@@ -41,11 +41,12 @@ void init_kernel_heap(void) {
     heap_start->size = heap_size - HEADER_SIZE;
     heap_start->free = 1;
     heap_start->next = NULL;
+    log("Kernel heap initialized.", 1);
 }
 
 void* kmalloc(size_t size) {
     if (!heap_start) {
-        serial_write_string("Heap not initialized!\n");
+        log("Heap not initialized!\n", 3);
         return NULL;
     }
     
@@ -75,7 +76,7 @@ void* kmalloc(size_t size) {
         curr = curr->next;
     }
     
-    serial_write_string("kmalloc: no suitable block found\n");
+    log("kmalloc: no suitable block found\n", 3);
     return NULL;
 }
 

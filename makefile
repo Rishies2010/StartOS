@@ -2,7 +2,7 @@
 
 CFLAGS = -mcmodel=kernel -m64 -ffreestanding -fno-stack-protector -Wall -Wextra -c -fno-pie -fno-pic
 LDFLAGS = -m elf_x86_64 -T linker.ld
-ASFLAGS = -f elf32
+ASFLAGS = -f elf64
 
 SRC_DIR = src
 BUILD_DIR = build
