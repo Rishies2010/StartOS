@@ -1,5 +1,5 @@
 /**
- * 64-bit interrupt service routine handlers
+ * Interrupt service routine handlers
  */
 
 #include "isr.h"
@@ -23,77 +23,52 @@ void isr_handler(registers_t* regs)
     // Handle specific exceptions
     switch(regs->int_no) {
         case DIVISION_BY_ZERO:
-            // prints("Division by Zero Exception!\n");
+            log("Division by Zero Exception!\n", 3);
             break;
         case DEBUG_EXCEPTION:
-            // prints("Debug Exception!\n");
+            log("Debug Exception!\n", 3);
             break;
         case NON_MASKABLE_INTERRUPT:
-            // prints("Non-Maskable Interrupt!\n");
+            log("Non-Maskable Interrupt!\n", 3);
             break;
         case BREAKPOINT_EXCEPTION:
-            // prints("Breakpoint Exception!\n");
+            log("Breakpoint Exception!\n", 3);
             break;
         case INVALID_OPCODE_EXCEPTION:
-            // prints("Invalid Opcode Exception!\n");
+            log("Invalid Opcode Exception!\n", 3);
             break;
         case GENERAL_PROTECTION_FAULT:
-            // prints("General Protection Fault! Error Code: ");
-            // print_uint(regs->err_code);
-            // prints("\n");
+            log("General Protection Fault! Error Code: %d", 3, regs->err_code);
             break;
         case PAGE_FAULT:
-            // prints("Page Fault! Error Code: ");
-            // print_uint(regs->err_code);
-            // prints(" CR2: ");
             uint64_t cr2;
             __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
-            // print_uint(cr2);
-            // prints("\n");
+            log("Page Fault! Error Code: %i; CR2: %d.", 3, regs->err_code, cr2);
             break;
         case DOUBLE_FAULT:
-            // prints("Double Fault! Error Code: ");
-            // print_uint(regs->err_code);
-            // prints("\n");
+            log("Double Fault! Error Code: %i", 3, regs->err_code);
             for(;;)asm volatile("cli; hlt");
             break;
     }
 
     // Call registered handler if exists
     if(interrupt_handlers[regs->int_no]) {
-        // prints("Handling interrupt ");
-        // print_uint(regs->int_no);
-        // prints("!\n");
         interrupt_handlers[regs->int_no](*regs);
-        // prints("Returning from handler!\n");
     } else {
-        // prints("Unhandled ISR. Interrupt: ");
-        // print_uint(regs->int_no);
-        // prints(", Error Code: ");
-        // print_uint(regs->err_code);
-        // prints("\n");
+        log("Unhandled ISR. Interrupt: %i, Error Code: %d.", 3, regs->int_no, regs->err_code);
     }
 }
 
 void irq_handler(registers_t* regs)
 {
-    // Send EOI (End of Interrupt) to PIC
     if(regs->int_no >= 40) {
-        // Reset slave PIC
         outportb(SLAVE_COMMAND, PIC_RESET);
     }
-    // Reset master PIC
     outportb(MASTER_COMMAND, PIC_RESET);
-
-    // Call registered handler if exists
     if(interrupt_handlers[regs->int_no]) {
         interrupt_handlers[regs->int_no](*regs);
     } else {
-        // Don't spam keyboard interrupts
         if(regs->int_no == 33) return;
-        
-        // prints("Unhandled IRQ: ");
-        // print_uint(regs->int_no);
-        // prints("\n");
+        log("Unhandled IRQ: %d", 3, regs->int_no);
     }
 }

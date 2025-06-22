@@ -50,11 +50,11 @@
 // 64-bit register structure
 typedef struct registers
 {
-    uint64_t ds;                                    // Data segment selector
-    uint64_t r15, r14, r13, r12, r11, r10, r9, r8; // 64-bit registers
-    uint64_t rdi, rsi, rbp, rsp, rbx, rdx, rcx, rax; // 64-bit general purpose registers
-    uint64_t int_no, err_code;                      // Interrupt number and error code
-    uint64_t rip, cs, rflags, userrsp, ss;          // Pushed by processor automatically
+    uint64_t ds;
+    uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
+    uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
+    uint64_t int_no, err_code;
+    uint64_t rip, cs, rflags, userrsp, ss;
 } registers_t;
 
 // Interrupt service routine handler function type

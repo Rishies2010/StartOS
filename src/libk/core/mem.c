@@ -24,7 +24,7 @@ void init_kernel_heap(void) {
     if (!memmap) {
         return;
     }
-    uint64_t heap_size = 0x1000000;
+    uint64_t heap_size = 0x800000;
     uint64_t heap_phys = 0;
     for (size_t i = 0; i < memmap->entry_count; i++) {
         struct limine_memmap_entry *entry = memmap->entries[i];
