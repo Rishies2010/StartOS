@@ -32,6 +32,7 @@ void pit_handler(){
 
 void _start(void){
     serial_init();
+    init_pmm();
     init_kernel_heap();
     init_gdt();
     init_idt();
