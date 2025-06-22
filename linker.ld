@@ -1,24 +1,26 @@
 OUTPUT_FORMAT(elf64-x86-64)
-ENTRY(kmain)
+ENTRY(_start)
 
 SECTIONS
 {
-    . = 0xFFFFFFFF80000000;
+    . = 0xffffffff80000000;
     
-    .text ALIGN(4K) : AT(0x100000) {
+    .text : {
         *(.text*)
     }
     
-    .rodata ALIGN(4K) : AT(0x100000 + SIZEOF(.text)) {
+    .rodata : {
         *(.rodata*)
     }
     
-    .data ALIGN(4K) : AT(0x100000 + SIZEOF(.text) + SIZEOF(.rodata)) {
+    .data : {
         *(.data*)
     }
     
-    .bss ALIGN(4K) : AT(0x100000 + SIZEOF(.text) + SIZEOF(.rodata) + SIZEOF(.data)) {
+    .bss : {
         *(COMMON)
         *(.bss*)
     }
+    
+    _kernel_end = .;
 }
