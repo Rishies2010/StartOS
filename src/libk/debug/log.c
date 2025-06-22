@@ -5,7 +5,7 @@
 #include "../string.h"
 #include "../core/mem.h"
 
-void log(const char* fmt, int level, ...) {
+void log(const char* fmt, int level, int visibility, ...) {
     if (!fmt) return;
     const char* loglevel;
     switch (level) {
@@ -16,7 +16,7 @@ void log(const char* fmt, int level, ...) {
         default: loglevel = "\t[LOGERROR] - "; break;
     }
     va_list args;
-    va_start(args, level);
+    va_start(args, visibility);
     char formatted[1024];
     int len = vsnprintf(formatted, sizeof(formatted), fmt, args);
     va_end(args);
@@ -37,5 +37,8 @@ void log(const char* fmt, int level, ...) {
     strcat(logline, formatted);
     strcat(logline, "\n");
     serial_write_string(logline);
+    if(visibility == 1){
+        //do prints here
+    }
     kfree(logline);
 }

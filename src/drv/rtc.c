@@ -42,6 +42,7 @@ void rtc_initialize(void)
 {
     boot_time = rtc_get_time();
     rtc_enable_periodic_updates();
+    log("RTC Timesystem initialized.", 1, 0);
 }
 
 /// @brief Handles RTC Periodic Updates

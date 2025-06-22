@@ -41,6 +41,6 @@ void _start(void){
     rtc_initialize();
     asm volatile("sti");
     register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");
-    log("Get stick bugged lol", 3);
+    log("Get stick bugged lol", 3, 1);
     for(;;);
 }

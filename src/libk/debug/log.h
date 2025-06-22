@@ -1,6 +1,6 @@
 #ifndef LOG_H
 #define LOG_H
 
-void log(const char *fmt, int level, ...);
+void log(const char *fmt, int level, int visibility, ...);
 
 #endif

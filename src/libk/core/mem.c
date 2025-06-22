@@ -134,7 +134,7 @@ uint64_t alloc_pages(size_t count) {
     
     uint64_t page_idx = find_free_pages(count);
     if (page_idx == UINT64_MAX) {
-        log("PMM: Out of memory!", 3);
+        log("PMM: Out of memory!", 3, 1);
         return 0;
     }
     for (size_t i = 0; i < count; i++) {
@@ -172,30 +172,23 @@ uint64_t get_free_memory(void) {
     return (total_pages - used_pages) * PAGE_SIZE;
 }
 
-void print_memory_stats(void) {
-    log("Memory Stats:", 1);
-    log("Total pages: ", 1);
-    log("Used pages: ", 1);
-    log("Free pages: ", 1);
-}
-
 void init_kernel_heap(void) {
     uint64_t heap_pages = 2048;
     uint64_t heap_phys = alloc_pages(heap_pages);
     if (!heap_phys) {
-        log("Failed to allocate heap pages!", 3);
+        log("Failed to allocate heap pages!", 3, 1);
         return;}    
     uint64_t heap_virt = heap_phys + 0xffff800000000000;
     heap_start = (header_t*)heap_virt;
     heap_start->size = (heap_pages * PAGE_SIZE) - HEADER_SIZE;
     heap_start->free = 1;
     heap_start->next = NULL;
-    log("Kernel heap initialized.", 1);
+    log("Kernel heap initialized.", 1, 0);
 }
 
 void* kmalloc(size_t size) {
     if (!heap_start) {
-        log("Heap not initialized!", 3);
+        log("Heap not initialized!", 3, 1);
         return NULL;
     }
     if (size == 0) {
@@ -220,7 +213,7 @@ void* kmalloc(size_t size) {
         }
         curr = curr->next;
     }
-    log("kmalloc: no suitable block found", 3);
+    log("kmalloc: no suitable block found", 3, 1);
     return NULL;
 }
 
