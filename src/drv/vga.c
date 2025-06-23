@@ -19,6 +19,7 @@ static size_t terminal_column = 0;
 static uint32_t terminal_color = 0xFFFFFF;
 static const size_t CHAR_WIDTH = 8;
 static const size_t CHAR_HEIGHT = 16;
+static size_t max_rows, max_cols;
 
 void vga_init(void){
     fb = framebuffer_request.response->framebuffers[0];
@@ -26,6 +27,8 @@ void vga_init(void){
     framebuffer_width = fb->width;
     framebuffer_height = fb->height;
     framebuffer_pitch = fb->pitch;
+    max_rows = framebuffer_height / CHAR_HEIGHT;
+    max_cols = framebuffer_width / CHAR_WIDTH;
 }
 
 void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
@@ -33,6 +36,19 @@ void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
         uint32_t* fb = (uint32_t*)framebuffer_addr;
         fb[y * (framebuffer_pitch / 4) + x] = color;
     }
+}
+
+void scroll_up(void) {
+    uint32_t* fb = (uint32_t*)framebuffer_addr;
+    size_t pixels_per_row = framebuffer_pitch / 4;
+    size_t char_rows_to_move = max_rows - 1;
+    size_t pixels_to_move = char_rows_to_move * CHAR_HEIGHT * pixels_per_row;
+    
+    memmove(fb, fb + (CHAR_HEIGHT * pixels_per_row), pixels_to_move * sizeof(uint32_t));
+    
+    size_t last_row_start = (max_rows - 1) * CHAR_HEIGHT * pixels_per_row;
+    size_t last_row_pixels = CHAR_HEIGHT * pixels_per_row;
+    memset(fb + last_row_start, 0, last_row_pixels * sizeof(uint32_t));
 }
 
 void setcolor(uint32_t color) {
@@ -43,13 +59,18 @@ uint32_t makecolor(int r, int g, int b) {
     return (r << 16) | (g << 8) | b;
 }
 
+void newline(void) {
+    terminal_column = 0;
+    terminal_row++;
+    if (terminal_row >= max_rows) {
+        scroll_up();
+        terminal_row = max_rows - 1;
+    }
+}
+
 void printc(char c) {
     if (c == '\n') {
-        terminal_column = 0;
-        terminal_row++;
-        if (terminal_row >= framebuffer_height / CHAR_HEIGHT) {
-            terminal_row = 0;
-        }
+        newline();
         return;
     }
     
@@ -58,25 +79,27 @@ void printc(char c) {
         return;
     }
     
-    if (terminal_column >= framebuffer_width / CHAR_WIDTH) {
-        terminal_column = 0;
-        terminal_row++;
-        if (terminal_row >= framebuffer_height / CHAR_HEIGHT) {
-            terminal_row = 0;
+    if (c == '\b') {
+        if (terminal_column > 0) {
+            terminal_column--;
+            uint32_t start_x = terminal_column * CHAR_WIDTH;
+            uint32_t start_y = terminal_row * CHAR_HEIGHT;
+            
+            for (int row = 0; row < CHAR_HEIGHT; row++) {
+                for (int col = 0; col < CHAR_WIDTH; col++) {
+                    put_pixel(start_x + col, start_y + row, 0x000000);
+                }
+            }
         }
+        return;
+    }
+    
+    if (terminal_column >= max_cols) {
+        newline();
     }
     
     uint32_t start_x = terminal_column * CHAR_WIDTH;
     uint32_t start_y = terminal_row * CHAR_HEIGHT;
-
-    if(c == '\b') {
-        terminal_column--;
-    for (int row = 0; row < CHAR_HEIGHT; row++) {
-        for (int col = 0; col < CHAR_WIDTH; col++) {
-                put_pixel(start_x - col - 1, start_y + row, 0x000000);
-        }
-    } return;
-    }
     
     for (int row = 0; row < CHAR_HEIGHT; row++) {
         uint8_t font_row = font_8x16[(unsigned char)c][row];
