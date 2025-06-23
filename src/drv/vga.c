@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "../libk/core/mem.h"
+#include "../libk/debug/log.h"
 #include "../libk/string.h"
 #include "../libk/limine.h"
 #include "vga.h"
@@ -29,6 +30,7 @@ void vga_init(void){
     framebuffer_pitch = fb->pitch;
     max_rows = framebuffer_height / CHAR_HEIGHT;
     max_cols = framebuffer_width / CHAR_WIDTH;
+    log("Framebuffer found and initialized. Height : %i; Width : %i.", 4, 0, framebuffer_height, framebuffer_width);
 }
 
 void put_pixel(uint32_t x, uint32_t y, uint32_t color) {

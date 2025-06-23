@@ -28,12 +28,11 @@ void _start(void){
     init_gdt();
     init_idt();
     if(init_apic()) {
-        log("APIC initialized successfully", 1, 0);
         apic_timer_init(100);
     } else {
         log("APIC not available, falling back to PIT", 3, 1);
         remap_pic();
-        init_pit(100);
+        init_pit(10);
         register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");}
     rtc_initialize();
     vga_init();

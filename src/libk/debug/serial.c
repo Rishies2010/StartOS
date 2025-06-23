@@ -13,7 +13,7 @@ void serial_init() {
     outportb(COM1 + 3, 0x03);
     outportb(COM1 + 2, 0xC7);
     outportb(COM1 + 4, 0x0B);
-    serial_write_string("-[INFO] - SERIAL Out initialized.\n");
+    serial_write_string("-[PASS] - SERIAL Out initialized.\n");
 }
 
 // Send one byte

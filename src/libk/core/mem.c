@@ -183,7 +183,7 @@ void init_kernel_heap(void) {
     heap_start->size = (heap_pages * PAGE_SIZE) - HEADER_SIZE;
     heap_start->free = 1;
     heap_start->next = NULL;
-    log("Kernel heap initialized.", 1, 0);
+    log("Kernel heap initialized.", 4, 0);
 }
 
 void* kmalloc(size_t size) {

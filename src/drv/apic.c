@@ -1,5 +1,6 @@
 #include "apic.h"
 #include "../libk/core/mem.h"
+#include "../libk/debug/log.h"
 #include "../cpu/isr.h"
 #include <stdint.h>
 #include <stdbool.h>
@@ -47,20 +48,14 @@ bool init_apic(void) {
     if (!check_apic_support()) {
         return false;
     }
-
     uint64_t msr = rdmsr(APIC_BASE_MSR);
     apic_base = msr & 0xFFFFF000;
-    
     if (!(msr & APIC_BASE_ENABLE)) {
         msr |= APIC_BASE_ENABLE;
-        wrmsr(APIC_BASE_MSR, msr);
-    }
-
+        wrmsr(APIC_BASE_MSR, msr);}
     apic_available = true;
     apic_enable();
-    
     register_interrupt_handler(IRQ0, apic_timer_handler, "APIC Timer");
-    
     return true;
 }
 
@@ -134,6 +129,7 @@ void apic_timer_init(uint32_t frequency) {
     
     uint32_t target_ticks = ticks_per_ms * (1000 / frequency);
     apic_write(APIC_TIMER_ICR, target_ticks);
+    log("APIC initialized successfully at frequency %u.", 4, 0, frequency);
 }
 
 void apic_timer_stop(void) {

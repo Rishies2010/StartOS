@@ -41,7 +41,7 @@ void remap_pic(void)
     outportb(SLAVE_DATA, ICW4_8086);
     outportb(MASTER_DATA, 0x0);
     outportb(SLAVE_DATA, 0x0);
-    log("PIC Remapped", 1, 0);
+    log("PIC Remapped successfully.", 4, 0);
 }
 
 void send_eoi(unsigned char irq) {
