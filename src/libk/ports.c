@@ -24,3 +24,20 @@ uint32_t inportl(uint16_t port) {
     __asm__ __volatile__("inl %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
+void outportsw(uint16_t port, uint16_t *data, uint32_t count) {
+    __asm__ __volatile__(
+        "rep outsw"
+        :
+        : "d"(port), "S"(data), "c"(count)
+        : "memory"
+    );
+}
+
+void inportsw(uint16_t port, uint16_t *data, uint32_t count) {
+    __asm__ __volatile__(
+        "rep insw"
+        :
+        : "d"(port), "D"(data), "c"(count)
+        : "memory"
+    );
+}

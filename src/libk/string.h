@@ -33,4 +33,8 @@ void itoa_hex(unsigned long value, char* str);
 int vsnprintf(char* str, size_t size, const char* format, va_list args);
 int snprintf(char* str, size_t size, const char* format, ...);
 
+//Case changers
+char toLower(char c);
+char toUpper(char c);
+
 #endif

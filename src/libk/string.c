@@ -467,3 +467,17 @@ int snprintf(char* str, size_t size, const char* format, ...) {
     va_end(args);
     return written;
 }
+
+char toLower(char c) {
+    if (c >= 'A' && c <= 'Z') {
+        return c + ('a' - 'A');
+    }
+    return c;
+}
+
+char toUpper(char c) {
+    if (c >= 'a' && c <= 'z') {
+        return c - ('a' - 'A');
+    }
+    return c;
+}

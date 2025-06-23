@@ -51,9 +51,12 @@ run:
 	virtualboxvm --startvm "StartOS" &
 
 qemu:
-	qemu-system-x86_64 -cdrom StartOS.iso -m 1G
+	qemu-system-x86_64 -cdrom StartOS.iso -m 1G -drive file=/run/media/rishies2010/Storage/VMs/StartOS/StartOS.vhd,if=ide,index=0
 
 stop:
 	VBoxManage controlvm "StartOS" poweroff
+
+out:
+	socat - UNIX-CONNECT:/tmp/startos
 
 .PHONY: all clean run

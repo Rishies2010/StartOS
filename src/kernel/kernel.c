@@ -16,6 +16,8 @@
 #include "../drv/rtc.h"
 #include "../drv/vga.h"
 #include "../drv/apic.h"
+#include "../drv/fat32.h"
+#include "../drv/ata_pio_drv.h"
 
 void pit_handler(){
     send_eoi(IRQ0);
@@ -37,6 +39,7 @@ void _start(void){
     rtc_initialize();
     vga_init();
     asm volatile("sti");
+    ata_init();
     prints("\n Welcome to StartOS !\n\n");
     log("Get stick bugged lol", 3, 1);
     for(;;);
