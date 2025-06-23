@@ -42,7 +42,7 @@ char* strncat(char* dest, const char* src, size_t n) {
         dest++;
     }
     while (n-- && (*dest++ = *src++));
-    if (n == SIZE_MAX) {
+    if (n == ((size_t)-1)) {
         *dest = '\0';
     }
     return start;
@@ -292,7 +292,7 @@ static int format_int(char* buf, size_t buf_size, long long value, int base, int
     int total_len = temp_len;
     if (negative) total_len++;
     int pad_len = (width > total_len) ? width - total_len : 0;
-    int written = 0;
+    size_t written = 0;
     if (!zero_pad && pad_len > 0) {
         for (int i = 0; i < pad_len && written < buf_size - 1; i++) {
             buf[written++] = ' ';
@@ -327,11 +327,8 @@ int vsnprintf(char* str, size_t size, const char* format, va_list args) {
         
         p++;
         int zero_pad = 0;
-        int left_align = 0;
-        
         while (*p == '0' || *p == '-') {
             if (*p == '0') zero_pad = 1;
-            if (*p == '-') left_align = 1;
             p++;
         }
         int width = 0;

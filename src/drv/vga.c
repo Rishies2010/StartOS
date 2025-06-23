@@ -17,8 +17,8 @@ static uint64_t framebuffer_width, framebuffer_height, framebuffer_pitch;
 static size_t terminal_row = 0;
 static size_t terminal_column = 0;
 static uint32_t terminal_color = 0xFFFFFF;
-static const size_t CHAR_WIDTH = 8;
-static const size_t CHAR_HEIGHT = 16;
+static const int CHAR_WIDTH = 8;
+static const int CHAR_HEIGHT = 16;
 static size_t max_rows, max_cols;
 
 void vga_init(void){
@@ -119,11 +119,11 @@ void prints(const char* data, ...) {
     va_list args;
     va_start(args, data);
     char temp[512];
-    int len = vsnprintf(temp, sizeof(temp), data, args);
+    unsigned long len = vsnprintf(temp, sizeof(temp), data, args);
     va_end(args);
     if (len < 0) return;
     if (len < sizeof(temp)) {
-        for (int i = 0; i < len; i++) {
+        for (unsigned long i = 0; i < len; i++) {
             printc(temp[i]);
         }
     } else {
@@ -132,7 +132,7 @@ void prints(const char* data, ...) {
         va_start(args, data);
         vsnprintf(buffer, len + 1, data, args);
         va_end(args);
-        for (int i = 0; i < len; i++) {
+        for (unsigned long i = 0; i < len; i++) {
             printc(buffer[i]);
         }
         kfree(buffer);

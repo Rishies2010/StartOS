@@ -15,21 +15,11 @@
 #include "../drv/pit.h"
 #include "../drv/rtc.h"
 #include "../drv/vga.h"
+#include "../drv/apic.h"
 
 void pit_handler(){
     send_eoi(IRQ0);
 }
-
-// void shutdown(){
-//     outportw(0x604, 0x2000);
-//     outportw(0xB004, 0x2000);
-//     outportw(0x4004, 0x3400);
-//     outportb(0xB2, 0x0F);
-//     outportw(0x8900, 0x2001);
-//     outportw(0x8900, 0xFF00);
-//     __asm__ __volatile__("cli");
-//     __asm__ __volatile__("hlt");
-// }
 
 void _start(void){
     serial_init();
@@ -37,14 +27,18 @@ void _start(void){
     init_kernel_heap();
     init_gdt();
     init_idt();
-    remap_pic();
-    init_pit(10);
+    if(init_apic()) {
+        log("APIC initialized successfully", 1, 0);
+        apic_timer_init(100);
+    } else {
+        log("APIC not available, falling back to PIT", 3, 1);
+        remap_pic();
+        init_pit(100);
+        register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");}
     rtc_initialize();
     vga_init();
     asm volatile("sti");
-    clr();
-    register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");
-    prints("\n  Welcome to StartOS !\n\n");
+    prints("\n Welcome to StartOS !\n\n");
     log("Get stick bugged lol", 3, 1);
     for(;;);
 }

@@ -3,8 +3,6 @@
 #include <stddef.h>
 #include <stdarg.h>
 
-#define SIZE_MAX ((size_t)-1)
-
 // Standard string functions
 size_t strlen(const char* str);
 char* strcpy(char* dest, const char* src);
