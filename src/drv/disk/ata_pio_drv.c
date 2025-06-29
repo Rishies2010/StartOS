@@ -1,7 +1,7 @@
 #include "ata_pio_drv.h"
-#include "../libk/ports.h"
-#include "vga.h"
-#include "../libk/debug/log.h"
+#include "../../libk/ports.h"
+#include "../vga.h"
+#include "../../libk/debug/log.h"
 #include <stddef.h>
 
 #define ATA_PRIMARY_DATA         0x1F0
@@ -244,11 +244,7 @@ ata_status_t ata_identify_drive(uint8_t drive, ata_drive_info_t* info) {
  */
 ata_status_t ata_init(void) {
     log("ATA: Initializing ATA subsystem", 1, 0);
-    
-    // Software reset
     ata_soft_reset();
-    
-    // Try to identify both drives
     ata_identify_drive(0, &primary_master);
     ata_identify_drive(1, &primary_slave);
     
@@ -256,7 +252,6 @@ ata_status_t ata_init(void) {
         log("ATA: No drives found", 2, 0);
         return ATA_NO_DEVICE;
     }
-    
     log("ATA: Initialization complete", 1, 0);
     return ATA_OK;
 }

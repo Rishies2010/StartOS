@@ -24,26 +24,33 @@ void isr_handler(registers_t* regs)
     switch(regs->int_no) {
         case DIVISION_BY_ZERO:
             log("Division by Zero Exception!\n", 3, 1);
+            for(;;)asm volatile("cli; hlt");
             break;
         case DEBUG_EXCEPTION:
             log("Debug Exception!\n", 3, 1);
+            for(;;)asm volatile("cli; hlt");
             break;
         case NON_MASKABLE_INTERRUPT:
             log("Non-Maskable Interrupt!\n", 3, 1);
+            for(;;)asm volatile("cli; hlt");
             break;
         case BREAKPOINT_EXCEPTION:
             log("Breakpoint Exception!\n", 3, 1);
+            for(;;)asm volatile("cli; hlt");
             break;
         case INVALID_OPCODE_EXCEPTION:
             log("Invalid Opcode Exception!\n", 3, 1);
+            for(;;)asm volatile("cli; hlt");
             break;
         case GENERAL_PROTECTION_FAULT:
             log("General Protection Fault! Error Code: %d", 3, 1, regs->err_code);
+            for(;;)asm volatile("cli; hlt");
             break;
         case PAGE_FAULT:
             uint64_t cr2;
             __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
-            log("Page Fault! Error Code: %i; CR2: %d.", 3, 1, regs->err_code, cr2);
+            log("Page Fault! Error Code: %i; address: 0x%lx", 3, 1, regs->err_code, cr2);
+            for(;;)asm volatile("cli; hlt");
             break;
         case DOUBLE_FAULT:
             log("Double Fault! Error Code: %i", 3, 1, regs->err_code);

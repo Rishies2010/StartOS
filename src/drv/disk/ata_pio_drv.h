@@ -85,10 +85,4 @@ ata_status_t ata_read_sectors(uint64_t lba, uint16_t sector_count, uint8_t* buff
  */
 ata_drive_info_t* ata_get_drive_info(uint8_t drive);
 
-// Legacy function names for compatibility
-#define identify() (ata_init() == ATA_OK ? 1 : 0)
-#define ata_pio_read28(lba, count, buf) ata_read_sectors_28(lba, count, buf)
-#define ata_pio_read48(lba, count, buf) ata_read_sectors_48(lba, count, buf)
-#define ata_pio_write48(lba, count, buf) ata_write_sectors_48(lba, count, buf)
-
 #endif
