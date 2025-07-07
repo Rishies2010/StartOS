@@ -13,9 +13,9 @@ int strcmp(const char* str1, const char* str2);
 int strncmp(const char* str1, const char* str2, size_t n);
 char* strchr(const char* str, int c);
 char* strrchr(const char* str, int c);
-char* strstr(const char* haystack, const char* needle);
 size_t strspn(const char* str1, const char* str2);
 size_t strcspn(const char* str1, const char* str2);
+char* strstr(const char* haystack, const char* needle);
 
 // Standard memory functions
 void* memset(void* ptr, int value, size_t size);

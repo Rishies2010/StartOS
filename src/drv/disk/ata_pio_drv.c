@@ -1,6 +1,7 @@
 #include "ata_pio_drv.h"
 #include "../../libk/ports.h"
 #include "../vga.h"
+#include "../../libk/string.h"
 #include "../../libk/debug/log.h"
 #include <stddef.h>
 
@@ -235,7 +236,10 @@ ata_status_t ata_identify_drive(uint8_t drive, ata_drive_info_t* info) {
     
     log("ATA: Drive identified successfully", 1, 0);
     log("ATA: Model: %s", 1, 0, info->model);
-    
+    if(strstr(info->model, "QEMU") != NULL)
+        log("StartOS running in a VM (QEMU)", 4, 0);
+    if(strstr(info->model, "VBOX") != NULL)
+        log("StartOS running in a VM (VirtualBox)", 4, 0);
     return ATA_OK;
 }
 

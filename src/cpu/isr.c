@@ -20,40 +20,87 @@ void register_interrupt_handler(uint8_t interrupt, isr_handler_t handler, const 
 
 void isr_handler(registers_t* regs)
 {
-    // Handle specific exceptions
     switch(regs->int_no) {
         case DIVISION_BY_ZERO:
-            log("Division by Zero Exception!\n", 3, 1);
+            log("\n=== DIVISION BY ZERO EXCEPTION ===\n", 3, 1);
+            log("RIP: 0x%lx, RSP: 0x%lx", 3, 1, regs->rip, regs->userrsp);
+            log("RAX: 0x%lx, RBX: 0x%lx, RCX: 0x%lx, RDX: 0x%lx", 3, 1, 
+                regs->rax, regs->rbx, regs->rcx, regs->rdx);
+            log("\n=== REGISTER DUMP ===\n", 3, 1);
+            log("RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx", 3, 1,
+                regs->rax, regs->rbx, regs->rcx, regs->rdx);
+            log("RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx", 3, 1,
+                regs->rsi, regs->rdi, regs->rbp, regs->userrsp);
+            log("RIP=0x%016lx RFLAGS=0x%016lx", 3, 1, regs->rip, regs->rflags);
             for(;;)asm volatile("cli; hlt");
             break;
-        case DEBUG_EXCEPTION:
-            log("Debug Exception!\n", 3, 1);
-            for(;;)asm volatile("cli; hlt");
-            break;
-        case NON_MASKABLE_INTERRUPT:
-            log("Non-Maskable Interrupt!\n", 3, 1);
-            for(;;)asm volatile("cli; hlt");
-            break;
-        case BREAKPOINT_EXCEPTION:
-            log("Breakpoint Exception!\n", 3, 1);
-            for(;;)asm volatile("cli; hlt");
-            break;
+            
         case INVALID_OPCODE_EXCEPTION:
-            log("Invalid Opcode Exception!\n", 3, 1);
+            log("\n=== INVALID OPCODE EXCEPTION ===\n", 3, 1);
+            log("RIP: 0x%lx (instruction pointer)", 3, 1, regs->rip);
+            log("CS: 0x%lx, RFLAGS: 0x%lx", 3, 1, regs->cs, regs->rflags);
+            
+            // Try to read the bad instruction bytes
+            uint8_t* bad_instr = (uint8_t*)regs->rip;
+            log("Instruction bytes: %02x %02x %02x %02x", 3, 1,
+                bad_instr[0], bad_instr[1], bad_instr[2], bad_instr[3]);
+            log("\n=== REGISTER DUMP ===\n", 3, 1);
+            log("RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx", 3, 1,
+                regs->rax, regs->rbx, regs->rcx, regs->rdx);
+            log("RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx", 3, 1,
+                regs->rsi, regs->rdi, regs->rbp, regs->userrsp);
+            log("RIP=0x%016lx RFLAGS=0x%016lx", 3, 1, regs->rip, regs->rflags);
             for(;;)asm volatile("cli; hlt");
             break;
+            
         case GENERAL_PROTECTION_FAULT:
-            log("General Protection Fault! Error Code: %d", 3, 1, regs->err_code);
+            log("\n=== GENERAL PROTECTION FAULT ===\n", 3, 1);
+            log("Error Code: 0x%lx", 3, 1, regs->err_code);
+            
+            if(regs->err_code & 1) {
+                log("External event caused fault", 3, 1);
+            } else {
+                log("Internal event caused fault", 3, 1);
+            }
+            
+            uint16_t selector = (regs->err_code >> 3) & 0x1FFF;
+            if(selector) {
+                log("Segment selector: 0x%x", 3, 1, selector);
+            }
+            
+            log("RIP: 0x%lx, RSP: 0x%lx", 3, 1, regs->rip, regs->userrsp);
+            log("\n=== REGISTER DUMP ===\n", 3, 1);
+            log("RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx", 3, 1,
+                regs->rax, regs->rbx, regs->rcx, regs->rdx);
+            log("RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx", 3, 1,
+                regs->rsi, regs->rdi, regs->rbp, regs->userrsp);
+            log("RIP=0x%016lx RFLAGS=0x%016lx", 3, 1, regs->rip, regs->rflags);
             for(;;)asm volatile("cli; hlt");
             break;
+            
         case PAGE_FAULT:
             uint64_t cr2;
             __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
-            log("Page Fault! Error Code: %i; address: 0x%lx", 3, 1, regs->err_code, cr2);
-            for(;;)asm volatile("cli; hlt");
-            break;
-        case DOUBLE_FAULT:
-            log("Double Fault! Error Code: %i", 3, 1, regs->err_code);
+            log("\n=== PAGE FAULT ===\n", 3, 1);
+            log("Faulting address: 0x%lx", 3, 1, cr2);
+            log("Error code: 0x%lx", 3, 1, regs->err_code);
+            
+            if(regs->err_code & 1) log("- Page protection violation", 3, 1);
+            else log("- Page not present", 3, 1);
+            
+            if(regs->err_code & 2) log("- Write operation", 3, 1);
+            else log("- Read operation", 3, 1);
+            
+            if(regs->err_code & 4) log("- User mode access", 3, 1);
+            else log("- Supervisor mode access", 3, 1);
+            
+            log("RIP: 0x%lx", 3, 1, regs->rip);
+            log("\n=== REGISTER DUMP ===\n", 3, 1);
+            log("RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx", 3, 1,
+                regs->rax, regs->rbx, regs->rcx, regs->rdx);
+            log("RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx", 3, 1,
+                regs->rsi, regs->rdi, regs->rbp, regs->userrsp);
+            log("RIP=0x%016lx RFLAGS=0x%016lx", 3, 1, regs->rip, regs->rflags);
             for(;;)asm volatile("cli; hlt");
             break;
     }

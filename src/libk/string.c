@@ -91,24 +91,6 @@ char* strrchr(const char* str, int c) {
     return last;
 }
 
-char* strstr(const char* haystack, const char* needle) {
-    if (!*needle) return (char*)haystack;
-    
-    while (*haystack) {
-        const char* h = haystack;
-        const char* n = needle;
-        
-        while (*h && *n && (*h == *n)) {
-            h++;
-            n++;
-        }
-        
-        if (!*n) return (char*)haystack;
-        haystack++;
-    }
-    return NULL;
-}
-
 void* memset(void* ptr, int value, size_t size) {
     unsigned char* p = (unsigned char*)ptr;
     unsigned char val = (unsigned char)value;
@@ -187,6 +169,26 @@ size_t strspn(const char* str1, const char* str2) {
         len++;
     }
     return len;
+}
+
+char* strstr(const char* haystack, const char* needle) {
+    if (!needle || !*needle) return (char*)haystack;
+    if (!haystack) return NULL;
+    const char* h = haystack;
+    const char* n = needle;
+    while (*h) {
+        const char* h_temp = h;
+        const char* n_temp = n;
+        while (*h_temp && *n_temp && (*h_temp == *n_temp)) {
+            h_temp++;
+            n_temp++;
+        }
+        if (!*n_temp) {
+            return (char*)h;
+        }
+        h++;
+    }
+    return NULL;
 }
 
 size_t strcspn(const char* str1, const char* str2) {
