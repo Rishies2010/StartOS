@@ -8,10 +8,13 @@ on:
 
 jobs:
   build:
-
-    runs-on: fedora-latest
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: make
+
+    - name: Install dependencies
+      run: sudo apt update && sudo apt install -y build-essential nasm
+
+    - name: Build with make
       run: make
