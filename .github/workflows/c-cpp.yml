@@ -13,11 +13,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install dependencies for building
+    - name: Install dependencies for building...
       run: sudo apt update && sudo apt install -y build-essential nasm xorriso
 
-    - name: Building with make
+    - name: Building with make...
       run: make
-
-    - name: Success !
-      run: echo "Success !" && sudo reboot
