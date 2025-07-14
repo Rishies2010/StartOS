@@ -5,7 +5,7 @@
 #include "../libk/string.h"
 #include "../libk/limine.h"
 #include "vga.h"
-#include "../libk/gfx/font_8x16.h"
+#include "../libk/gfx/font2_8x16.h"
 #include <stdbool.h>
 
 static volatile struct limine_framebuffer_request framebuffer_request = {
@@ -104,7 +104,7 @@ void printc(char c) {
     uint32_t start_y = terminal_row * CHAR_HEIGHT;
     
     for (int row = 0; row < CHAR_HEIGHT; row++) {
-        uint8_t font_row = font_8x16[(unsigned char)c][row];
+        uint8_t font_row = font2_8x16[(unsigned char)c][row];
         for (int col = 0; col < CHAR_WIDTH; col++) {
             if (font_row & (0x80 >> col)) {
                 put_pixel(start_x + col, start_y + row, terminal_color);
@@ -120,7 +120,7 @@ void printc(char c) {
 void prints(const char* data, ...) {
     va_list args;
     va_start(args, data);
-    char temp[512];
+    char temp[strlen(data) + 1];
     unsigned long len = vsnprintf(temp, sizeof(temp), data, args);
     va_end(args);
     if (len < 0) return;

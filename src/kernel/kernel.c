@@ -41,7 +41,8 @@ void _start(void){
         register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");}
     rtc_initialize();
     vga_init();
+    ata_init();
     asm volatile("sti");
-    prints("\n Welcome to StartOS !\n\n");
+    prints("Hello Everyone ! FONT Test here ! \nDamn, - \t good font indeed HUH ?\ni liek it\nqwertyuiopasdfghjklzxcvbnm\nQWERTYUIOPASDFGHJKLZXCVBNM");
     for(;;);
 }
