@@ -42,6 +42,7 @@ void _start(void){
         register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");}
     rtc_initialize();
     ata_init();
+    print_mem_info(0);
     prints("\n Welcome To StartOS !\n\n");
     for(;;);
 }
