@@ -11,13 +11,15 @@
 #include "../libk/ports.h"
 #include "../cpu/gdt.h"
 #include "../cpu/idt.h"
-#include "../cpu/sse.h"
+#include "../cpu/sse_fpu.h"
 #include "../cpu/isr.h"
 #include "../drv/pic.h"
 #include "../drv/pit.h"
 #include "../drv/rtc.h"
 #include "../drv/vga.h"
 #include "../drv/apic.h"
+#include "../drv/sound.h"
+#include "../drv/speaker.h"
 #include "../drv/disk/ata.h"
 
 void pit_handler(){
@@ -32,7 +34,7 @@ void _start(void){
     init_gdt();
     init_idt();
     asm volatile("sti");
-    enable_sse();
+    enable_sse_and_fpu();
     if(init_apic()) {
         apic_timer_init(100);
     } else {
@@ -42,6 +44,7 @@ void _start(void){
         register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");}
     rtc_initialize();
     ata_init();
+    sound_init();
     print_mem_info(0);
     prints("\n Welcome To StartOS !\n\n");
     for(;;);
