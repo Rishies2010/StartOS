@@ -18,8 +18,7 @@
 #include "../drv/rtc.h"
 #include "../drv/vga.h"
 #include "../drv/apic.h"
-#include "../drv/disk/ff.h"
-#include "../drv/disk/ata_pio_drv.h"
+#include "../drv/disk/ata.h"
 
 void pit_handler(){
     send_eoi(IRQ0);
@@ -29,8 +28,10 @@ void _start(void){
     serial_init();
     init_pmm();
     init_kernel_heap();
+    vga_init();
     init_gdt();
     init_idt();
+    asm volatile("sti");
     enable_sse();
     if(init_apic()) {
         apic_timer_init(100);
@@ -40,9 +41,7 @@ void _start(void){
         init_pit(10);
         register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");}
     rtc_initialize();
-    vga_init();
     ata_init();
-    asm volatile("sti");
-    prints("Hello Everyone ! FONT Test here ! \nDamn, - \t good font indeed HUH ?\ni liek it\nqwertyuiopasdfghjklzxcvbnm\nQWERTYUIOPASDFGHJKLZXCVBNM");
+    prints("\n Welcome To StartOS !\n\n");
     for(;;);
 }

@@ -24,6 +24,5 @@ void* krealloc(void* ptr, size_t size);
 // Utility functions
 uint64_t get_total_memory(void);
 uint64_t get_free_memory(void);
-void print_memory_stats(void);
 
 #endif

@@ -184,6 +184,7 @@ void init_kernel_heap(void) {
     heap_start->free = 1;
     heap_start->next = NULL;
     log("Kernel heap initialized.", 4, 0);
+    log("\n -> Memory Statistics:\n\n - Total Memory:\n   %i bytes.\n\n - Free Memory:\n   %i bytes.\n\n - Used Memory:\n   %i bytes.\n", 1, 0, (uint32_t)get_total_memory(), (uint32_t)get_free_memory(), (uint32_t)get_total_memory() - (uint32_t)get_free_memory());
 }
 
 void* kmalloc(size_t size) {

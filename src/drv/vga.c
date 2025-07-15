@@ -193,3 +193,20 @@ void print_hex(uint32_t num) {
     }
     prints(buffer);
 }
+
+void print_float(float num) {
+    if (num < 0) {
+        printc('-');
+        num = -num;
+    }
+    uint32_t integer_part = (uint32_t)num;
+    float fractional_part = num - (float)integer_part;
+    print_uint(integer_part);
+    printc('.');
+    for (int i = 0; i < 3; i++) {
+        fractional_part *= 10;
+        int digit = (int)fractional_part;
+        printc('0' + digit);
+        fractional_part -= digit;
+    }
+}
