@@ -62,4 +62,4 @@ out:
 gdb:
 	gdb build/kernel.bin
 
-.PHONY: all clean run
+.PHONY: all clean run qemu out stop gdb
