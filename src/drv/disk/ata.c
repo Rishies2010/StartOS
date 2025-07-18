@@ -121,6 +121,7 @@ ata_device_type_t ata_detect_drive(uint8_t drive) {
 }
 
 ata_error_t ata_init(void) {
+    int found_drives = 0;
     for (int i = 0; i < 4; i++) {
         drives[i].base_io = (i < 2) ? ATA_PRIMARY_IO : ATA_SECONDARY_IO;
         drives[i].ctrl_io = (i < 2) ? ATA_PRIMARY_DEVCTL : ATA_SECONDARY_DEVCTL;
@@ -139,42 +140,31 @@ ata_error_t ata_init(void) {
             
             if (drive_name[0] != '\0') {
                 log("ATA: Drive %d (%s): %s", 1, 0, i, type_str, drive_name);
-            } else {
-                drives[i].exists = 0; //we aint handling unknown devices
-                log("ATA: Drive %d (%s): Unknown Device / No Drive", 1, 0, i, type_str);
-            }
+                found_drives++;
+            } else drives[i].exists = 0;
             if(strstr(drive_name, "QEMU") != NULL)
                 log("StartOS running in a VM (QEMU)", 4, 0);
             if(strstr(drive_name, "VBOX") != NULL)
                 log("StartOS running in a VM (VirtualBox)", 4, 0);
         }
     }
-    
-    log("ATA: Initialization complete", 4, 0);
+    log("ATA: Initialization complete. Found %i drive%s.", 4, 0, found_drives, found_drives==1 ?"":"s");
     return ATA_SUCCESS;
 }
 
 ata_error_t ata_identify_drive(uint8_t drive, uint16_t* buffer) {
     if (drive >= 4 || !drives[drive].exists || !buffer) {
-        return ATA_ERR_INVALID_PARAM;
-    }
-    
+        return ATA_ERR_INVALID_PARAM;}
     uint16_t base_io = drives[drive].base_io;
-    
     ata_select_drive(base_io, drives[drive].drive_select);
-    
     ata_error_t err = ata_wait_ready(base_io);
     if (err != ATA_SUCCESS) return err;
-    
     outportb(base_io + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
-    
     err = ata_wait_drq(base_io);
     if (err != ATA_SUCCESS) return err;
-    
     for (int i = 0; i < 256; i++) {
         buffer[i] = inportw(base_io + ATA_REG_DATA);
     }
-    
     return ATA_SUCCESS;
 }
 

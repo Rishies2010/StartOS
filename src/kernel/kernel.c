@@ -9,6 +9,7 @@
 #include "../libk/core/mem.h"
 #include "../libk/string.h"
 #include "../libk/ports.h"
+#include "../libk/gfx/logo.h"
 #include "../cpu/gdt.h"
 #include "../cpu/idt.h"
 #include "../cpu/sse_fpu.h"
@@ -41,6 +42,20 @@ void play_bootup_sequence() {
     speaker_pause();
 }
 
+void draw_startos_logo(int x_offset, int y_offset) {
+    for (int y = 0; y < startos.height; ++y) {
+        for (int x = 0; x < startos.width; ++x) {
+            int idx = (y * startos.width + x) * startos.bytes_per_pixel;
+
+            uint8_t r = 255 - startos.pixel_data[idx + 0];
+            uint8_t g = 255 - startos.pixel_data[idx + 1];
+            uint8_t b = 255 - startos.pixel_data[idx + 2];
+            if(!(r == 0 && g == 0 && b == 0))
+            put_pixel(x + x_offset, y + y_offset, makecolor(r, g, b));
+        }
+    }
+}
+
 void _start(void){
     serial_init();
     init_pmm();
@@ -60,7 +75,8 @@ void _start(void){
     rtc_initialize();
     ata_init();
     print_mem_info(0);
-    prints("\n Welcome To StartOS !\n\n");
+    prints("\n Welcome To StartOS ! (DEBUG Mode)\n\n");
+    draw_startos_logo(-24, 5);
     play_bootup_sequence();
     for(;;);
 }
