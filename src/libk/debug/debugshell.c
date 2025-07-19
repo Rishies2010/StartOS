@@ -102,8 +102,8 @@ static void cmd_meminfo(){
 }
 
 static void cmd_gdtinfo(void) {
-    uint16_t gdt_limit = 0;
-    uint64_t gdt_base = 0;
+    uint16_t gdt_limit;
+    uint64_t gdt_base;
     
     __asm__ volatile("sgdt %0" : "=m"(*(struct { uint16_t limit; uint64_t base; } __attribute__((packed))*) 
                      &(struct { uint16_t limit; uint64_t base; } __attribute__((packed))){ gdt_limit, gdt_base }));
