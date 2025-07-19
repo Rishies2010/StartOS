@@ -7,6 +7,8 @@
 #include "../core/mem.h"
 #include "../../drv/speaker.h"
 
+bool debug = true; //DEBUG TOGGLE
+
 void sound_err() {
     speaker_note(0, 0);
     for(volatile int i = 0; i < 2000000; i++);
@@ -19,7 +21,7 @@ void log(const char* fmt, int level, int visibility, ...) {
     switch (level) {
         case 1: loglevel = "-[INFO] - ";  setcolor(makecolor(150, 150, 150)); break;
         case 2: loglevel = "-[WARN] - ";  setcolor(makecolor(255, 90, 0));    break;
-        case 3: loglevel = "-[ERROR] - "; setcolor(makecolor(255, 50, 50)); sound_err(); break;
+        case 3: loglevel = "-[ERROR] - "; setcolor(makecolor(255, 50, 50)); if(!debug)sound_err(); break;
         case 4: loglevel = "-[PASS] - ";  setcolor(makecolor(50, 255, 50));   break;
         default:loglevel = "-[LOGERROR] - "; setcolor(makecolor(255, 50, 50)); break;
     }
@@ -45,7 +47,7 @@ void log(const char* fmt, int level, int visibility, ...) {
     strcat(logline, formatted);
     strcat(logline, "\n");
     serial_write_string(logline);
-    if(visibility == 1){
+    if(visibility == 1 || debug){
         prints(logline);
     }
     kfree(logline);

@@ -75,8 +75,8 @@ void _start(void){
     rtc_initialize();
     ata_init();
     print_mem_info(0);
-    prints("\n Welcome To StartOS ! (DEBUG Mode)\n\n");
-    draw_startos_logo(-24, 5);
-    play_bootup_sequence();
+    prints("\n Welcome To StartOS !");
+    if(debug)prints(" (DEBUG Mode)\n\n");else prints("\n\n");
+    if(!debug){play_bootup_sequence();draw_startos_logo(-24, 5);}
     for(;;);
 }
