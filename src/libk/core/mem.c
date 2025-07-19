@@ -187,7 +187,7 @@ void init_kernel_heap(void) {
 }
 
 void print_mem_info(int vis){
-    log("\n -> Memory Statistics:\n\n - Total Memory:\n   %i MBs.\n\n - Free Memory:\n   %i MBs.\n\n - Used Memory:\n   %i MBs.\n", 1, vis, (uint32_t)get_total_memory()/1048576, (uint32_t)get_free_memory()/1048576, ((uint32_t)get_total_memory() - (uint32_t)get_free_memory())/1048576);
+    log("\n -> Memory Statistics:\n\n - Total Memory:\n   %lu MBs.\n\n - Free Memory:\n   %lu MBs.\n\n - Used Memory:\n   %lu MBs.\n", 1, vis, get_total_memory()/1048576, get_free_memory()/1048576, (get_total_memory() - get_free_memory())/1048576);
 }
 
 void* kmalloc(size_t size) {

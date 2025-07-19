@@ -74,9 +74,9 @@ void _start(void){
         register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");}
     rtc_initialize();
     ata_init();
-    print_mem_info(0);
     prints("\n Welcome To StartOS !");
     if(debug)prints(" (DEBUG Mode)\n\n");else prints("\n\n");
-    if(!debug){play_bootup_sequence();draw_startos_logo(-24, 5);}
+    if(!debug){draw_startos_logo(-24, 5);play_bootup_sequence();}
+    print_mem_info(0);
     for(;;);
 }

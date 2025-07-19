@@ -15,6 +15,7 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
 static struct limine_framebuffer *fb;
 static uint32_t *framebuffer_addr;
 static uint64_t framebuffer_width, framebuffer_height, framebuffer_pitch;
+static uint8_t framebuffer_bpp;
 static size_t terminal_row = 0;
 static size_t terminal_column = 0;
 static uint32_t terminal_color = 0xFFFFFF;
@@ -28,17 +29,41 @@ void vga_init(void){
     framebuffer_width = fb->width;
     framebuffer_height = fb->height;
     framebuffer_pitch = fb->pitch;
+    framebuffer_bpp = fb->bpp;
     max_rows = framebuffer_height / CHAR_HEIGHT;
     max_cols = framebuffer_width / CHAR_WIDTH;
-    log("Framebuffer found and initialized. Height : %i; Width : %i.", 4, 0, framebuffer_height, framebuffer_width);
+    log("\n-[PASS] - Framebuffer found and initialized.\n        - Height : %i.\n        - Width : %i.\n        - Bits Per Pixel : %i.\n        - Pitch : %i.", 4, 0, framebuffer_height, framebuffer_width, framebuffer_bpp, framebuffer_pitch);
 }
 
 void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
-    if (framebuffer_addr && x < framebuffer_width && y < framebuffer_height) {
-        uint32_t* fb = (uint32_t*)framebuffer_addr;
-        fb[y * (framebuffer_pitch / 4) + x] = color;
+    if (!framebuffer_addr || x >= framebuffer_width || y >= framebuffer_height) return;
+    uint8_t* fb = (uint8_t*)framebuffer_addr;
+    uint32_t offset = y * framebuffer_pitch + x * (framebuffer_bpp / 8);
+    switch (framebuffer_bpp) {
+        case 32: {
+            *(uint32_t*)(fb + offset) = color;
+            break;
+        }
+        case 24: {
+            fb[offset + 0] = color & 0xFF;
+            fb[offset + 1] = (color >> 8) & 0xFF;
+            fb[offset + 2] = (color >> 16) & 0xFF;
+            break;
+        }
+        case 16: {
+            uint8_t r = (color >> 16) & 0xFF;
+            uint8_t g = (color >> 8) & 0xFF;
+            uint8_t b = color & 0xFF;
+            uint16_t rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+            *(uint16_t*)(fb + offset) = rgb565;
+            break;
+        }
+        default:
+            log("Unsupported BPP.", 3, 1);
+            break;
     }
 }
+
 
 void scroll_up(void) {
     uint32_t* fb = (uint32_t*)framebuffer_addr;
