@@ -113,6 +113,11 @@ void printc(char c) {
         terminal_column = 0;
         return;
     }
+
+    if(c=='\t'){
+        for(int i = 1; i <=4; i++)printc(' ');
+        return;
+    }
     
     if (c == '\b') {
         if (terminal_column > 0) {
