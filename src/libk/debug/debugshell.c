@@ -12,8 +12,6 @@
 #include "../../libk/core/mem.h"
 // Global Stuff
 static char command_buffer[MAX_COMMAND_LENGTH];
-static int count = 0;
-static int font = 1;
 
 // Parse command into arguments
 static int parse_command(char* command, char* args[], int max_args) {
@@ -104,8 +102,8 @@ static void cmd_meminfo(){
 }
 
 static void cmd_gdtinfo(void) {
-    uint16_t gdt_limit;
-    uint64_t gdt_base;
+    uint16_t gdt_limit = 0;
+    uint64_t gdt_base = 0;
     
     __asm__ volatile("sgdt %0" : "=m"(*(struct { uint16_t limit; uint64_t base; } __attribute__((packed))*) 
                      &(struct { uint16_t limit; uint64_t base; } __attribute__((packed))){ gdt_limit, gdt_base }));
@@ -306,7 +304,7 @@ static void cmd_echo(int argc, char* argv[]) {
 void cmd_font(int argc, char* argv[]) {
     if(argc>2){ log(" Usage: font (1, 2 or 3).", 3, 1); return;}
     int fnum = atoi(argv[1]);
-    if(!(fnum>0 || fnum<4)){ log(" Parameter not a number.", 3, 1); return;}
+    if(!(fnum>0) || !(fnum<4)){ log(" Parameter not a number.", 3, 1); return;}
     prints(" Font set to %i.", fnum);
     setfont(fnum);
 }
@@ -348,6 +346,8 @@ bool shell_execute(const char* command) {
         cmd_gdtinfo();
     } else if (strcmp(argv[0], "cpuinfo") == 0) {
         cmd_cpuinfo();
+    } else if (strcmp(argv[0], "picinfo") == 0) {
+        cmd_picinfo();
     } else if (strcmp(argv[0], "reginfo") == 0) {
         cmd_reginfo();
     } else if (strcmp(argv[0], "meminfo") == 0) {

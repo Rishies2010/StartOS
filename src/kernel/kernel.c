@@ -44,8 +44,8 @@ void play_bootup_sequence() {
 }
 
 void draw_startos_logo(int x_offset, int y_offset) {
-    for (int y = 0; y < startos.height; ++y) {
-        for (int x = 0; x < startos.width; ++x) {
+    for (uint32_t y = 0; y < startos.height; ++y) {
+        for (uint32_t x = 0; x < startos.width; ++x) {
             int idx = (y * startos.width + x) * startos.bytes_per_pixel;
 
             uint8_t r = 255 - startos.pixel_data[idx + 0];
