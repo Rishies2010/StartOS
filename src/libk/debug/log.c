@@ -7,7 +7,7 @@
 #include "../core/mem.h"
 #include "../../drv/speaker.h"
 
-bool debug = false; //DEBUG TOGGLE
+char* os_version = debug?"0.90.0 DEBUG_ENABLED":"0.90.0 Unstable";
 
 void sound_err() {
     speaker_note(0, 0);

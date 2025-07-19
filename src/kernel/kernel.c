@@ -4,6 +4,7 @@
 
 // Kernel Includes
 
+#include "../libk/debug/debugshell.h"
 #include "../libk/debug/serial.h"
 #include "../libk/debug/log.h"
 #include "../libk/core/mem.h"
@@ -75,8 +76,18 @@ void _start(void){
     rtc_initialize();
     ata_init();
     prints("\n Welcome To StartOS !");
-    if(debug)prints(" (DEBUG Mode)\n\n");else prints("\n\n");
-    if(!debug){draw_startos_logo(-24, 5);play_bootup_sequence();}
-    print_mem_info(0);
+    #if debug
+        prints(" (DEBUG Mode)\n\n");
+        log("\n        - DEBUG Mode\n", 1, 0);
+    #else
+        prints("\n\n");
+    #endif
+    #if !debug
+        draw_startos_logo(-24, 5);
+        play_bootup_sequence();
+    #endif
+    #if debug
+        shell_run();
+    #endif
     for(;;);
 }
