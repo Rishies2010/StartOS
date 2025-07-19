@@ -7,7 +7,7 @@
 #include "../core/mem.h"
 #include "../../drv/speaker.h"
 
-bool debug = true; //DEBUG TOGGLE
+bool debug = false; //DEBUG TOGGLE
 
 void sound_err() {
     speaker_note(0, 0);
@@ -18,12 +18,13 @@ void sound_err() {
 void log(const char* fmt, int level, int visibility, ...) {
     if (!fmt) return;
     const char* loglevel;
+    int font = current_font;
     switch (level) {
-        case 1: loglevel = "-[INFO] - ";  setcolor(makecolor(150, 150, 150)); break;
+        case 1: loglevel = "-[INFO] - ";  setcolor(makecolor(150, 150, 150)); setfont(3); break;
         case 2: loglevel = "-[WARN] - ";  setcolor(makecolor(255, 90, 0));    break;
-        case 3: loglevel = "-[ERROR] - "; setcolor(makecolor(255, 50, 50)); if(!debug)sound_err(); break;
+        case 3: loglevel = "-[ERROR] - "; setcolor(makecolor(255, 50, 50)); setfont(1); if(!debug)sound_err(); break;
         case 4: loglevel = "-[PASS] - ";  setcolor(makecolor(50, 255, 50));   break;
-        default:loglevel = "-[LOGERROR] - "; setcolor(makecolor(255, 50, 50)); break;
+        default:loglevel = "-[LOGERROR] - "; setcolor(makecolor(255, 50, 50));  setfont(1); break;
     }
     va_list args;
     va_start(args, visibility);
@@ -51,5 +52,6 @@ void log(const char* fmt, int level, int visibility, ...) {
         prints(logline);
     }
     kfree(logline);
+    setfont(font); 
     setcolor(makecolor(255, 255, 255));
 }

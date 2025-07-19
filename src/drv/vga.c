@@ -5,7 +5,9 @@
 #include "../libk/string.h"
 #include "../libk/limine.h"
 #include "vga.h"
+#include "../libk/gfx/font1_8x16.h"
 #include "../libk/gfx/font2_8x16.h"
+#include "../libk/gfx/font3_8x16.h"
 #include <stdbool.h>
 
 static volatile struct limine_framebuffer_request framebuffer_request = {
@@ -21,6 +23,7 @@ static size_t terminal_column = 0;
 static uint32_t terminal_color = 0xFFFFFF;
 static const int CHAR_WIDTH = 8;
 static const int CHAR_HEIGHT = 16;
+int current_font = 0;
 static size_t max_rows, max_cols;
 
 void vga_init(void){
@@ -30,9 +33,14 @@ void vga_init(void){
     framebuffer_height = fb->height;
     framebuffer_pitch = fb->pitch;
     framebuffer_bpp = fb->bpp;
+    current_font = 2;
     max_rows = framebuffer_height / CHAR_HEIGHT;
     max_cols = framebuffer_width / CHAR_WIDTH;
     log("\n-[PASS] - Framebuffer found and initialized.\n        - Height : %i.\n        - Width : %i.\n        - Bits Per Pixel : %i.\n        - Pitch : %i.", 4, 0, framebuffer_height, framebuffer_width, framebuffer_bpp, framebuffer_pitch);
+}
+
+void setfont(int fontnum){
+    current_font = fontnum;
 }
 
 void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
@@ -129,7 +137,16 @@ void printc(char c) {
     uint32_t start_y = terminal_row * CHAR_HEIGHT;
     
     for (int row = 0; row < CHAR_HEIGHT; row++) {
-        uint8_t font_row = font2_8x16[(unsigned char)c][row];
+        uint8_t font_row;
+        switch (current_font){
+            case 1:
+                font_row = font1_8x16[(unsigned char)c][row];break;
+            case 2:
+                font_row = font2_8x16[(unsigned char)c][row];break;
+            case 3:
+                font_row = font3_8x16[(unsigned char)c][row];break;
+            default:
+                font_row = font2_8x16[(unsigned char)c][row];break;}
         for (int col = 0; col < CHAR_WIDTH; col++) {
             if (font_row & (0x80 >> col)) {
                 put_pixel(start_x + col, start_y + row, terminal_color);
