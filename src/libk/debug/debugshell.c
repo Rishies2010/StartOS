@@ -304,7 +304,7 @@ static void cmd_echo(int argc, char* argv[]) {
 void cmd_font(int argc, char* argv[]) {
     if(argc>2){ log(" Usage: font (1, 2 or 3).", 3, 1); return;}
     int fnum = atoi(argv[1]);
-    if(!(fnum>0) || !(fnum<4)){ log(" Parameter not a number.", 3, 1); return;}
+    if(!(fnum>0) || !(fnum<4)){ log(" Parameter either not a number or not between 1 to 3.", 3, 1); return;}
     prints(" Font set to %i.", fnum);
     setfont(fnum);
 }
