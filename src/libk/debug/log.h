@@ -2,7 +2,7 @@
 #define LOG_H
 #include "stdbool.h"
 
-#define debug 1
+#define debug 0
 extern char* os_version;
 
 void log(const char *fmt, int level, int visibility, ...);
