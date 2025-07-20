@@ -42,7 +42,7 @@ void rtc_initialize(void)
 {
     boot_time = rtc_get_time();
     rtc_enable_periodic_updates();
-    log("RTC Timesystem initialized.", 4, 0);
+    log("[RTC] Real Time Clock Timesystem initialized.", 4, 0);
 }
 
 /// @brief Handles RTC Periodic Updates
@@ -128,32 +128,4 @@ void sleep(uint32_t time)
             break;
         }
     }
-}
-
-uint32_t get_fattime(void)
-{
-    rtc_time_t current_time = rtc_get_time();
-    
-    if (current_time.month == 0 || current_time.month > 12) current_time.month = 1;
-    if (current_time.day == 0 || current_time.day > 31) current_time.day = 1;
-    if (current_time.hours > 23) current_time.hours = 0;
-    if (current_time.minutes > 59) current_time.minutes = 0;
-    if (current_time.seconds > 59) current_time.seconds = 0;
-    
-    uint16_t full_year = (current_time.year < 80) ? (2000 + current_time.year) : (1900 + current_time.year);
-    
-    if (full_year < 1980) full_year = 1980;
-    if (full_year > 2107) full_year = 2107;
-    
-    uint8_t fat_year = full_year - 1980;
-    
-    uint32_t fat_time = 0;
-    fat_time |= ((uint32_t)(fat_year & 0x7F)) << 25;
-    fat_time |= ((uint32_t)(current_time.month & 0x0F)) << 21;
-    fat_time |= ((uint32_t)(current_time.day & 0x1F)) << 16;
-    fat_time |= ((uint32_t)(current_time.hours & 0x1F)) << 11;
-    fat_time |= ((uint32_t)(current_time.minutes & 0x3F)) << 5;
-    fat_time |= ((uint32_t)(current_time.seconds >> 1) & 0x1F);
-    
-    return fat_time;
 }

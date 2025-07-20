@@ -12,7 +12,7 @@ void enable_sse_and_fpu(void) {
     cr4 |= (1 << 9);   // Set OSFXSR
     cr4 |= (1 << 10);  // Set OSXMMEXCPT
     asm volatile("mov %0, %%cr4" :: "r"(cr4));
-    log("SSE instructions enabled.", 4, 0);
+    log("[SSE] SSE instructions enabled.", 4, 0);
     size_t t;
     asm("clts");
     asm("mov %%cr0, %0" : "=r"(t));
@@ -23,5 +23,5 @@ void enable_sse_and_fpu(void) {
     t |= 3 << 9;
     asm("mov %0, %%cr4" :: "r"(t));
     asm("fninit");
-    log("Floating Point Unit enabled.", 4, 0);
+    log("[FPU] Floating Point Unit enabled.", 4, 0);
 }

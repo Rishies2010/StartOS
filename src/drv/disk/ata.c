@@ -170,7 +170,7 @@ ata_error_t ata_init(void)
 
             if (drive_name[0] != '\0')
             {
-                log("ATA: Drive %d (%s): %s", 1, 0, i, type_str, drive_name);
+                log("[ATA] Drive %d (%s): %s", 1, 0, i, type_str, drive_name);
                 found_drives++;
             }
             else
@@ -181,7 +181,7 @@ ata_error_t ata_init(void)
                 log("StartOS running in a VM (VirtualBox)", 4, 0);
         }
     }
-    log("ATA: Initialization complete. Found %i drive%s.", 4, 0, found_drives, found_drives == 1 ? "" : "s");
+    log("[ATA] Initialization complete. Found %i drive%s.", 4, 0, found_drives, found_drives == 1 ? "" : "s");
     return ATA_SUCCESS;
 }
 

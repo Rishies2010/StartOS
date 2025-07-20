@@ -19,12 +19,13 @@ void log(const char* fmt, int level, int visibility, ...) {
     if (!fmt) return;
     const char* loglevel;
     int font = current_font;
+    setfont(1);
     switch (level) {
-        case 1: loglevel = "-[INFO] - ";  setcolor(makecolor(150, 150, 150)); setfont(3); break;
+        case 1: loglevel = "-[INFO] - ";  setcolor(makecolor(150, 150, 150)); break;
         case 2: loglevel = "-[WARN] - ";  setcolor(makecolor(255, 90, 0));    break;
-        case 3: loglevel = "-[ERROR] - "; setcolor(makecolor(255, 50, 50)); setfont(1); if(!debug)sound_err(); break;
+        case 3: loglevel = "-[ERROR] - "; setcolor(makecolor(255, 50, 50)); if(!debug)sound_err(); break;
         case 4: loglevel = "-[PASS] - ";  setcolor(makecolor(50, 255, 50));   break;
-        default:loglevel = "-[LOGERROR] - "; setcolor(makecolor(255, 50, 50));  setfont(1); break;
+        default:loglevel = "-[LOGERROR] - "; setcolor(makecolor(255, 50, 50));  break;
     }
     va_list args;
     va_start(args, visibility);

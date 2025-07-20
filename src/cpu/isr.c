@@ -1,10 +1,6 @@
-/**
- * Interrupt service routine handlers
- */
-
 #include "isr.h"
 #include "idt.h"
-#include "../drv/pic.h"
+#include "../drv/local_apic.h"
 #include "../libk/ports.h"
 #include "../libk/string.h"
 #include "../libk/debug/log.h"
@@ -15,7 +11,7 @@ isr_handler_t interrupt_handlers[256];
 void register_interrupt_handler(uint8_t interrupt, isr_handler_t handler, const char* handler_name)
 {
     interrupt_handlers[interrupt] = handler;
-    log("New Interrupt Handler Registered : %s.", 1, 0, handler_name);
+    log("[ISR] New Interrupt Handler Registered : %s.", 1, 0, handler_name);
 }
 
 void isr_handler(registers_t* regs)
@@ -40,7 +36,6 @@ void isr_handler(registers_t* regs)
             log("RIP: 0x%lx (instruction pointer)", 3, 1, regs->rip);
             log("CS: 0x%lx, RFLAGS: 0x%lx", 3, 1, regs->cs, regs->rflags);
             
-            // Try to read the bad instruction bytes
             uint8_t* bad_instr = (uint8_t*)regs->rip;
             log("Instruction bytes: %02x %02x %02x %02x", 3, 1,
                 bad_instr[0], bad_instr[1], bad_instr[2], bad_instr[3]);
@@ -105,24 +100,20 @@ void isr_handler(registers_t* regs)
             break;
     }
 
-    // Call registered handler if exists
     if(interrupt_handlers[regs->int_no]) {
         interrupt_handlers[regs->int_no](*regs);
     } else {
-        log("Unhandled ISR. Interrupt: %i, Error Code: %d.", 3, 1, regs->int_no, regs->err_code);
+        log("[ISR] Unhandled ISR. Interrupt: %i, Error Code: %d.", 3, 1, regs->int_no, regs->err_code);
     }
 }
 
 void irq_handler(registers_t* regs)
 {
-    if(regs->int_no >= 40) {
-        outportb(SLAVE_COMMAND, PIC_RESET);
-    }
-    outportb(MASTER_COMMAND, PIC_RESET);
+    LocalApicSendEOI();
+    
     if(interrupt_handlers[regs->int_no]) {
         interrupt_handlers[regs->int_no](*regs);
     } else {
-        if(regs->int_no == 33) return;
-        log("Unhandled IRQ: %d", 3, 1, regs->int_no);
+        log("[IRQ] Unhandled IRQ: %d", 3, 1, regs->int_no);
     }
 }

@@ -36,7 +36,7 @@ void vga_init(void){
     current_font = 2;
     max_rows = framebuffer_height / CHAR_HEIGHT;
     max_cols = framebuffer_width / CHAR_WIDTH;
-    log("\n-[PASS] - Framebuffer found and initialized.\n        - Height : %i.\n        - Width : %i.\n        - Bits Per Pixel : %i.\n        - Pitch : %i.", 4, 0, framebuffer_height, framebuffer_width, framebuffer_bpp, framebuffer_pitch);
+    log("\n-[PASS] - [VGA] Framebuffer found and initialized.\n        - Height : %i.\n        - Width : %i.\n        - Bits Per Pixel : %i.\n        - Pitch : %i.", 4, 0, framebuffer_height, framebuffer_width, framebuffer_bpp, framebuffer_pitch);
 }
 
 void setfont(int fontnum){
@@ -67,7 +67,7 @@ void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
             break;
         }
         default:
-            log("Unsupported BPP.", 3, 1);
+            log("[VGA] Unsupported BPP.", 3, 1);
             break;
     }
 }

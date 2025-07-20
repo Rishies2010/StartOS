@@ -18,6 +18,5 @@ void rtc_initialize(void);
 uint32_t rtc_calculate_uptime(const rtc_time_t *start, const rtc_time_t *end);
 rtc_time_t rtc_boottime(void);
 void sleep(uint32_t time);
-uint32_t get_fattime(void);
 
 #endif

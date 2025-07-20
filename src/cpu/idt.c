@@ -110,7 +110,7 @@ void init_idt()
     idt_set_gate(47, (uint64_t)irq15, 0x08, 0x8E);  // Secondary ATA
 
     load_idt(&idt_ptr);
-    log("IDT Installed.", 4, 0);
+    log("[IDT] IDT Installed.", 4, 0);
 }
 
 static void idt_set_gate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags)

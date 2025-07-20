@@ -88,7 +88,7 @@ void init_gdt()
     // Load TSS
     __asm__ volatile("ltr %0" : : "r"((uint16_t)(5 * 8))); // TSS selector
     
-    log("GDT Installed.", 4, 0);
+    log("[GDT] GDT Installed.", 4, 0);
 }
 
 static void gdt_set_gate(int32_t num, uint64_t base, uint32_t limit, uint8_t access, uint8_t gran)

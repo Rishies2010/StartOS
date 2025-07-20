@@ -4,7 +4,6 @@
 
 // Kernel Includes
 
-#include "../libk/debug/debugshell.h"
 #include "../libk/debug/serial.h"
 #include "../libk/debug/log.h"
 #include "../libk/core/mem.h"
@@ -15,16 +14,18 @@
 #include "../cpu/idt.h"
 #include "../cpu/sse_fpu.h"
 #include "../cpu/isr.h"
-#include "../drv/pic.h"
-#include "../drv/pit.h"
+#include "../drv/apic_timer.h"
 #include "../drv/rtc.h"
 #include "../drv/vga.h"
-#include "../drv/apic.h"
+#include "../drv/local_apic.h"
+#include "../drv/ioapic.h"
+#include "../cpu/acpi/acpi.h"
 #include "../drv/speaker.h"
+#include "../drv/keyboard.h"
 #include "../drv/disk/ata.h"
 
 void pit_handler(){
-    send_eoi(IRQ0);
+    prints("[PIT] Handling Interrupt.");
 }
 
 void play_bootup_sequence() {
@@ -64,30 +65,24 @@ void _start(void){
     vga_init();
     init_gdt();
     init_idt();
+    AcpiInit();
+    LocalApicInit();
+    IoApicInit();
+    init_apic_timer(10);
     asm volatile("sti");
     enable_sse_and_fpu();
-    if(init_apic()) {
-        apic_timer_init(100);
-    } else {
-        log("APIC not available, falling back to PIT", 3, 1);
-        remap_pic();
-        init_pit(10);
-        register_interrupt_handler(IRQ0, pit_handler, "PIT Handler");}
     rtc_initialize();
+    init_keyboard();
     ata_init();
     prints("\n Welcome To StartOS !");
     #if debug
         prints(" (DEBUG Mode)\n\n");
-        log("\n        - DEBUG Mode\n", 1, 0);
     #else
         prints("\n\n");
     #endif
     #if !debug
         draw_startos_logo(-24, 5);
         play_bootup_sequence();
-    #endif
-    #if debug
-        shell_run();
     #endif
     for(;;);
 }
