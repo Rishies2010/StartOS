@@ -24,10 +24,6 @@
 #include "../drv/keyboard.h"
 #include "../drv/disk/ata.h"
 
-void pit_handler(){
-    prints("[PIT] Handling Interrupt.");
-}
-
 void play_bootup_sequence() {
     speaker_note(3, 0);  // C4
     for(volatile int i = 0; i < 8000000; i++);
@@ -69,18 +65,17 @@ void _start(void){
     LocalApicInit();
     IoApicInit();
     init_apic_timer(10);
-    asm volatile("sti");
     enable_sse_and_fpu();
     rtc_initialize();
+    IoApicSetEntry(g_ioApicAddr, 1, 33);
     init_keyboard();
     ata_init();
+    asm volatile("sti");
     prints("\n Welcome To StartOS !");
     #if debug
         prints(" (DEBUG Mode)\n\n");
     #else
         prints("\n\n");
-    #endif
-    #if !debug
         draw_startos_logo(-24, 5);
         play_bootup_sequence();
     #endif
