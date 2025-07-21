@@ -11,11 +11,12 @@
 #include <stdbool.h>
 
 static volatile struct limine_framebuffer_request framebuffer_request = {
-    .id = LIMINE_FRAMEBUFFER_REQUEST,
-    .revision = 0};
+    .id = { 0xc7b1dd30df4c8b88, 0x0a82e883a194f07b, 0x9d5827dcd881dd75, 0xa3148604f6fab11b },
+    .revision = 0
+};
 
 static struct limine_framebuffer *fb;
-static uint32_t *framebuffer_addr;
+static uint8_t *framebuffer_addr;
 static uint64_t framebuffer_width, framebuffer_height, framebuffer_pitch;
 static uint8_t framebuffer_bpp;
 static size_t terminal_row = 0;
@@ -23,67 +24,75 @@ static size_t terminal_column = 0;
 static uint32_t terminal_color = 0xFFFFFF;
 static const int CHAR_WIDTH = 8;
 static const int CHAR_HEIGHT = 16;
-int current_font = 0;
+int current_font = 2;
 static size_t max_rows, max_cols;
 
-void vga_init(void){
+void vga_init(void) {
+    if (!framebuffer_request.response || !framebuffer_request.response->framebuffer_count) {
+        log("[VGA] No framebuffer available", 3, 1);
+        return;
+    }
+    
     fb = framebuffer_request.response->framebuffers[0];
-    framebuffer_addr = (uint32_t *)fb->address;
+    framebuffer_addr = (uint8_t *)fb->address;
     framebuffer_width = fb->width;
     framebuffer_height = fb->height;
     framebuffer_pitch = fb->pitch;
     framebuffer_bpp = fb->bpp;
-    current_font = 2;
+    
+    if (framebuffer_bpp != 16 && framebuffer_bpp != 24 && framebuffer_bpp != 32) {
+        log("[VGA] Unsupported BPP: %i", 3, 1, framebuffer_bpp);
+        return;
+    }
+    
     max_rows = framebuffer_height / CHAR_HEIGHT;
     max_cols = framebuffer_width / CHAR_WIDTH;
-    log("\n-[PASS] - [VGA] Framebuffer found and initialized.\n        - Height : %i.\n        - Width : %i.\n        - Bits Per Pixel : %i.\n        - Pitch : %i.", 4, 0, framebuffer_height, framebuffer_width, framebuffer_bpp, framebuffer_pitch);
+    current_font = 2;
+    
+    log("[VGA] Framebuffer initialized: %ix%i, %i bpp", 4, 0, 
+        framebuffer_width, framebuffer_height, framebuffer_bpp);
 }
 
-void setfont(int fontnum){
-    current_font = fontnum;
-}
-
-void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
-    if (!framebuffer_addr || x >= framebuffer_width || y >= framebuffer_height) return;
-    uint8_t* fb = (uint8_t*)framebuffer_addr;
-    uint32_t offset = y * framebuffer_pitch + x * (framebuffer_bpp / 8);
-    switch (framebuffer_bpp) {
-        case 32: {
-            *(uint32_t*)(fb + offset) = color;
-            break;
-        }
-        case 24: {
-            fb[offset + 0] = color & 0xFF;
-            fb[offset + 1] = (color >> 8) & 0xFF;
-            fb[offset + 2] = (color >> 16) & 0xFF;
-            break;
-        }
-        case 16: {
-            uint8_t r = (color >> 16) & 0xFF;
-            uint8_t g = (color >> 8) & 0xFF;
-            uint8_t b = color & 0xFF;
-            uint16_t rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
-            *(uint16_t*)(fb + offset) = rgb565;
-            break;
-        }
-        default:
-            log("[VGA] Unsupported BPP.", 3, 1);
-            break;
+void setfont(int fontnum) {
+    if (fontnum >= 1 && fontnum <= 3) {
+        current_font = fontnum;
     }
 }
 
+void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
+    if (!framebuffer_addr || x >= framebuffer_width || y >= framebuffer_height) {
+        return;
+    }
+    
+    uint32_t offset = y * framebuffer_pitch + x * (framebuffer_bpp / 8);
+    
+    switch (framebuffer_bpp) {
+        case 32:
+            *(uint32_t*)(framebuffer_addr + offset) = color;
+            break;
+        case 24:
+            framebuffer_addr[offset] = color & 0xFF;
+            framebuffer_addr[offset + 1] = (color >> 8) & 0xFF;
+            framebuffer_addr[offset + 2] = (color >> 16) & 0xFF;
+            break;
+        case 16: {
+            uint16_t rgb565 = (((color >> 16) & 0xF8) << 8) | 
+                             (((color >> 8) & 0xFC) << 3) | 
+                             ((color & 0xF8) >> 3);
+            *(uint16_t*)(framebuffer_addr + offset) = rgb565;
+            break;
+        }
+    }
+}
 
 void scroll_up(void) {
-    uint32_t* fb = (uint32_t*)framebuffer_addr;
-    size_t pixels_per_row = framebuffer_pitch / 4;
-    size_t char_rows_to_move = max_rows - 1;
-    size_t pixels_to_move = char_rows_to_move * CHAR_HEIGHT * pixels_per_row;
+    if (!framebuffer_addr) return;
     
-    memmove(fb, fb + (CHAR_HEIGHT * pixels_per_row), pixels_to_move * sizeof(uint32_t));
+    size_t bytes_per_char_row = CHAR_HEIGHT * framebuffer_pitch;
+    size_t total_scroll_bytes = bytes_per_char_row * (max_rows - 1);
     
-    size_t last_row_start = (max_rows - 1) * CHAR_HEIGHT * pixels_per_row;
-    size_t last_row_pixels = CHAR_HEIGHT * pixels_per_row;
-    memset(fb + last_row_start, 0, last_row_pixels * sizeof(uint32_t));
+    memmove(framebuffer_addr, framebuffer_addr + bytes_per_char_row, total_scroll_bytes);
+    memset(framebuffer_addr + total_scroll_bytes, 0, bytes_per_char_row);
 }
 
 void setcolor(uint32_t color) {
@@ -91,7 +100,7 @@ void setcolor(uint32_t color) {
 }
 
 uint32_t makecolor(int r, int g, int b) {
-    return (r << 16) | (g << 8) | b;
+    return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
 }
 
 void newline(void) {
@@ -103,98 +112,83 @@ void newline(void) {
     }
 }
 
-void printc(char c) {
-    if (c == '\n') {
-        newline();
-        return;
+static void draw_char(char c, uint32_t x, uint32_t y) {
+    const uint8_t *font_data;
+    
+    switch (current_font) {
+        case 1: font_data = font1_8x16[(unsigned char)c]; break;
+        case 3: font_data = font3_8x16[(unsigned char)c]; break;
+        default: font_data = font2_8x16[(unsigned char)c]; break;
     }
     
-    if (c == '\r') {
-        terminal_column = 0;
-        return;
-    }
-
-    if(c=='\t'){
-        for(int i = 1; i <=4; i++)printc(' ');
-        return;
-    }
-    
-    if (c == '\b') {
-        if (terminal_column > 0) {
-            terminal_column--;
-            uint32_t start_x = terminal_column * CHAR_WIDTH;
-            uint32_t start_y = terminal_row * CHAR_HEIGHT;
-            
-            for (int row = 0; row < CHAR_HEIGHT; row++) {
-                for (int col = 0; col < CHAR_WIDTH; col++) {
-                    put_pixel(start_x + col, start_y + row, 0x000000);
-                }
-            }
+    for (int row = 0; row < CHAR_HEIGHT; row++) {
+        uint8_t font_row = font_data[row];
+        for (int col = 0; col < CHAR_WIDTH; col++) {
+            uint32_t color = (font_row & (0x80 >> col)) ? terminal_color : 0x000000;
+            put_pixel(x + col, y + row, color);
         }
-        return;
+    }
+}
+
+void printc(char c) {
+    switch (c) {
+        case '\n':
+            newline();
+            return;
+        case '\r':
+            terminal_column = 0;
+            return;
+        case '\t':
+            for (int i = 0; i < 4; i++) printc(' ');
+            return;
+        case '\b':
+            if (terminal_column > 0) {
+                terminal_column--;
+                draw_char(' ', terminal_column * CHAR_WIDTH, terminal_row * CHAR_HEIGHT);
+            }
+            return;
     }
     
     if (terminal_column >= max_cols) {
         newline();
     }
     
-    uint32_t start_x = terminal_column * CHAR_WIDTH;
-    uint32_t start_y = terminal_row * CHAR_HEIGHT;
-    
-    for (int row = 0; row < CHAR_HEIGHT; row++) {
-        uint8_t font_row;
-        switch (current_font){
-            case 1:
-                font_row = font1_8x16[(unsigned char)c][row];break;
-            case 2:
-                font_row = font2_8x16[(unsigned char)c][row];break;
-            case 3:
-                font_row = font3_8x16[(unsigned char)c][row];break;
-            default:
-                font_row = font2_8x16[(unsigned char)c][row];break;}
-        for (int col = 0; col < CHAR_WIDTH; col++) {
-            if (font_row & (0x80 >> col)) {
-                put_pixel(start_x + col, start_y + row, terminal_color);
-            } else {
-                put_pixel(start_x + col, start_y + row, 0x000000);
-            }
-        }
-    }
-    
+    draw_char(c, terminal_column * CHAR_WIDTH, terminal_row * CHAR_HEIGHT);
     terminal_column++;
 }
 
 void prints(const char* data, ...) {
+    if (!data) return;
+    
     va_list args;
     va_start(args, data);
-    char temp[strlen(data) + 1];
-    unsigned long len = vsnprintf(temp, sizeof(temp), data, args);
-    va_end(args);
-    if (len < 0) return;
-    if (len < sizeof(temp)) {
-        for (unsigned long i = 0; i < len; i++) {
-            printc(temp[i]);
-        }
-    } else {
-        char* buffer = (char*)kmalloc(len + 1);
-        if (!buffer) return;
-        va_start(args, data);
-        vsnprintf(buffer, len + 1, data, args);
+    
+    size_t len = strlen(data);
+    size_t buffer_size = len * 2 + 256;
+    char *buffer = (char*)kmalloc(buffer_size);
+    
+    if (!buffer) {
         va_end(args);
-        for (unsigned long i = 0; i < len; i++) {
+        return;
+    }
+    
+    int result = vsnprintf(buffer, buffer_size, data, args);
+    va_end(args);
+    
+    if (result > 0) {
+        for (int i = 0; i < result && buffer[i]; i++) {
             printc(buffer[i]);
         }
-        kfree(buffer);
     }
+    
+    kfree(buffer);
 }
 
 void clr(void) {
     if (!framebuffer_addr) return;
-    uint32_t* fb = (uint32_t*)framebuffer_addr;
-    size_t total_pixels = (framebuffer_height * framebuffer_pitch) / 4;
-    for (size_t i = 0; i < total_pixels; i++) {
-        fb[i] = 0x000000;
-    }
+    
+    size_t total_bytes = framebuffer_height * framebuffer_pitch;
+    memset(framebuffer_addr, 0, total_bytes);
     terminal_row = 0;
     terminal_column = 0;
 }
@@ -204,41 +198,39 @@ void print_uint(uint32_t num) {
         printc('0');
         return;
     }
-    uint32_t temp = num;
-    int digits = 0;
-    while (temp > 0) {
-        digits++;
-        temp /= 10;
-    }
-    char buffer[11];
-    buffer[digits] = '\0';
-    for (int i = digits - 1; i >= 0; i--) {
-        buffer[i] = (num % 10) + '0';
+    
+    char buffer[12];
+    int pos = 0;
+    
+    while (num > 0) {
+        buffer[pos++] = (num % 10) + '0';
         num /= 10;
     }
-    prints(buffer);
+    
+    for (int i = pos - 1; i >= 0; i--) {
+        printc(buffer[i]);
+    }
 }
 
 void print_hex(uint32_t num) {
+    prints("0x");
     if (num == 0) {
-        prints("0x0");
+        printc('0');
         return;
     }
-    prints("0x");
-    int digits = 0;
-    uint32_t temp = num;
-    while (temp > 0) {
-        digits++;
-        temp >>= 4;
-    }
+    
     char buffer[9];
-    buffer[digits] = '\0';
+    int pos = 0;
     const char hex_chars[] = "0123456789ABCDEF";
-    for (int i = digits - 1; i >= 0; i--) {
-        buffer[i] = hex_chars[num & 0xF];
+    
+    while (num > 0) {
+        buffer[pos++] = hex_chars[num & 0xF];
         num >>= 4;
     }
-    prints(buffer);
+    
+    for (int i = pos - 1; i >= 0; i--) {
+        printc(buffer[i]);
+    }
 }
 
 void print_float(float num) {
@@ -246,10 +238,12 @@ void print_float(float num) {
         printc('-');
         num = -num;
     }
+    
     uint32_t integer_part = (uint32_t)num;
-    float fractional_part = num - (float)integer_part;
     print_uint(integer_part);
     printc('.');
+    
+    float fractional_part = num - (float)integer_part;
     for (int i = 0; i < 3; i++) {
         fractional_part *= 10;
         int digit = (int)fractional_part;

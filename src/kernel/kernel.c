@@ -67,10 +67,10 @@ void _start(void){
     init_apic_timer(10);
     enable_sse_and_fpu();
     rtc_initialize();
-    IoApicSetEntry(g_ioApicAddr, 1, 33);
     init_keyboard();
     ata_init();
-    asm volatile("sti");
+    IoApicSetEntry(g_ioApicAddr, 0, 0x20);
+    IoApicSetEntry(g_ioApicAddr, 1, 0x21);
     prints("\n Welcome To StartOS !");
     #if debug
         prints(" (DEBUG Mode)\n\n");
@@ -79,5 +79,6 @@ void _start(void){
         draw_startos_logo(-24, 5);
         play_bootup_sequence();
     #endif
+    asm volatile("sti");
     for(;;);
 }

@@ -31,6 +31,7 @@ typedef struct AcpiHeader
 } __attribute__((__packed__)) AcpiHeader;
 
 // ------------------------------------------------------------------------------------------------
+
 typedef struct AcpiFadt
 {
     AcpiHeader header;
@@ -42,8 +43,56 @@ typedef struct AcpiFadt
     uint32_t smiCommandPort;
     uint8_t acpiEnable;
     uint8_t acpiDisable;
-    // TODO - fill in rest of data
+    uint8_t s4BiosReq;
+    uint8_t pStateCnt;
+    uint32_t pm1aEventBlk;
+    uint32_t pm1bEventBlk;
+    uint32_t pm1aControlBlk;
+    uint32_t pm1bControlBlk;
+    uint32_t pm2ControlBlk;
+    uint32_t pmTimerBlk;
+    uint32_t gpe0Blk;
+    uint32_t gpe1Blk;
+    uint8_t pm1EventLength;
+    uint8_t pm1ControlLength;
+    uint8_t pm2ControlLength;
+    uint8_t pmTimerLength;
+    uint8_t gpe0BlkLength;
+    uint8_t gpe1BlkLength;
+    uint8_t gpe1Base;
+    uint8_t cStateControl;
+    uint16_t worstC2Latency;
+    uint16_t worstC3Latency;
+    uint16_t flushSize;
+    uint16_t flushStride;
+    uint8_t dutyOffset;
+    uint8_t dutyWidth;
+    uint8_t dayAlrm;
+    uint8_t monAlrm;
+    uint8_t century;
+    uint16_t bootArchFlags;
+    uint8_t reserved2;
+    uint32_t flags;
+    uint8_t resetReg[12];
+    uint8_t resetValue;
+    uint16_t armBootArchFlags;
+    uint8_t fadtMinorVersion;
+    uint64_t xFirmwareControl;
+    uint64_t xDsdt;
+    uint8_t xPm1aEventBlk[12];
+    uint8_t xPm1bEventBlk[12];
+    uint8_t xPm1aControlBlk[12];
+    uint8_t xPm1bControlBlk[12];
+    uint8_t xPm2ControlBlk[12];
+    uint8_t xPmTimerBlk[12];
+    uint8_t xGpe0Blk[12];
+    uint8_t xGpe1Blk[12];
+    uint8_t sleepControlReg[12];
+    uint8_t sleepStatusReg[12];
+    uint64_t hypervisorVendorId;
 } __attribute__((__packed__)) AcpiFadt;
+
+static AcpiFadt *s_fadt;
 
 // ------------------------------------------------------------------------------------------------
 typedef struct AcpiMadt
@@ -98,20 +147,124 @@ typedef struct ApicInterruptOverride
 static AcpiMadt *s_madt;
 
 // ------------------------------------------------------------------------------------------------
+
+static uint16_t s_slp_typa = 0;
+static uint16_t s_slp_typb = 0;
+static bool s_s5_found = false;
+
+static bool AcpiFindS5(uint8_t *dsdt_addr, uint32_t dsdt_length)
+{
+    uint8_t *dsdt = dsdt_addr;
+    uint32_t *signature = (uint32_t*)dsdt;
+    
+    if (*signature != 0x54445344) return false;
+    
+    uint8_t *end = dsdt + dsdt_length;
+    uint8_t *ptr = dsdt + sizeof(AcpiHeader);
+    
+    while (ptr < end - 4) {
+        if (ptr[0] == '_' && ptr[1] == 'S' && ptr[2] == '5' && ptr[3] == '_') {
+            ptr += 4;
+            
+            if (*ptr == 0x12) {
+                ptr++;
+                uint8_t pkg_length = *ptr++;
+                if (pkg_length >= 4) {
+                    ptr++;
+                    if (*ptr == 0x0A) {
+                        ptr++;
+                        s_slp_typa = *ptr++;
+                    }
+                    if (*ptr == 0x0A) {
+                        ptr++;
+                        s_slp_typb = *ptr++;
+                    }
+                    s_s5_found = true;
+                    return true;
+                }
+            }
+        }
+        ptr++;
+    }
+    return false;
+}
+
 static void AcpiParseFacp(AcpiFadt *facp)
 {
+    s_fadt = facp;
+    
+    log("[AcpiParseFacp] PM1A Control Block = 0x%08x", 1, 0, facp->pm1aControlBlk);
+    log("[AcpiParseFacp] PM1B Control Block = 0x%08x", 1, 0, facp->pm1bControlBlk);
+    log("[AcpiParseFacp] Reset Register Address = 0x%02x%02x%02x%02x", 1, 0, 
+        facp->resetReg[8], facp->resetReg[9], facp->resetReg[10], facp->resetReg[11]);
+    log("[AcpiParseFacp] Reset Value = 0x%02x", 1, 0, facp->resetValue);
+    log("[AcpiParseFacp] Flags = 0x%08x", 1, 0, facp->flags);
+    log("[AcpiParseFacp] DSDT = 0x%08x", 1, 0, facp->dsdt);
+
+    if (facp->dsdt) {
+        AcpiHeader *dsdt_header = (AcpiHeader*)(uintptr_t)facp->dsdt;
+        AcpiFindS5((uint8_t*)dsdt_header, dsdt_header->length);
+        if (s_s5_found) {
+            log("[AcpiParseFacp] Found _S5_: SLP_TYPa=0x%02x SLP_TYPb=0x%02x", 1, 0, s_slp_typa, s_slp_typb);
+        }
+    }
+
     if (facp->smiCommandPort)
     {
-        //log("Enabling ACPI", 1, 0);
-        //IoWrite8(facp->smiCommandPort, facp->acpiEnable);
-
-        // TODO - wait for SCI_EN bit
+        log("[AcpiParseFacp] Enabling ACPI", 1, 0);
+        asm volatile("outb %0, %1" : : "a"((uint8_t)facp->acpiEnable), "Nd"((uint16_t)facp->smiCommandPort));
+        
+        uint16_t status;
+        do {
+            asm volatile("inw %1, %0" : "=a"(status) : "Nd"((uint16_t)facp->pm1aControlBlk));
+        } while (!(status & 0x0001));
     }
     else
     {
-        log("[AcpiParseFacp] ACPI already enabled.", 1, 0);
-        log("[AcpiParseFacp] WIP Function Called.", 2, 1);
+        log("[AcpiParseFacp] ACPI already enabled", 1, 0);
+    }
+}
 
+void AcpiShutdown()
+{
+    log("Should I shutdown? Maybe not? Well, I'll try.", 1, 0);
+if (!s_fadt || !s_s5_found){log("Nah, either FADT Table ain't there or S5 ain't found.", 1, 0); return;}
+    
+    uint16_t pm1a_cnt = s_fadt->pm1aControlBlk;
+    uint16_t pm1b_cnt = s_fadt->pm1bControlBlk;
+    
+    uint16_t slp_typa = (s_slp_typa << 10);
+    uint16_t slp_typb = (s_slp_typb << 10);
+    uint16_t slp_en = (1 << 13);
+    
+    asm volatile("outw %0, %1" : : "a"((uint16_t)(slp_typa | slp_en)), "Nd"(pm1a_cnt));
+    if (pm1b_cnt != 0) {
+        asm volatile("outw %0, %1" : : "a"((uint16_t)(slp_typb | slp_en)), "Nd"(pm1b_cnt));
+    }
+    log("Nah... I failed to do the shutdown bro, but don't worry, I'm going to an eternal sleep.", 3, 0);
+    for (;;) {
+        asm volatile("hlt");
+    }
+}
+
+void AcpiReboot()
+{
+    if (!s_fadt) return;
+    
+    if (s_fadt->resetReg[0] != 0) {
+        uint8_t address_space = s_fadt->resetReg[0];
+        uint32_t address = *(uint32_t*)&s_fadt->resetReg[8];
+        uint8_t value = s_fadt->resetValue;
+        
+        if (address_space == 1) {
+            asm volatile("outb %0, %1" : : "a"(value), "Nd"((uint16_t)address));
+        }
+    } else {
+        asm volatile("outb %0, %1" : : "a"((uint8_t)0xFE), "Nd"((uint16_t)0x64));
+    }
+    
+    for (;;) {
+        asm volatile("hlt");
     }
 }
 
