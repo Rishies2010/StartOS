@@ -8,6 +8,7 @@
 #include "../libk/gfx/font1_8x16.h"
 #include "../libk/gfx/font2_8x16.h"
 #include "../libk/gfx/font3_8x16.h"
+#include "../libk/gfx/startlogo.h"
 #include <stdbool.h>
 
 static volatile struct limine_framebuffer_request framebuffer_request = {
@@ -17,7 +18,7 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
 
 static struct limine_framebuffer *fb;
 static uint8_t *framebuffer_addr;
-static uint64_t framebuffer_width, framebuffer_height, framebuffer_pitch;
+uint64_t framebuffer_width, framebuffer_height, framebuffer_pitch;
 static uint8_t framebuffer_bpp;
 static size_t terminal_row = 0;
 static size_t terminal_column = 0;
@@ -85,6 +86,22 @@ void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
     }
 }
 
+void draw_startlogo(uint32_t x_offset, uint32_t y_offset) {
+    unsigned int x, y;
+    const char *data = header_data;
+    unsigned char pixel[3];
+    for (y = 0; y < height; y++) {
+        for (x = 0; x < width; x++) {
+            HEADER_PIXEL(data, pixel);
+            uint8_t r = 255 - pixel[0];
+            uint8_t g = 255 - pixel[1];
+            uint8_t b = 255 - pixel[2];
+            uint32_t color = makecolor(r, g, b);
+            put_pixel(x + x_offset, y + y_offset, color);
+        }
+    }
+}
+
 void scroll_up(void) {
     if (!framebuffer_addr) return;
     
@@ -93,6 +110,7 @@ void scroll_up(void) {
     
     memmove(framebuffer_addr, framebuffer_addr + bytes_per_char_row, total_scroll_bytes);
     memset(framebuffer_addr + total_scroll_bytes, 0, bytes_per_char_row);
+    if(!debug)draw_startlogo(framebuffer_width - 186, -16);
 }
 
 void setcolor(uint32_t color) {

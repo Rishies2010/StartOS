@@ -95,7 +95,7 @@ static void ata_get_drive_name(uint8_t drive, char *name_buffer)
     }
 
     char *name = (char *)&identify_buffer[27];
-    int name_len = 0;
+    int name_len = 0;  
 
     for (int i = 0; i < 40; i += 2)
     {

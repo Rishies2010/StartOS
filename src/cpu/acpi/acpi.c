@@ -227,45 +227,42 @@ static void AcpiParseFacp(AcpiFadt *facp)
 
 void AcpiShutdown()
 {
-    log("Should I shutdown? Maybe not? Well, I'll try.", 1, 0);
-if (!s_fadt || !s_s5_found){log("Nah, either FADT Table ain't there or S5 ain't found.", 1, 0); return;}
+    log("[ACPI] Shutting down...", 2, 1);
+    if (!s_fadt || !s_s5_found) {
+        asm volatile("outb %0, %1" : : "a"((uint8_t)0xFE), "Nd"((uint16_t)0x64));
+        asm volatile("cli; hlt" : : : "memory");
+        return;
+    }
     
     uint16_t pm1a_cnt = s_fadt->pm1aControlBlk;
     uint16_t pm1b_cnt = s_fadt->pm1bControlBlk;
     
-    uint16_t slp_typa = (s_slp_typa << 10);
-    uint16_t slp_typb = (s_slp_typb << 10);
-    uint16_t slp_en = (1 << 13);
-    
-    asm volatile("outw %0, %1" : : "a"((uint16_t)(slp_typa | slp_en)), "Nd"(pm1a_cnt));
-    if (pm1b_cnt != 0) {
-        asm volatile("outw %0, %1" : : "a"((uint16_t)(slp_typb | slp_en)), "Nd"(pm1b_cnt));
-    }
-    log("Nah... I failed to do the shutdown bro, but don't worry, I'm going to an eternal sleep.", 3, 0);
-    for (;;) {
-        asm volatile("hlt");
-    }
-}
-
-void AcpiReboot()
-{
-    if (!s_fadt) return;
-    
-    if (s_fadt->resetReg[0] != 0) {
-        uint8_t address_space = s_fadt->resetReg[0];
-        uint32_t address = *(uint32_t*)&s_fadt->resetReg[8];
-        uint8_t value = s_fadt->resetValue;
-        
-        if (address_space == 1) {
-            asm volatile("outb %0, %1" : : "a"(value), "Nd"((uint16_t)address));
-        }
-    } else {
+    if (pm1a_cnt == 0) {
         asm volatile("outb %0, %1" : : "a"((uint8_t)0xFE), "Nd"((uint16_t)0x64));
+        asm volatile("cli; hlt" : : : "memory");
+        return;
     }
     
-    for (;;) {
-        asm volatile("hlt");
+    uint16_t pm1a_status;
+    asm volatile("inw %1, %0" : "=a"(pm1a_status) : "Nd"(pm1a_cnt));
+    pm1a_status &= ~(0x7 << 10);
+    pm1a_status |= (s_slp_typa << 10) | (1 << 13);
+    
+    asm volatile("cli" : : : "memory");
+    asm volatile("outw %0, %1" : : "a"(pm1a_status), "Nd"(pm1a_cnt));
+    
+    if (pm1b_cnt != 0) {
+        uint16_t pm1b_status;
+        asm volatile("inw %1, %0" : "=a"(pm1b_status) : "Nd"(pm1b_cnt));
+        pm1b_status &= ~(0x7 << 10);
+        pm1b_status |= (s_slp_typb << 10) | (1 << 13);
+        asm volatile("outw %0, %1" : : "a"(pm1b_status), "Nd"(pm1b_cnt));
     }
+    
+    for (volatile int i = 0; i < 1000000; i++);
+    
+    asm volatile("outb %0, %1" : : "a"((uint8_t)0xFE), "Nd"((uint16_t)0x64));
+    log("[ACPI] Failed to shutdown. Aborting.", 3, 1);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -425,9 +422,6 @@ static bool AcpiParseRsdp(uint8_t *p)
 // ------------------------------------------------------------------------------------------------
 void AcpiInit()
 {
-    // TODO - Search Extended BIOS Area
-
-    // Search main BIOS area below 1MB
     uint8_t *p = (uint8_t *)0x000e0000;
     uint8_t *end = (uint8_t *)0x000fffff;
 
@@ -435,7 +429,7 @@ void AcpiInit()
     {
         uint64_t signature = *(uint64_t *)p;
 
-        if (signature == 0x2052545020445352) // 'RSD PTR '
+        if (signature == 0x2052545020445352)
         {
             if (AcpiParseRsdp(p))
             {

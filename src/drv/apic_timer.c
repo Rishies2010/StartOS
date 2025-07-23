@@ -9,12 +9,10 @@
 #define APIC_TIMER_CUR 0x390
 #define APIC_TIMER_DIV 0x3E0
 
-static uint32_t ticks = 0;
 static uint32_t apic_freq = 0;
 
 void apic_timer_handler() {
     LocalApicSendEOI();
-    ticks++;
 }
 
 void init_apic_timer(uint32_t freq) {
@@ -55,15 +53,4 @@ uint32_t get_apic_timer_frequency() {
     apic[APIC_TIMER_DIV / 4] = old_div;
     
     return (start - end) * 320;
-}
-
-uint32_t get_timer_ticks() {
-    return ticks;
-}
-
-void sleep_ms(uint32_t ms) {
-    uint32_t start = ticks;
-    while((ticks - start) < (ms / 10)) {
-        __asm__ volatile("hlt");
-    }
 }

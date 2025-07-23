@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 extern int current_font;
+extern uint64_t framebuffer_width, framebuffer_height;
 
 void vga_init(void);
 void printc(char c);
@@ -15,5 +16,6 @@ void put_pixel(uint32_t x, uint32_t y, uint32_t color);
 void setfont(int fontnum);
 void setcolor(uint32_t color);
 uint32_t makecolor(int r, int g, int b);
+void draw_startlogo(uint32_t x_offset, uint32_t y_offset);
 
 #endif
