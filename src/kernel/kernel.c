@@ -13,6 +13,7 @@
 #include "../cpu/idt.h"
 #include "../cpu/sse_fpu.h"
 #include "../cpu/isr.h"
+#include "../cpu/smp.h"
 #include "../cpu/id/cpuid.h"
 #include "../drv/apic_timer.h"
 #include "../drv/rtc.h"
@@ -54,6 +55,7 @@ void _start(void){
     enable_sse_and_fpu();
     detect_cpu_info(0);
     rtc_initialize();
+    init_smp();
     init_keyboard();
     ata_init();
     IoApicSetEntry(g_ioApicAddr, 0, 0x20);
