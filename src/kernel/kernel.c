@@ -45,6 +45,7 @@ void _start(void){
     serial_init();
     init_pmm();
     init_kernel_heap();
+    init_vmm();
     vga_init();
     init_gdt();
     init_idt();

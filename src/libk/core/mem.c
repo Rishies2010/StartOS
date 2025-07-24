@@ -21,6 +21,8 @@ typedef struct header {
 #define HEADER_SIZE sizeof(header_t)
 static header_t* heap_start = NULL;
 
+static page_table_t* kernel_pml4 = NULL;
+
 static volatile struct limine_memmap_request memmap_request = {
     .id = LIMINE_MEMMAP_REQUEST,
     .revision = 0
@@ -92,7 +94,7 @@ void init_pmm(void) {
         serial_write_string("-[ERROR] - PMM: Can't find space for bitmap!\n");
         return;
     }
-    pmm_bitmap = (uint8_t*)(bitmap_phys + 0xffff800000000000);
+    pmm_bitmap = (uint8_t*)(bitmap_phys + KERNEL_VIRT_OFFSET);
     for (uint64_t i = 0; i < bitmap_size; i++) {
         pmm_bitmap[i] = 0xFF;
     }
@@ -178,7 +180,7 @@ void init_kernel_heap(void) {
     if (!heap_phys) {
         log("Failed to allocate heap pages!", 3, 1);
         return;}    
-    uint64_t heap_virt = heap_phys + 0xffff800000000000;
+    uint64_t heap_virt = heap_phys + KERNEL_VIRT_OFFSET;
     heap_start = (header_t*)heap_virt;
     heap_start->size = (heap_pages * PAGE_SIZE) - HEADER_SIZE;
     heap_start->free = 1;
@@ -259,4 +261,132 @@ void* krealloc(void* ptr, size_t size) {
         kfree(ptr);
     }
     return new_mem;
+}
+
+static uint64_t get_pml4_index(uint64_t vaddr) {
+    return (vaddr >> 39) & 0x1FF;
+}
+
+static uint64_t get_pdpt_index(uint64_t vaddr) {
+    return (vaddr >> 30) & 0x1FF;
+}
+
+static uint64_t get_pd_index(uint64_t vaddr) {
+    return (vaddr >> 21) & 0x1FF;
+}
+
+static uint64_t get_pt_index(uint64_t vaddr) {
+    return (vaddr >> 12) & 0x1FF;
+}
+
+page_table_t* create_page_directory(void) {
+    uint64_t phys = alloc_page();
+    if (!phys) return NULL;
+    
+    page_table_t* pml4 = (page_table_t*)(phys + KERNEL_VIRT_OFFSET);
+    memset(pml4, 0, PAGE_SIZE);
+    return pml4;
+}
+
+void map_page(page_table_t* pml4, uint64_t virt, uint64_t phys, uint64_t flags) {
+    uint64_t pml4_idx = get_pml4_index(virt);
+    uint64_t pdpt_idx = get_pdpt_index(virt);
+    uint64_t pd_idx = get_pd_index(virt);
+    uint64_t pt_idx = get_pt_index(virt);
+    
+    if (!(pml4->entries[pml4_idx] & PAGE_PRESENT)) {
+        uint64_t pdpt_phys = alloc_page();
+        if (!pdpt_phys) return;
+        page_table_t* pdpt = (page_table_t*)(pdpt_phys + KERNEL_VIRT_OFFSET);
+        memset(pdpt, 0, PAGE_SIZE);
+        pml4->entries[pml4_idx] = pdpt_phys | PAGE_PRESENT | PAGE_WRITABLE | (flags & PAGE_USER);
+    }
+    
+    page_table_t* pdpt = (page_table_t*)((pml4->entries[pml4_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
+    
+    if (!(pdpt->entries[pdpt_idx] & PAGE_PRESENT)) {
+        uint64_t pd_phys = alloc_page();
+        if (!pd_phys) return;
+        page_table_t* pd = (page_table_t*)(pd_phys + KERNEL_VIRT_OFFSET);
+        memset(pd, 0, PAGE_SIZE);
+        pdpt->entries[pdpt_idx] = pd_phys | PAGE_PRESENT | PAGE_WRITABLE | (flags & PAGE_USER);
+    }
+    
+    page_table_t* pd = (page_table_t*)((pdpt->entries[pdpt_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
+    
+    if (!(pd->entries[pd_idx] & PAGE_PRESENT)) {
+        uint64_t pt_phys = alloc_page();
+        if (!pt_phys) return;
+        page_table_t* pt = (page_table_t*)(pt_phys + KERNEL_VIRT_OFFSET);
+        memset(pt, 0, PAGE_SIZE);
+        pd->entries[pd_idx] = pt_phys | PAGE_PRESENT | PAGE_WRITABLE | (flags & PAGE_USER);
+    }
+    
+    page_table_t* pt = (page_table_t*)((pd->entries[pd_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
+    pt->entries[pt_idx] = phys | flags;
+}
+
+void switch_page_directory(page_table_t* pml4) {
+    uint64_t phys = (uint64_t)pml4 - KERNEL_VIRT_OFFSET;
+    __asm__ volatile("mov %0, %%cr3" : : "r"(phys) : "memory");
+}
+
+uint64_t virt_to_phys(page_table_t* pml4, uint64_t virt) {
+    uint64_t pml4_idx = get_pml4_index(virt);
+    uint64_t pdpt_idx = get_pdpt_index(virt);
+    uint64_t pd_idx = get_pd_index(virt);
+    uint64_t pt_idx = get_pt_index(virt);
+    
+    if (!(pml4->entries[pml4_idx] & PAGE_PRESENT)) return 0;
+    page_table_t* pdpt = (page_table_t*)((pml4->entries[pml4_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
+    
+    if (!(pdpt->entries[pdpt_idx] & PAGE_PRESENT)) return 0;
+    page_table_t* pd = (page_table_t*)((pdpt->entries[pdpt_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
+    
+    if (!(pd->entries[pd_idx] & PAGE_PRESENT)) return 0;
+    page_table_t* pt = (page_table_t*)((pd->entries[pd_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
+    
+    if (!(pt->entries[pt_idx] & PAGE_PRESENT)) return 0;
+    return (pt->entries[pt_idx] & 0xFFFFFFFFFFFFF000) + (virt & 0xFFF);
+}
+
+void unmap_page(page_table_t* pml4, uint64_t virt) {
+    uint64_t pml4_idx = get_pml4_index(virt);
+    uint64_t pdpt_idx = get_pdpt_index(virt);
+    uint64_t pd_idx = get_pd_index(virt);
+    uint64_t pt_idx = get_pt_index(virt);
+    
+    if (!(pml4->entries[pml4_idx] & PAGE_PRESENT)) return;
+    page_table_t* pdpt = (page_table_t*)((pml4->entries[pml4_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
+    
+    if (!(pdpt->entries[pdpt_idx] & PAGE_PRESENT)) return;
+    page_table_t* pd = (page_table_t*)((pdpt->entries[pdpt_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
+    
+    if (!(pd->entries[pd_idx] & PAGE_PRESENT)) return;
+    page_table_t* pt = (page_table_t*)((pd->entries[pd_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
+    
+    pt->entries[pt_idx] = 0;
+    __asm__ volatile("invlpg (%0)" : : "r"(virt) : "memory");
+}
+
+page_table_t* clone_page_directory(page_table_t* src) {
+    page_table_t* new_pml4 = create_page_directory();
+    if (!new_pml4) return NULL;
+    
+    for (int i = 256; i < 512; i++) {
+        new_pml4->entries[i] = src->entries[i];
+    }
+    
+    return new_pml4;
+}
+
+void init_vmm(void) {
+    uint64_t cr3;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
+    kernel_pml4 = (page_table_t*)(cr3 + KERNEL_VIRT_OFFSET);
+    log("VMM initialized.", 4, 0);
+}
+
+page_table_t* get_kernel_pml4(void) {
+    return kernel_pml4;
 }
