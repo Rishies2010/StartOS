@@ -142,8 +142,9 @@ static void draw_char(char c, uint32_t x, uint32_t y) {
     for (int row = 0; row < CHAR_HEIGHT; row++) {
         uint8_t font_row = font_data[row];
         for (int col = 0; col < CHAR_WIDTH; col++) {
-            uint32_t color = (font_row & (0x80 >> col)) ? terminal_color : 0x000000;
-            put_pixel(x + col, y + row, color);
+            // uint32_t color = (font_row & (0x80 >> col)) ? terminal_color : 0x000000;
+            if(font_row & (0x80 >> col))
+            put_pixel(x + col, y + row, terminal_color);
         }
     }
 }

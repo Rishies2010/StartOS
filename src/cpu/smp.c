@@ -10,31 +10,36 @@ void init_smp()
 {
     log("[SMP] Waking up all CPUs.", 1, 0);
 
-    g_activeCpuCount = 1;
-    int localId = LocalApicGetId();
-    for (int i = 0; i < g_acpiCpuCount; ++i)
-    {
-        int apicId = g_acpiCpuIds[i];
-        if (apicId != localId)
-        {
-            LocalApicSendInit(apicId);
-        }
-    }
-    sleep(10);
-    for (int i = 0; i < g_acpiCpuCount; ++i)
-    {
-        int apicId = g_acpiCpuIds[i];
-        if (apicId != localId)
-        {
-            LocalApicSendStartup(apicId, 0x8);
-        }
-    }
-    sleep(10);
-    while (g_activeCpuCount != g_acpiCpuCount)
-    {
-        log("[SMP] Waiting : %d.", 1, 0, g_activeCpuCount);
-        sleep(10);
-    }
+    // g_activeCpuCount = 1;
+    // int localId = LocalApicGetId();
+    // for (int i = 0; i < g_acpiCpuCount; ++i)
+    // {
+    //     int apicId = g_acpiCpuIds[i];
+    //     if (apicId != localId)
+    //     {
+    //         LocalApicSendInit(apicId);
+    //     }
+    // }
+    // sleep(10);
+    // for (int i = 0; i < g_acpiCpuCount; ++i)
+    // {
+    //     int apicId = g_acpiCpuIds[i];
+    //     if (apicId != localId)
+    //     {
+    //         LocalApicSendStartup(apicId, 0x8);
+    //     }
+    // }
+    // sleep(10);
+    // while (g_activeCpuCount != g_acpiCpuCount)
+    // {
+    //     log("[SMP] Waiting : %d.", 1, 0, g_activeCpuCount);
+    //     sleep(10);
+    // }
+
+    /**
+     * TODO: make this actual work. 
+     * works in QEMU, not VBox. Why ? cuz shit aint exist at 0x8000
+     */
 
     log("[SMP] All CPUs activated.", 4, 0);
 }

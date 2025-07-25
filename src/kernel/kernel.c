@@ -4,6 +4,7 @@
 
 // Kernel Includes
 
+#include "gfx.h"
 #include "../libk/debug/serial.h"
 #include "../libk/debug/log.h"
 #include "../libk/core/mem.h"
@@ -18,12 +19,59 @@
 #include "../drv/apic_timer.h"
 #include "../drv/rtc.h"
 #include "../drv/vga.h"
+#include "../drv/mouse.h"
 #include "../drv/local_apic.h"
 #include "../drv/ioapic.h"
 #include "../cpu/acpi/acpi.h"
 #include "../drv/speaker.h"
 #include "../drv/keyboard.h"
 #include "../drv/disk/ata.h"
+
+int cursor_old_x = 0;
+int cursor_old_y = 0;
+int outline = 0x202020;
+int fill = 0x808080;
+
+void draw_cursor() {
+    int size = 20;
+    for (int y = 0; y < size; y++) {
+        for (int x = 0; x < size - y; x++) {
+            put_pixel(cursor_old_x + x, cursor_old_y + y, 0x000000);
+        }
+    }
+    
+    int x = mouse_x();
+    int y = mouse_y();
+    uint8_t buttons = mouse_button();
+    int current_outline = outline;
+    int current_fill = fill;
+    
+    if (buttons & 0x01) current_fill = 0xFFFFFF;
+    if (buttons & 0x02) current_outline = 0xFFFFFF;
+    if (buttons & 0x04) current_fill = 0xFFFFFF;
+    
+    for (int py = 0; py < size; py++) {
+        for (int px = 0; px < size - py; px++) {
+            if (px == 0 || px == size - py - 1 || py == 0) {
+                put_pixel(x + px, y + py, current_outline);
+            } else {
+                put_pixel(x + px, y + py, current_fill);
+            }
+        }
+    }
+    cursor_old_x = x;
+    cursor_old_y = y;
+}
+
+void test_mouse(void) {
+    cursor_old_x = framebuffer_width / 2;
+    cursor_old_y = framebuffer_height / 2;
+    while (1) {
+        if (mouse_moved()) {
+            draw_cursor();
+        }
+    }
+}
 
 void play_bootup_sequence() {
     speaker_note(3, 0);  // C4
@@ -59,16 +107,18 @@ void _start(void){
     init_smp();
     init_keyboard();
     ata_init();
+    mouse_init();
     IoApicSetEntry(g_ioApicAddr, 0, 0x20);
     IoApicSetEntry(g_ioApicAddr, 1, 0x21);
-    prints("\n Welcome To StartOS !");
     #if debug
-        prints(" (DEBUG Mode)\n\n");
+        prints("\n  Welcome To StartOS ! (DEBUG Mode)\n\n");
     #else
-        prints("\n\n");
+        aa_rect(4, 4, 180, 40, 7, makecolor(0, 0, 0), makecolor(255 ,255, 255));
+        prints("\n  Welcome To StartOS !\n\n");
         draw_startlogo(framebuffer_width - 186, -16);
         play_bootup_sequence();
     #endif
     asm volatile("sti");
+    test_mouse();
     for(;;);
 }
