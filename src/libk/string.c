@@ -109,21 +109,23 @@ void* memcpy(void* dest, const void* src, size_t size) {
     return dest;
 }
 
-void* memmove(void* dest, const void* src, size_t size) {
+void* memmove(void* dest, const void* src, size_t n) {
+    if (__builtin_expect(dest == src || n == 0, 1))
+        return dest;
+
     unsigned char* d = (unsigned char*)dest;
     const unsigned char* s = (const unsigned char*)src;
-    
-    if (d < s) {
-        while (size--) {
+
+    if (d < s || d >= s + n) {
+        while (n--)
             *d++ = *s++;
-        }
     } else {
-        d += size;
-        s += size;
-        while (size--) {
+        d += n;
+        s += n;
+        while (n--)
             *--d = *--s;
-        }
     }
+
     return dest;
 }
 

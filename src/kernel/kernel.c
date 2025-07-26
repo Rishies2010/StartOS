@@ -106,10 +106,11 @@ void _start(void){
     rtc_initialize();
     init_smp();
     init_keyboard();
-    ata_init();
     mouse_init();
     IoApicSetEntry(g_ioApicAddr, 0, 0x20);
     IoApicSetEntry(g_ioApicAddr, 1, 0x21);
+    asm volatile("sti");
+    ata_init();
     #if debug
         prints("\n  Welcome To StartOS ! (DEBUG Mode)\n\n");
     #else
@@ -118,7 +119,6 @@ void _start(void){
         draw_startlogo(framebuffer_width - 186, -16);
         play_bootup_sequence();
     #endif
-    asm volatile("sti");
     test_mouse();
     for(;;);
 }

@@ -178,7 +178,7 @@ void printc(char c) {
 
 void prints(const char* data, ...) {
     if (!data) return;
-    
+    __asm__ __volatile__("cli");
     va_list args;
     va_start(args, data);
     
@@ -199,8 +199,8 @@ void prints(const char* data, ...) {
             printc(buffer[i]);
         }
     }
-    
     kfree(buffer);
+    __asm__ __volatile__("sti");
 }
 
 void clr(void) {

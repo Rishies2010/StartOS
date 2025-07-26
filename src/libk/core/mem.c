@@ -178,14 +178,14 @@ void init_kernel_heap(void) {
     uint64_t heap_pages = 2048;
     uint64_t heap_phys = alloc_pages(heap_pages);
     if (!heap_phys) {
-        log("Failed to allocate heap pages!", 3, 1);
+        serial_write_string("-[ERROR] - Failed to allocate heap pages!");
         return;}    
     uint64_t heap_virt = heap_phys + KERNEL_VIRT_OFFSET;
     heap_start = (header_t*)heap_virt;
     heap_start->size = (heap_pages * PAGE_SIZE) - HEADER_SIZE;
     heap_start->free = 1;
     heap_start->next = NULL;
-    log("Kernel heap initialized.", 4, 0);
+    serial_write_string("-[PASS] - Kernel heap initialized.");
 }
 
 void print_mem_info(int vis){
@@ -194,7 +194,7 @@ void print_mem_info(int vis){
 
 void* kmalloc(size_t size) {
     if (!heap_start) {
-        log("Heap not initialized!", 3, 1);
+        serial_write_string("-[ERROR] - Heap not initialized!");
         return NULL;
     }
     if (size == 0) {
@@ -219,7 +219,7 @@ void* kmalloc(size_t size) {
         }
         curr = curr->next;
     }
-    log("kmalloc: no suitable block found", 3, 1);
+    log("[KMALLOC] No suitable block found.", 3, 1);
     return NULL;
 }
 
@@ -384,7 +384,7 @@ void init_vmm(void) {
     uint64_t cr3;
     __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
     kernel_pml4 = (page_table_t*)(cr3 + KERNEL_VIRT_OFFSET);
-    log("VMM initialized.", 4, 0);
+    serial_write_string("-[PASS] - VMM initialized.");
 }
 
 page_table_t* get_kernel_pml4(void) {
