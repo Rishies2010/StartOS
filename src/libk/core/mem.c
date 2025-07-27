@@ -70,7 +70,7 @@ static uint64_t find_free_pages(size_t count) {
 void init_pmm(void) {
     struct limine_memmap_response *memmap = memmap_request.response;
     if (!memmap) {
-        serial_write_string("-[ERROR] - PMM: Failed to get memory map!\n");
+        serial_write_string("-[ERROR] - [MEM] PMM: Failed to get memory map!\n");
         return;
     }
     memory_base = UINT64_MAX;
@@ -94,7 +94,7 @@ void init_pmm(void) {
             break;
         }}    
     if (!bitmap_phys) {
-        serial_write_string("-[ERROR] - PMM: Can't find space for bitmap!\n");
+        serial_write_string("-[ERROR] - [MEM] PMM: Can't find space for bitmap!\n");
         return;
     }
     pmm_bitmap = (uint8_t*)(bitmap_phys + KERNEL_VIRT_OFFSET);
@@ -125,7 +125,7 @@ void init_pmm(void) {
             used_pages++;
         }
     }
-    serial_write_string("-[PASS] - PMM Initialized successfully\n");
+    serial_write_string("-[PASS] - [MEM] PMM Initialized successfully\n");
 }
 
 uint64_t alloc_page(void) {
@@ -182,14 +182,14 @@ void init_kernel_heap(void) {
     uint64_t heap_pages = 2048;
     uint64_t heap_phys = alloc_pages(heap_pages);
     if (!heap_phys) {
-        serial_write_string("-[ERROR] - Failed to allocate heap pages!");
+        serial_write_string("-[ERROR] - [MEM] Failed to allocate heap pages!\n");
         return;}    
     uint64_t heap_virt = heap_phys + KERNEL_VIRT_OFFSET;
     heap_start = (header_t*)heap_virt;
     heap_start->size = (heap_pages * PAGE_SIZE) - HEADER_SIZE;
     heap_start->free = 1;
     heap_start->next = NULL;
-    serial_write_string("-[PASS] - Kernel heap initialized.");
+    serial_write_string("-[PASS] - [MEM] Kernel heap initialized.\n");
 }
 
 void print_mem_info(int vis){
@@ -224,7 +224,7 @@ void* kmalloc(size_t size) {
         }
         curr = curr->next;
     }
-    serial_write_string("-[ERROR] - [KMALLOC] No suitable block found.");
+    serial_write_string("-[ERROR] - [MEM] No suitable block found.\n");
     spinlock_release(&heap_lock);
     return NULL;
 }
@@ -391,7 +391,7 @@ void init_vmm(void) {
     uint64_t cr3;
     __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
     kernel_pml4 = (page_table_t*)(cr3 + KERNEL_VIRT_OFFSET);
-    serial_write_string("-[PASS] - VMM initialized.");
+    serial_write_string("-[PASS] - [MEM] VMM initialized.\n");
 }
 
 page_table_t* get_kernel_pml4(void) {
