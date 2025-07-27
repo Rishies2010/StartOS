@@ -14,6 +14,7 @@
 #include "../cpu/idt.h"
 #include "../cpu/sse_fpu.h"
 #include "../cpu/isr.h"
+#include "../libk/spinlock.h"
 #include "../cpu/smp.h"
 #include "../cpu/id/cpuid.h"
 #include "../drv/apic_timer.h"
@@ -113,6 +114,7 @@ void _start(void){
     enable_sse_and_fpu();
     detect_cpu_info(0);
     rtc_initialize();
+    spinlock_init(&loglock);
     init_smp();
     ata_init();
     init_keyboard();

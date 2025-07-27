@@ -5,6 +5,8 @@
 #include "../libk/limine.h"
 #include "gdt.h"
 #include "idt.h"
+#include "id/core.h"
+
 
 #define STACK_SIZE 4096
 
@@ -22,7 +24,7 @@ void ap_entry(struct limine_smp_info *info) {
     LocalApicInit(info->lapic_id);
     asm volatile("mov %0, %%rsp" : : "r" (ap_stacks[info->processor_id] + STACK_SIZE) : "memory");
     __atomic_add_fetch(&g_activeCpuCount, 1, __ATOMIC_SEQ_CST);
-    asm volatile("sti");
+    ap_main();
     while(1);
 }
 
