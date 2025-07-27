@@ -32,7 +32,6 @@ $(KERNEL): $(OBJ)
 	@mkdir -p $(BUILD_DIR)
 	ld $(LDFLAGS) $(OBJ) -o $@
 
-
 $(ISO_IMAGE): $(KERNEL) $(LIMINE_BINARIES)
 	@mkdir -p $(ISO_DIR)/boot
 	cp $(KERNEL) $(ISO_DIR)/boot/
@@ -45,13 +44,13 @@ $(ISO_IMAGE): $(KERNEL) $(LIMINE_BINARIES)
 	$(LIMINE_DIR)/limine bios-install $(ISO_IMAGE)
 
 clean:
-	rm -rf $(OBJ) $(KERNEL) $(ISO_IMAGE) $(ISO_DIR) $(BUILD_DIR)
+	rm -rf $(OBJ) $(KERNEL) $(ISO_IMAGE) $(ISO_DIR) $(BUILD_DIR) src/cpu/ap.bin
 
 run:
 	virtualboxvm --startvm "StartOS" &
 
 qemu:
-	qemu-system-x86_64 -cdrom StartOS.iso -audiodev pa,id=snd0 -machine pcspk-audiodev=snd0 -m 64M -drive file=/run/media/rishies2010/Storage/VMs/StartOS/StartOS.vhd,if=ide,index=0 -boot d -serial mon:stdio -serial file:serial.log
+	qemu-system-x86_64 -cdrom StartOS.iso -audiodev pa,id=snd0 -machine pcspk-audiodev=snd0 -m 64M -drive file=/run/media/rishies2010/Storage/VMs/StartOS/StartOS.vhd,if=ide,index=0 -boot d -smp 2 -serial stdio
 
 stop:
 	VBoxManage controlvm "StartOS" poweroff
