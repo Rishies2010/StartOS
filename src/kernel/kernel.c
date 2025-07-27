@@ -47,7 +47,16 @@ void draw_cursor() {
     int current_fill = fill;
     
     if (buttons & 0x01) current_fill = 0xFFFFFF;
-    if (buttons & 0x02) current_outline = 0xFFFFFF;
+    if (buttons & 0x02) {
+        outportw(0x604, 0x2000);
+        outportw(0xB004, 0x2000);
+        outportw(0x4004, 0x3400);
+        outportb(0xB2, 0x0F);
+        outportw(0x8900, 0x2001);
+        outportw(0x8900, 0xFF00);
+        __asm__ __volatile__("cli");
+        __asm__ __volatile__("hlt");
+    }
     if (buttons & 0x04) current_fill = 0xFFFFFF;
     
     for (int py = 0; py < size; py++) {
