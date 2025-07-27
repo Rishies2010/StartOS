@@ -302,9 +302,9 @@ void init_keyboard(void) {
 
 char get_key(void) {
     char c = buffer_get_char();
-    if (c != 0) {
-        printc(c);
-    }
+    // if (c != 0) {
+    //     printc(c);
+    // }
     return c;
 }
 

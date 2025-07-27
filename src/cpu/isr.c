@@ -76,28 +76,17 @@ void isr_handler(registers_t* regs)
         case PAGE_FAULT:
             uint64_t cr2;
             __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
-            log("\n=== PAGE FAULT ===\n", 3, 1);
-            log("Faulting address: 0x%lx", 3, 1, cr2);
-            log("Error code: 0x%lx", 3, 1, regs->err_code);
-            
-            if(regs->err_code & 1) log("- Page protection violation", 3, 1);
-            else log("- Page not present", 3, 1);
-            
-            if(regs->err_code & 2) log("- Write operation", 3, 1);
-            else log("- Read operation", 3, 1);
-            
-            if(regs->err_code & 4) log("- User mode access", 3, 1);
-            else log("- Supervisor mode access", 3, 1);
-            
-            log("RIP: 0x%lx", 3, 1, regs->rip);
-            log("\n=== REGISTER DUMP ===\n", 3, 1);
-            log("RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx", 3, 1,
-                regs->rax, regs->rbx, regs->rcx, regs->rdx);
-            log("RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx", 3, 1,
-                regs->rsi, regs->rdi, regs->rbp, regs->userrsp);
-            log("RIP=0x%016lx RFLAGS=0x%016lx", 3, 1, regs->rip, regs->rflags);
-            for(;;)asm volatile("cli; hlt");
-            break;
+            log("=== PAGE FAULT ===\n         - Faulting address: 0x%lx\n         - Error code: 0x%lx\n         - %s\n         - %s\n         - %s\n         - RIP: 0x%lx\n         - \n         - === REGISTER DUMP ===\n         - \n         - RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx\n         - RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx\n         - RIP=0x%016lx RFLAGS=0x%016lx", 3, 1, 
+                cr2, regs->err_code,
+                (regs->err_code & 1) ? "- Page protection violation" : "- Page not present",
+                (regs->err_code & 2) ? "- Write operation" : "- Read operation", 
+                (regs->err_code & 4) ? "- User mode access" : "- Supervisor mode access",
+                regs->rip,
+                regs->rax, regs->rbx, regs->rcx, regs->rdx,
+                regs->rsi, regs->rdi, regs->rbp, regs->userrsp,
+                regs->rip, regs->rflags);
+                for(;;)asm volatile("cli; hlt");
+                break;
     }
 
     if(interrupt_handlers[regs->int_no]) {

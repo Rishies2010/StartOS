@@ -91,15 +91,6 @@ char* strrchr(const char* str, int c) {
     return last;
 }
 
-void* memset(void* ptr, int value, size_t size) {
-    unsigned char* p = (unsigned char*)ptr;
-    unsigned char val = (unsigned char)value;
-    while (size--) {
-        *p++ = val;
-    }
-    return ptr;
-}
-
 void* memcpy(void* dest, const void* src, size_t size) {
     unsigned char* d = (unsigned char*)dest;
     const unsigned char* s = (const unsigned char*)src;
@@ -109,21 +100,47 @@ void* memcpy(void* dest, const void* src, size_t size) {
     return dest;
 }
 
-void* memmove(void* dest, const void* src, size_t n) {
-    if (__builtin_expect(dest == src || n == 0, 1))
-        return dest;
+void* memset(void* ptr, int value, size_t size) {
+    if (!ptr || size == 0) {
+        return ptr;
+    }
+    
+    volatile unsigned char* p = (volatile unsigned char*)ptr;
+    unsigned char val = (unsigned char)value;
+    
+    while (size > 0) {
+        *p = val;
+        p++;
+        size--;
+    }
+    
+    return ptr;
+}
 
-    unsigned char* d = (unsigned char*)dest;
-    const unsigned char* s = (const unsigned char*)src;
+void* memmove(void* dest, const void* src, size_t n) {
+    if (!dest || !src || n == 0) {
+        return dest;
+    }
+    
+    if (dest == src) {
+        return dest;
+    }
+
+    volatile unsigned char* d = (volatile unsigned char*)dest;
+    volatile const unsigned char* s = (volatile const unsigned char*)src;
 
     if (d < s || d >= s + n) {
-        while (n--)
-            *d++ = *s++;
+        size_t i = 0;
+        while (i < n) {
+            d[i] = s[i];
+            i++;
+        }
     } else {
-        d += n;
-        s += n;
-        while (n--)
-            *--d = *--s;
+        size_t i = n;
+        while (i > 0) {
+            i--;
+            d[i] = s[i];
+        }
     }
 
     return dest;

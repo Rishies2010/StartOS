@@ -3,6 +3,9 @@
 #include "../debug/serial.h"
 #include "../string.h"
 #include "../limine.h"
+#include "../spinlock.h"
+
+static spinlock_t heap_lock;
 
 static uint8_t* pmm_bitmap = NULL;
 static uint64_t total_pages = 0;
@@ -175,6 +178,7 @@ uint64_t get_free_memory(void) {
 }
 
 void init_kernel_heap(void) {
+    spinlock_init(&heap_lock);
     uint64_t heap_pages = 2048;
     uint64_t heap_phys = alloc_pages(heap_pages);
     if (!heap_phys) {
@@ -194,12 +198,12 @@ void print_mem_info(int vis){
 
 void* kmalloc(size_t size) {
     if (!heap_start) {
-        serial_write_string("-[ERROR] - Heap not initialized!");
         return NULL;
     }
     if (size == 0) {
         return NULL;
     }
+    spinlock_acquire(&heap_lock);
     size = (size + 7) & ~7;
     
     header_t* curr = heap_start;
@@ -215,17 +219,19 @@ void* kmalloc(size_t size) {
             }
             
             curr->free = 0;
+            spinlock_release(&heap_lock);
             return (void*)((uint8_t*)curr + HEADER_SIZE);
         }
         curr = curr->next;
     }
-    log("[KMALLOC] No suitable block found.", 3, 1);
+    serial_write_string("-[ERROR] - [KMALLOC] No suitable block found.");
+    spinlock_release(&heap_lock);
     return NULL;
 }
 
 void kfree(void* ptr) {
     if (!ptr) return;
-    
+    spinlock_acquire(&heap_lock);    
     header_t* block = (header_t*)((uint8_t*)ptr - HEADER_SIZE);
     block->free = 1;
     if (block->next && block->next->free) {
@@ -240,6 +246,7 @@ void kfree(void* ptr) {
         curr->size += HEADER_SIZE + block->size;
         curr->next = block->next;
     }
+    spinlock_release(&heap_lock);
 }
 
 void* krealloc(void* ptr, size_t size) {

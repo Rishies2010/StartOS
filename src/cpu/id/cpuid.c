@@ -23,7 +23,7 @@ static void get_brand_string(char *brand) {
     uint32_t eax, ebx, ecx, edx;
     char *p = brand;
     
-    for (int i = 0x80000002; i <= 0x80000004; i++) {
+    for (uint32_t i = 0x80000002; i <= 0x80000004; i++) {
         cpuid(i, 0, &eax, &ebx, &ecx, &edx);
         memcpy(p, &eax, 4); p += 4;
         memcpy(p, &ebx, 4); p += 4;
@@ -78,7 +78,6 @@ void detect_cpu_info(int vis) {
         uint32_t stepping = eax & 0xF;
         uint32_t model = (eax >> 4) & 0xF;
         uint32_t family = (eax >> 8) & 0xF;
-        uint32_t proc_type = (eax >> 12) & 0x3;
         uint32_t ext_model = (eax >> 16) & 0xF;
         uint32_t ext_family = (eax >> 20) & 0xFF;
         
