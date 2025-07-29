@@ -1,13 +1,62 @@
-#ifndef AA_SHAPES_H
-#define AA_SHAPES_H
+#ifndef GFX_H
+#define GFX_H
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
 
-void aa_put_pixel(float x, float y, uint32_t color);
-void aa_line(float x0, float y0, float x1, float y1, uint32_t color);
-void aa_circle(float cx, float cy, float r, uint32_t color);
-void aa_rect(float x, float y, float w, float h, float border_thick, uint32_t fill_color, uint32_t border_color);
-void aa_triangle(float x1, float y1, float x2, float y2, float x3, float y3, uint32_t color);
-void aa_semicircle(float cx, float cy, float r, int dir, uint32_t color);
+#define MAX_WINDOWS 16
+#define TITLEBAR_HEIGHT 20
+#define TASKBAR_HEIGHT 25
+#define CURSOR_SIZE 12
+#define FONT_WIDTH 8
+#define FONT_HEIGHT 16
+
+typedef struct {
+    uint32_t id;
+    char title[64];
+    uint32_t x, y, width, height;
+    uint8_t *buffer;
+    bool visible;
+    bool focused;
+    uint32_t cursor_x, cursor_y;
+} window_t;
+
+typedef struct {
+    uint32_t x, y, width, height;
+    char text[32];
+    bool pressed;
+} button_t;
+
+typedef struct {
+    uint32_t x, y, width;
+    char text[64];
+    uint32_t cursor_pos;
+    bool focused;
+} input_field_t;
+
+void wm_init(void);
+void wm_update(void);
+
+uint32_t wm_create_window(const char *title, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+void wm_destroy_window(uint32_t id);
+void wm_set_window_pos(uint32_t id, uint32_t x, uint32_t y);
+uint32_t wm_get_window_by_title(const char *title);
+
+void window_put_pixel(uint32_t id, uint32_t x, uint32_t y, uint32_t color);
+void window_printc(uint32_t id, char c, uint32_t x, uint32_t y);
+void window_prints(uint32_t id, const char *str, uint32_t x, uint32_t y);
+
+button_t wm_create_button(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const char *text);
+bool wm_button_clicked(button_t *btn, uint32_t mouse_x, uint32_t mouse_y, bool clicked);
+
+input_field_t wm_create_input(uint32_t x, uint32_t y, uint32_t width);
+void wm_handle_input_key(input_field_t *input, char key);
+
+void draw_xor_background(void);
+void draw_cursor(void);
+void aa_put_pixel(uint32_t x, uint32_t y, uint32_t color, uint8_t alpha);
+void draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color);
+void draw_text_at(const char *text, uint32_t x, uint32_t y, uint32_t color);
 
 #endif

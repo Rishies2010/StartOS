@@ -20,8 +20,8 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
 static struct limine_framebuffer *fb;
 static uint8_t *framebuffer_addr;
 uint64_t framebuffer_width, framebuffer_height, framebuffer_pitch;
-static uint8_t framebuffer_bpp;
-static uint32_t terminal_color = 0xFFFFFF;
+uint8_t framebuffer_bpp;
+static uint32_t terminal_color = 0x000000;
 static int term_col = 0, term_row = 0;
 static int max_rows, max_cols;
 int current_font = 2;
