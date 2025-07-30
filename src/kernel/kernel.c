@@ -71,7 +71,6 @@ void _start(void){
     #if debug
         log("[KERNEL] Running In Debug Mode.", 2, 1);
     #else
-        aa_rect(4, 4, 180, 40, 7, makecolor(0, 0, 0), makecolor(255 ,255, 255));
         prints("\n  Welcome To StartOS !\n\n");
         draw_startlogo(framebuffer_width - 186, -16);
         play_bootup_sequence();

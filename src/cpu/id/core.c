@@ -18,8 +18,10 @@ void paint_main(void) {
             window_put_pixel(paint_win, x, y, makecolor(255, 255, 255));
         }
     }
+        int ahh = wm_create_window("Welcome", 20, 20, 150, 150);
+        window_prints(ahh, "Welcome To StartOS Beta!", 4, 4);
     
-    window_prints(paint_win, "Click and drag to paint!", 10, 10);
+    window_prints(paint_win, "Click and drag to paint! R G B K C", 10, 10);
     
     uint32_t last_mx = 0, last_my = 0;
     bool was_pressed = false;
@@ -27,11 +29,9 @@ void paint_main(void) {
     
     while (true) {
         if(mouse_moved()){
-        wm_update();
         
         char key = get_key();
         if (key == 27) break;
-        
         if (key == 'r') brush_color = makecolor(255, 0, 0);
         if (key == 'g') brush_color = makecolor(0, 255, 0);
         if (key == 'b') brush_color = makecolor(0, 0, 255);
@@ -43,15 +43,22 @@ void paint_main(void) {
                 }
             }
         }
-        
         uint32_t mx = mouse_x();
         uint32_t my = mouse_y();
         uint8_t mb = mouse_button();
-        
         if (mb & 1) {
-            if (mx >= 200 && mx < 580 && my >= 180 && my < 430) {
-                uint32_t wx = mx - 200;
-                uint32_t wy = my - 180;
+            optional_window optional_window_context = wm_get_window_context(paint_win);
+            window_t window_context;
+            if (optional_window_context.err == false)
+            {
+                window_context = optional_window_context.window;
+            }
+
+            if (mx >= window_context.x && mx < window_context.x + window_context.width
+                && my >= window_context.y && my < window_context.y + window_context.height - 20)
+                {
+                uint32_t wx = mx - window_context.x; 
+                uint32_t wy = my - (window_context.y + 20);
                 
                 if (wy >= 30) {
                     window_put_pixel(paint_win, wx, wy, brush_color);
@@ -63,15 +70,29 @@ void paint_main(void) {
                         int dx = (int)wx - (int)last_mx;
                         int dy = (int)wy - (int)last_my;
                         int steps = (dx > dy ? (dx > -dx ? dx : -dx) : (dy > -dy ? dy : -dy));
-                        
-                        for (int i = 0; i <= steps; i++) {
+
+                        /* If dx > dy {
+                            If dx > -dx {
+                                steps = dx
+                            } 
+                                else
+                            {
+                                steps = -dx
+                            }
+                        }
+
+                        */
+                        if(steps != 0)
+                        {
+                            for (int i = 0; i <= steps; i++) {
                             uint32_t ix = last_mx + (dx * i) / steps;
                             uint32_t iy = last_my + (dy * i) / steps;
-                            if (iy >= 30) {
+                                if (iy >= 30) {
                                 window_put_pixel(paint_win, ix, iy, brush_color);
                                 window_put_pixel(paint_win, ix+1, iy, brush_color);
                                 window_put_pixel(paint_win, ix, iy+1, brush_color);
                                 window_put_pixel(paint_win, ix+1, iy+1, brush_color);
+                                }
                             }
                         }
                     }
@@ -80,7 +101,9 @@ void paint_main(void) {
                     last_my = wy;
                     was_pressed = true;
                 }
-            }}
+            }
+        }
+        wm_update(); 
         } else {
             was_pressed = false;
         }
@@ -90,6 +113,7 @@ void paint_main(void) {
 void ap_main(void){
     __asm__ __volatile__("cli");
     if(LocalApicGetId() == 1){
+        __asm__ __volatile__("sti");
         paint_main();
         for(;;);
     }

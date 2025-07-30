@@ -18,7 +18,7 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
 };
 
 static struct limine_framebuffer *fb;
-static uint8_t *framebuffer_addr;
+uint8_t *framebuffer_addr;
 uint64_t framebuffer_width, framebuffer_height, framebuffer_pitch;
 uint8_t framebuffer_bpp;
 static uint32_t terminal_color = 0x000000;
@@ -111,7 +111,7 @@ void draw_char(char c, uint32_t x, uint32_t y) {
     const uint8_t *font_data;
     
     switch (current_font) {
-        case 1: font_data = font1_8x16[(unsigned char)c]; break;
+        case 1: font_data = font1_8x16[(unsigned char)c]; break; 
         case 3: font_data = font3_8x16[(unsigned char)c]; break;
         default: font_data = font2_8x16[(unsigned char)c]; break;
     }

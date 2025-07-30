@@ -22,6 +22,12 @@ typedef struct {
     uint32_t cursor_x, cursor_y;
 } window_t;
 
+typedef struct
+{
+    bool err;
+    window_t window;
+} optional_window;
+
 typedef struct {
     uint32_t x, y, width, height;
     char text[32];
@@ -42,6 +48,7 @@ uint32_t wm_create_window(const char *title, uint32_t x, uint32_t y, uint32_t wi
 void wm_destroy_window(uint32_t id);
 void wm_set_window_pos(uint32_t id, uint32_t x, uint32_t y);
 uint32_t wm_get_window_by_title(const char *title);
+optional_window wm_get_window_context(const uint32_t id); //done
 
 void window_put_pixel(uint32_t id, uint32_t x, uint32_t y, uint32_t color);
 void window_printc(uint32_t id, char c, uint32_t x, uint32_t y);

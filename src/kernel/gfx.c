@@ -3,10 +3,12 @@
 #include "../drv/mouse.h"
 #include "../drv/rtc.h"
 #include "../libk/core/mem.h"
+#include "../libk/string.h"
 #include "gfx.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "../libk/gfx/font2_8x16.h"
 
 static window_t windows[MAX_WINDOWS];
 static uint32_t window_count = 0;
@@ -16,6 +18,14 @@ static uint32_t next_window_id = 1;
 static bool dragging = false;
 static uint32_t drag_start_x, drag_start_y;
 static uint32_t drag_window_x, drag_window_y;
+static uint32_t last_cursor_x = 0, last_cursor_y = 0;
+static bool window_dirty[MAX_WINDOWS];
+static bool background_dirty = true;
+static bool taskbar_dirty = true;
+static uint32_t cursor_backup[CURSOR_SIZE * CURSOR_SIZE];
+static uint32_t drag_backup[4][200];
+static uint32_t last_drag_x = 0, last_drag_y = 0;
+static uint32_t last_drag_w = 0, last_drag_h = 0;
 
 void wm_init(void) {
     for (int i = 0; i < MAX_WINDOWS; i++) {
@@ -23,9 +33,79 @@ void wm_init(void) {
         windows[i].visible = false;
         windows[i].focused = false;
         windows[i].buffer = NULL;
+        window_dirty[i] = false;
     }
     cursor_x = framebuffer_width / 2;
     cursor_y = framebuffer_height / 2;
+    last_cursor_x = cursor_x;
+    last_cursor_y = cursor_y;
+    background_dirty = true;
+    taskbar_dirty = true;
+}
+
+uint32_t get_pixel_at(uint32_t x, uint32_t y) {
+    if (x >= framebuffer_width || y >= framebuffer_height) {
+        return makecolor(0, 0, 0);
+    }
+    
+    uint32_t pixel_offset = (y * framebuffer_width + x) * (framebuffer_bpp / 8);
+    return *(uint32_t*)((uint8_t*)framebuffer_addr + pixel_offset);
+}
+
+void backup_cursor_area(uint32_t x, uint32_t y) {
+    for (int i = 0; i < CURSOR_SIZE; i++) {
+        cursor_backup[i] = get_pixel_at(x, y + i);
+        cursor_backup[CURSOR_SIZE + i] = get_pixel_at(x + 1, y + i);
+        if (i < CURSOR_SIZE / 2) {
+            cursor_backup[2 * CURSOR_SIZE + i] = get_pixel_at(x + i, y);
+            cursor_backup[2 * CURSOR_SIZE + CURSOR_SIZE / 2 + i] = get_pixel_at(x + i, y + 1);
+        }
+    }
+}
+
+void restore_cursor_area(uint32_t x, uint32_t y) {
+    for (int i = 0; i < CURSOR_SIZE; i++) {
+        put_pixel(x, y + i, cursor_backup[i]);
+        put_pixel(x + 1, y + i, cursor_backup[CURSOR_SIZE + i]);
+        if (i < CURSOR_SIZE / 2) {
+            put_pixel(x + i, y, cursor_backup[2 * CURSOR_SIZE + i]);
+            put_pixel(x + i, y + 1, cursor_backup[2 * CURSOR_SIZE + CURSOR_SIZE / 2 + i]);
+        }
+    }
+}
+
+void backup_drag_outline(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
+    uint32_t backup_idx = 0;
+    
+    for (uint32_t i = 0; i < w && backup_idx < 200; i += 2) {
+        drag_backup[0][backup_idx] = get_pixel_at(x + i, y);
+        drag_backup[1][backup_idx] = get_pixel_at(x + i, y + h - 1);
+        backup_idx++;
+    }
+    
+    backup_idx = 0;
+    for (uint32_t i = 0; i < h && backup_idx < 200; i += 2) {
+        drag_backup[2][backup_idx] = get_pixel_at(x, y + i);
+        drag_backup[3][backup_idx] = get_pixel_at(x + w - 1, y + i);
+        backup_idx++;
+    }
+}
+
+void restore_drag_outline(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
+    uint32_t backup_idx = 0;
+    
+    for (uint32_t i = 0; i < w && backup_idx < 200; i += 2) {
+        put_pixel(x + i, y, drag_backup[0][backup_idx]);
+        put_pixel(x + i, y + h - 1, drag_backup[1][backup_idx]);
+        backup_idx++;
+    }
+    
+    backup_idx = 0;
+    for (uint32_t i = 0; i < h && backup_idx < 200; i += 2) {
+        put_pixel(x, y + i, drag_backup[2][backup_idx]);
+        put_pixel(x + w - 1, y + i, drag_backup[3][backup_idx]);
+        backup_idx++;
+    }
 }
 
 void draw_xor_background(void) {
@@ -49,6 +129,19 @@ void draw_cursor(void) {
             put_pixel(cursor_x + i, cursor_y, white);
             put_pixel(cursor_x + i, cursor_y + 1, black);
         }
+    }
+}
+
+void draw_drag_outline(uint32_t x, uint32_t y, uint32_t w, uint32_t h) {
+    uint32_t gray = makecolor(128, 128, 128);
+    
+    for (uint32_t i = 0; i < w; i += 2) {
+        put_pixel(x + i, y, gray);
+        put_pixel(x + i, y + h - 1, gray);
+    }
+    for (uint32_t i = 0; i < h; i += 2) {
+        put_pixel(x, y + i, gray);
+        put_pixel(x + w - 1, y + i, gray);
     }
 }
 
@@ -82,7 +175,7 @@ void draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
 
 void draw_text_at(const char *text, uint32_t x, uint32_t y, uint32_t color) {
     uint32_t pos_x = x;
-    while (*text) {
+    while(*text != '\0') {
         draw_char(*text, pos_x, y);
         text++;
         pos_x += FONT_WIDTH;
@@ -133,10 +226,12 @@ void draw_taskbar(void) {
         draw_rect(x_pos, taskbar_y + 2, 120, 21, btn_color);
         
         char short_title[16];
-        for (int j = 0; j < 15 && windows[i].title[j]; j++) {
+        int j = 0;
+        while (j < 15 && windows[i].title[j] != '\0') {
             short_title[j] = windows[i].title[j];
+            j++;
         }
-        short_title[15] = '\0';
+        short_title[j] = '\0';
         
         draw_text_at(short_title, x_pos + 3, taskbar_y + 5, makecolor(255, 255, 255));
         x_pos += 125;
@@ -145,7 +240,7 @@ void draw_taskbar(void) {
     }
     
     rtc_time_t time = rtc_get_time();
-    char time_str[16];
+    char time_str[6];
     time_str[0] = '0' + (time.hours / 10);
     time_str[1] = '0' + (time.hours % 10);
     time_str[2] = ':';
@@ -162,10 +257,12 @@ uint32_t wm_create_window(const char *title, uint32_t x, uint32_t y, uint32_t wi
     uint32_t idx = window_count++;
     windows[idx].id = next_window_id++;
     
-    for (int i = 0; i < 63 && title[i]; i++) {
+    int i = 0;
+    while (i < 63 && title[i] != '\0') {
         windows[idx].title[i] = title[i];
+        i++;
     }
-    windows[idx].title[63] = '\0';
+    windows[idx].title[i] = '\0';
     
     windows[idx].x = x;
     windows[idx].y = y;
@@ -179,15 +276,21 @@ uint32_t wm_create_window(const char *title, uint32_t x, uint32_t y, uint32_t wi
     size_t buf_size = width * (height - TITLEBAR_HEIGHT) * (framebuffer_bpp / 8);
     windows[idx].buffer = (uint8_t*)kmalloc(buf_size);
     
-    uint32_t bg_color = makecolor(240, 240, 240);
-    for (size_t i = 0; i < buf_size; i += (framebuffer_bpp / 8)) {
-        *(uint32_t*)(windows[idx].buffer + i) = bg_color;
+    if (windows[idx].buffer != NULL) {
+        uint32_t bg_color = makecolor(240, 240, 240);
+        for (size_t j = 0; j < buf_size; j += (framebuffer_bpp / 8)) {
+            *(uint32_t*)(windows[idx].buffer + j) = bg_color;
+        }
     }
     
     for (uint32_t i = 0; i < window_count - 1; i++) {
         windows[i].focused = false;
+        window_dirty[i] = true;
     }
     focused_window = idx;
+    window_dirty[idx] = true;
+    background_dirty = true;
+    taskbar_dirty = true;
     
     return windows[idx].id;
 }
@@ -201,13 +304,17 @@ void wm_destroy_window(uint32_t id) {
             
             for (uint32_t j = i; j < window_count - 1; j++) {
                 windows[j] = windows[j + 1];
+                window_dirty[j] = window_dirty[j + 1];
             }
             window_count--;
             
             if (focused_window >= window_count && window_count > 0) {
                 focused_window = window_count - 1;
                 windows[focused_window].focused = true;
+                window_dirty[focused_window] = true;
             }
+            background_dirty = true;
+            taskbar_dirty = true;
             break;
         }
     }
@@ -218,6 +325,8 @@ void wm_set_window_pos(uint32_t id, uint32_t x, uint32_t y) {
         if (windows[i].id == id) {
             windows[i].x = x;
             windows[i].y = y;
+            window_dirty[i] = true;
+            background_dirty = true;
             break;
         }
     }
@@ -226,26 +335,62 @@ void wm_set_window_pos(uint32_t id, uint32_t x, uint32_t y) {
 uint32_t wm_get_window_by_title(const char *title) {
     for (uint32_t i = 0; i < window_count; i++) {
         bool match = true;
-        for (int j = 0; title[j] && windows[i].title[j]; j++) {
+        int j = 0;
+        while (title[j] != '\0' && windows[i].title[j] != '\0') {
             if (title[j] != windows[i].title[j]) {
                 match = false;
                 break;
             }
+            j++;
         }
-        if (match) return windows[i].id;
+        if (match && title[j] == '\0' && windows[i].title[j] == '\0') {
+            return windows[i].id;
+        }
     }
     return 0;
 }
 
+optional_window wm_get_window_context(const uint32_t id) {
+    for (uint32_t i = 0; i < window_count; ++i) {
+        if (windows[i].id == id) {
+            return (optional_window) { .err = false, .window = windows[i] };
+        }
+    }
+    
+    window_t null_window = {
+        .id = 0, 
+        .title = {0},
+        .x = 0, .y = 0, .width = 0, .height = 0,
+        .buffer = NULL,
+        .visible = false,
+        .focused = false,
+        .cursor_x = 0,
+        .cursor_y = 0
+    };
+    return (optional_window) { .err = true, .window = null_window };
+}
+
 void window_put_pixel(uint32_t id, uint32_t x, uint32_t y, uint32_t color) {
     for (uint32_t i = 0; i < window_count; i++) {
-        if (windows[i].id == id) {
+        if (windows[i].id == id && windows[i].buffer != NULL) {
             uint32_t content_height = windows[i].height - TITLEBAR_HEIGHT;
-            if (x >= windows[i].width || y >= content_height) return;
+            if (x >= windows[i].width || y >= content_height) return; 
             
             uint32_t buf_idx = (y * windows[i].width + x) * (framebuffer_bpp / 8);
             *(uint32_t*)(windows[i].buffer + buf_idx) = color;
+            window_dirty[i] = true;
             break;
+        }
+    }
+}
+
+void draw_cool_char(char c, uint32_t x, uint32_t y, int id, uint32_t color) {
+    const uint8_t *font_data = font2_8x16[(unsigned char)c];
+    for (int row = 0; row < 16; row++) {
+        uint8_t font_row = font_data[row];
+        for (int col = 0; col < 8; col++) {
+            if(font_row & (0x80 >> col))
+                window_put_pixel(id, x + col, y + row, color);
         }
     }
 }
@@ -255,16 +400,15 @@ void window_printc(uint32_t id, char c, uint32_t x, uint32_t y) {
         if (windows[i].id == id) {
             uint32_t content_height = windows[i].height - TITLEBAR_HEIGHT;
             if (x + FONT_WIDTH > windows[i].width || y + FONT_HEIGHT > content_height) return;
-            setcolor(makecolor(0, 0, 0));
-            draw_char(c, x, y);
+            draw_cool_char(c, x, y, id, makecolor(0, 0, 0));
             break;
         }
-    }
-}
+    } 
+} 
 
 void window_prints(uint32_t id, const char *str, uint32_t x, uint32_t y) {
     uint32_t pos_x = x;
-    while (*str) {
+    while (*str != '\0') {
         window_printc(id, *str, pos_x, y);
         str++;
         pos_x += FONT_WIDTH;
@@ -279,10 +423,12 @@ button_t wm_create_button(uint32_t x, uint32_t y, uint32_t width, uint32_t heigh
     btn.height = height;
     btn.pressed = false;
     
-    for (int i = 0; i < 31 && text[i]; i++) {
+    int i = 0;
+    while (i < 31 && text[i] != '\0') {
         btn.text[i] = text[i];
+        i++;
     }
-    btn.text[31] = '\0';
+    btn.text[i] = '\0';
     
     return btn;
 }
@@ -325,25 +471,23 @@ void wm_handle_input_key(input_field_t *input, char key) {
 }
 
 void wm_update(void) {
-    draw_xor_background();
-    
-    for (uint32_t i = 0; i < window_count; i++) {
-        draw_window(&windows[i]);
-    }
-    
-    draw_taskbar();
-    
     uint32_t new_x = mouse_x();
     uint32_t new_y = mouse_y();
     uint8_t mouse_btn = mouse_button();
     
     if (new_x != cursor_x || new_y != cursor_y) {
+        restore_cursor_area(last_cursor_x, last_cursor_y);
+        
         cursor_x = new_x;
         cursor_y = new_y;
         
         if (cursor_x >= framebuffer_width) cursor_x = framebuffer_width - 1;
         if (cursor_y >= framebuffer_height) cursor_y = framebuffer_height - 1;
+        
+        backup_cursor_area(cursor_x, cursor_y);
     }
+    
+    static bool was_dragging = false;
     
     if (mouse_btn & 1) {
         if (!dragging) {
@@ -357,28 +501,108 @@ void wm_update(void) {
                     }
                     
                     for (uint32_t j = 0; j < window_count; j++) {
-                        windows[j].focused = false;
+                        if (windows[j].focused) {
+                            windows[j].focused = false;
+                            window_dirty[j] = true;
+                        }
                     }
                     windows[i].focused = true;
                     focused_window = i;
+                    window_dirty[i] = true;
+                    taskbar_dirty = true;
                     
                     dragging = true;
                     drag_start_x = cursor_x;
                     drag_start_y = cursor_y;
                     drag_window_x = windows[i].x;
                     drag_window_y = windows[i].y;
+                    last_drag_x = cursor_x;
+                    last_drag_y = cursor_y;
+                    last_drag_w = windows[i].width;
+                    last_drag_h = windows[i].height;
+                    
+                    int32_t dx = cursor_x - drag_start_x;
+                    int32_t dy = cursor_y - drag_start_y;
+                    uint32_t new_x = drag_window_x + dx;
+                    uint32_t new_y = drag_window_y + dy;
+                    
+                    backup_drag_outline(new_x, new_y, last_drag_w, last_drag_h);
+                    draw_drag_outline(new_x, new_y, last_drag_w, last_drag_h);
+                    was_dragging = true;
                     break;
                 }
             }
         } else {
+            if (cursor_x != last_drag_x || cursor_y != last_drag_y) {
+                if (was_dragging) {
+                    int32_t old_dx = last_drag_x - drag_start_x;
+                    int32_t old_dy = last_drag_y - drag_start_y;
+                    uint32_t old_x = drag_window_x + old_dx;
+                    uint32_t old_y = drag_window_y + old_dy;
+                    
+                    restore_drag_outline(old_x, old_y, last_drag_w, last_drag_h);
+                }
+                
+                int32_t dx = cursor_x - drag_start_x;
+                int32_t dy = cursor_y - drag_start_y;
+                uint32_t new_x = drag_window_x + dx;
+                uint32_t new_y = drag_window_y + dy;
+                
+                backup_drag_outline(new_x, new_y, last_drag_w, last_drag_h);
+                draw_drag_outline(new_x, new_y, last_drag_w, last_drag_h);
+                
+                last_drag_x = cursor_x;
+                last_drag_y = cursor_y;
+                was_dragging = true;
+            }
+        }
+    } else {
+        if (dragging) {
+            if (was_dragging) {
+                int32_t old_dx = last_drag_x - drag_start_x;
+                int32_t old_dy = last_drag_y - drag_start_y;
+                uint32_t old_x = drag_window_x + old_dx;
+                uint32_t old_y = drag_window_y + old_dy;
+                
+                restore_drag_outline(old_x, old_y, last_drag_w, last_drag_h);
+            }
+            
             int32_t dx = cursor_x - drag_start_x;
             int32_t dy = cursor_y - drag_start_y;
             windows[focused_window].x = drag_window_x + dx;
             windows[focused_window].y = drag_window_y + dy;
+            
+            dragging = false;
+            was_dragging = false;
+            background_dirty = true;
+            for (uint32_t i = 0; i < window_count; i++) {
+                window_dirty[i] = true;
+            }
         }
-    } else {
-        dragging = false;
+    }
+    
+    if (background_dirty) {
+        draw_xor_background();
+        background_dirty = false;
+        for (uint32_t i = 0; i < window_count; i++) {
+            window_dirty[i] = true;
+        }
+        taskbar_dirty = true;
+    }
+    
+    for (uint32_t i = 0; i < window_count; i++) {
+        if (window_dirty[i]) {
+            draw_window(&windows[i]);
+            window_dirty[i] = false;
+        }
+    }
+    
+    if (taskbar_dirty) {
+        draw_taskbar();
+        taskbar_dirty = false;
     }
     
     draw_cursor();
+    last_cursor_x = cursor_x;
+    last_cursor_y = cursor_y;
 }

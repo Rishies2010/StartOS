@@ -2,6 +2,7 @@
 #include "../libk/debug/log.h"
 #include "../drv/local_apic.h"
 #include "../libk/string.h"
+#include "sse_fpu.h"
 #include "../libk/limine.h"
 #include "gdt.h"
 #include "idt.h"
@@ -21,6 +22,7 @@ static uint8_t ap_stacks[MAX_CPU_COUNT][STACK_SIZE] __attribute__((aligned(16)))
 void ap_entry(struct limine_smp_info *info) {
     init_gdt();
     init_idt();
+    enable_sse_and_fpu();
     LocalApicInit(info->lapic_id);
     asm volatile("mov %0, %%rsp" : : "r" (ap_stacks[info->processor_id] + STACK_SIZE) : "memory");
     __atomic_add_fetch(&g_activeCpuCount, 1, __ATOMIC_SEQ_CST);
