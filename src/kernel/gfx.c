@@ -32,7 +32,7 @@ void wm_init(void)
     for (int i = 0; i < MAX_WINDOWS; i++)
     {
         windows[i].id = 0;
-        windows[i].visible = false;
+        windows[i].state = false;
         windows[i].focused = false;
         windows[i].buffer = NULL;
         window_dirty[i] = false;
@@ -265,9 +265,6 @@ void draw_titlebar(window_t *win)
 
 void draw_window(window_t *win)
 {
-    if (!win->visible)
-        return;
-
     draw_titlebar(win);
 
     uint32_t content_y = win->y + TITLEBAR_HEIGHT;
@@ -297,15 +294,12 @@ void draw_taskbar(void)
     uint32_t x_pos = 5;
     for (uint32_t i = 0; i < window_count; i++)
     {
-        if (!windows[i].visible)
-            continue;
-
         uint32_t btn_color = windows[i].focused ? makecolor(100, 150, 200) : makecolor(80, 80, 80);
-        draw_rect(x_pos, taskbar_y + 2, 120, 21, btn_color);
+        draw_rect(x_pos, taskbar_y + 2, 80, 21, btn_color);
 
-        char short_title[16];
+        char short_title[10];
         int j = 0;
-        while (j < 15 && windows[i].title[j] != '\0')
+        while (j < 9 && windows[i].title[j] != '\0')
         {
             short_title[j] = windows[i].title[j];
             j++;
@@ -313,9 +307,9 @@ void draw_taskbar(void)
         short_title[j] = '\0';
 
         draw_text_at(short_title, x_pos + 3, taskbar_y + 5, makecolor(255, 255, 255));
-        x_pos += 125;
+        x_pos += 85;
 
-        if (x_pos > framebuffer_width - 200)
+        if (x_pos > framebuffer_width - 60)
             break;
     }
 
@@ -328,7 +322,7 @@ void draw_taskbar(void)
     time_str[4] = '0' + (time.minutes % 10);
     time_str[5] = '\0';
 
-    draw_text_at(time_str, framebuffer_width - 60, taskbar_y + 5, makecolor(255, 255, 255));
+    draw_text_at(time_str, framebuffer_width - 52, taskbar_y + 5, makecolor(255, 255, 255));
 }
 
 uint32_t wm_create_window(const char *title, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
@@ -351,7 +345,7 @@ uint32_t wm_create_window(const char *title, uint32_t x, uint32_t y, uint32_t wi
     windows[idx].y = y;
     windows[idx].width = width;
     windows[idx].height = height;
-    windows[idx].visible = true;
+    windows[idx].state = true;
     windows[idx].focused = true;
     windows[idx].cursor_x = 0;
     windows[idx].cursor_y = 0;
@@ -391,7 +385,7 @@ void wm_destroy_window(uint32_t id)
             {
                 kfree(windows[i].buffer);
             }
-
+            windows[i].state = false;
             for (uint32_t j = i; j < window_count - 1; j++)
             {
                 windows[j] = windows[j + 1];
@@ -418,9 +412,11 @@ void wm_set_window_pos(uint32_t id, uint32_t x, uint32_t y)
     {
         if (windows[i].id == id)
         {
-            if (x > framebuffer_width) x = 0;
-            if (y > framebuffer_height) y = 0;
-            
+            if (x > framebuffer_width)
+                x = 0;
+            if (y > framebuffer_height)
+                y = 0;
+
             windows[i].x = x;
             windows[i].y = y;
             window_dirty[i] = true;
@@ -471,7 +467,7 @@ optional_window wm_get_window_context(const uint32_t id)
         .width = 0,
         .height = 0,
         .buffer = NULL,
-        .visible = false,
+        .state = false,
         .focused = false,
         .cursor_x = 0,
         .cursor_y = 0};
@@ -510,7 +506,7 @@ void draw_cool_char(char c, uint32_t x, uint32_t y, int id, uint32_t color)
     }
 }
 
-void window_printc(uint32_t id, char c, uint32_t x, uint32_t y)
+void window_printc(uint32_t id, char c, uint32_t x, uint32_t y, uint32_t color)
 {
     for (uint32_t i = 0; i < window_count; i++)
     {
@@ -519,18 +515,18 @@ void window_printc(uint32_t id, char c, uint32_t x, uint32_t y)
             uint32_t content_height = windows[i].height - TITLEBAR_HEIGHT;
             if (x + FONT_WIDTH > windows[i].width || y + FONT_HEIGHT > content_height)
                 return;
-            draw_cool_char(c, x, y, id, makecolor(0, 0, 0));
+            draw_cool_char(c, x, y, id, color);
             break;
         }
     }
 }
 
-void window_prints(uint32_t id, const char *str, uint32_t x, uint32_t y)
+void window_prints(uint32_t id, const char *str, uint32_t x, uint32_t y, uint32_t color)
 {
     uint32_t pos_x = x;
     while (*str != '\0')
     {
-        window_printc(id, *str, pos_x, y);
+        window_printc(id, *str, pos_x, y, color);
         str++;
         pos_x += FONT_WIDTH;
     }
@@ -721,12 +717,16 @@ void wm_update(void)
             int32_t dy = (int32_t)cursor_y - drag_start_y;
             int32_t new_x = drag_window_x + dx;
             int32_t new_y = drag_window_y + dy;
-            
-            if (new_x < 0) new_x = 0;
-            if (new_y < 0) new_y = 0;
-            if (new_x >= (int32_t)framebuffer_width) new_x = framebuffer_width - 1;
-            if (new_y >= (int32_t)framebuffer_height) new_y = framebuffer_height - 1;
-            
+
+            if (new_x < 0)
+                new_x = 0;
+            if (new_y < 0)
+                new_y = 0;
+            if (new_x >= (int32_t)framebuffer_width)
+                new_x = framebuffer_width - 1;
+            if (new_y >= (int32_t)framebuffer_height)
+                new_y = framebuffer_height - 1;
+
             windows[focused_window].x = (uint32_t)new_x;
             windows[focused_window].y = (uint32_t)new_y;
             dragging = false;
@@ -758,7 +758,8 @@ void wm_update(void)
             window_dirty[i] = false;
         }
     }
-    if(window_dirty[focused_window]){
+    if (window_dirty[focused_window])
+    {
         draw_window(&windows[focused_window]);
         window_dirty[focused_window] = false;
     }

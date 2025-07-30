@@ -17,7 +17,7 @@ typedef struct {
     char title[64];
     uint32_t x, y, width, height;
     uint8_t *buffer;
-    bool visible;
+    bool state;
     bool focused;
     uint32_t cursor_x, cursor_y;
 } window_t;
@@ -48,11 +48,11 @@ uint32_t wm_create_window(const char *title, uint32_t x, uint32_t y, uint32_t wi
 void wm_destroy_window(uint32_t id);
 void wm_set_window_pos(uint32_t id, uint32_t x, uint32_t y);
 uint32_t wm_get_window_by_title(const char *title);
-optional_window wm_get_window_context(const uint32_t id); //done
+optional_window wm_get_window_context(const uint32_t id);
 
 void window_put_pixel(uint32_t id, uint32_t x, uint32_t y, uint32_t color);
-void window_printc(uint32_t id, char c, uint32_t x, uint32_t y);
-void window_prints(uint32_t id, const char *str, uint32_t x, uint32_t y);
+void window_printc(uint32_t id, char c, uint32_t x, uint32_t y, uint32_t color);
+void window_prints(uint32_t id, const char *str, uint32_t x, uint32_t y, uint32_t color);
 
 button_t wm_create_button(uint32_t x, uint32_t y, uint32_t width, uint32_t height, const char *text);
 bool wm_button_clicked(button_t *btn, uint32_t mouse_x, uint32_t mouse_y, bool clicked);
