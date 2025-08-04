@@ -4,7 +4,6 @@
 
 // Kernel Includes
 
-#include "gfx.h"
 #include "sched.h"
 #include "../libk/debug/serial.h"
 #include "../libk/debug/log.h"
@@ -66,14 +65,10 @@ void _start(void){
     mouse_init();
     IoApicSetEntry(g_ioApicAddr, 0, 0x20);
     IoApicSetEntry(g_ioApicAddr, 1, 0x21);
-    spinlock_init(&schedlock);
     init_smp();
     #if debug
         log("[KERNEL] Running In Debug Mode.", 2, 1);
     #else
-        prints("\n  Welcome To StartOS !\n\n");
-        draw_startlogo(framebuffer_width - 186, -16);
-        play_bootup_sequence();
     #endif
     asm volatile("sti");
     for(;;);

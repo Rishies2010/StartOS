@@ -7,6 +7,7 @@
 #include "gdt.h"
 #include "idt.h"
 #include "id/core.h"
+#include "../drv/apic_timer.h"
 
 
 #define STACK_SIZE 4096
@@ -23,9 +24,10 @@ void ap_entry(struct limine_smp_info *info) {
     init_gdt();
     init_idt();
     enable_sse_and_fpu();
-    LocalApicInit(info->lapic_id);
+    LocalApicInit();
     asm volatile("mov %0, %%rsp" : : "r" (ap_stacks[info->processor_id] + STACK_SIZE) : "memory");
     __atomic_add_fetch(&g_activeCpuCount, 1, __ATOMIC_SEQ_CST);
+    init_apic_timer(10);
     ap_main();
     while(1);
 }
@@ -38,7 +40,6 @@ void init_smp() {
     }
     log("[SMP] Bootstrap Processor ID: %d, Total CPUs: %d", 1, 0,
         smp->bsp_lapic_id, smp->cpu_count);
-    LocalApicInit(smp->bsp_lapic_id);
     for (size_t i = 0; i < smp->cpu_count; i++) {
         if (smp->cpus[i]->lapic_id != smp->bsp_lapic_id) {
             log("[SMP] Starting CPU %lu (LAPIC ID %d)", 1, 0,
