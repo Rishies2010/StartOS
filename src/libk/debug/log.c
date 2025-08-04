@@ -19,34 +19,34 @@ void sound_err() {
 void log(const char* fmt, int level, int visibility, ...) {
     if (!fmt) return;
     spinlock_acquire(&loglock);
-    
+
     const char* loglevel;
-    char color_seq[32];
+    const char* color_seq;
     
     switch (level) {
         case 1: 
             loglevel = "-[INFO] - "; 
-            snprintf(color_seq, sizeof(color_seq), "\033[38;2;150;150;150m");
+            color_seq = "\x1b[38;2;150;150;150m";
             break;
         case 2: 
             loglevel = "-[WARN] - "; 
-            snprintf(color_seq, sizeof(color_seq), "\033[38;2;255;90;0m");
+            color_seq = "\x1b[38;2;255;90;0m";
             break;
         case 3: 
             loglevel = "-[ERROR] - "; 
-            snprintf(color_seq, sizeof(color_seq), "\033[38;2;255;50;50m");
+            color_seq = "\x1b[38;2;255;50;50m";
             if(!debug) sound_err(); 
             break;
         case 4: 
             loglevel = "-[PASS] - "; 
-            snprintf(color_seq, sizeof(color_seq), "\033[38;2;50;255;50m");
+            color_seq = "\x1b[38;2;50;255;50m";
             break;
         default:
             loglevel = "-[LOGERROR] - "; 
-            snprintf(color_seq, sizeof(color_seq), "\033[38;2;255;50;50m");
+            color_seq = "\x1b[38;2;255;50;50m";
             break;
     }
-    
+
     va_list args;
     va_start(args, visibility);
     char formatted[1024];
@@ -57,34 +57,22 @@ void log(const char* fmt, int level, int visibility, ...) {
         spinlock_release(&loglock);
         return;
     }
-    
-    size_t loglevel_len = strlen(loglevel);
-    size_t formatted_len = strlen(formatted);
-    size_t full_len = loglevel_len + formatted_len + 2;
-    
-    if (full_len > 2048) {
-        spinlock_release(&loglock);
-        return;
-    }
-    
-    char* logline = (char*)kmalloc(full_len);
+    char* logline = (char*)kmalloc(len + strlen(loglevel) + 3);
     if (!logline) {
         spinlock_release(&loglock);
         return;
     }
-    
     strcpy(logline, loglevel);
     strcat(logline, formatted);
     strcat(logline, "\n");
-    
+    serial_write_string(color_seq);
     serial_write_string(logline);
-    
-    if(visibility == 1 || debug){
+    serial_write_string("\x1b[0m");
+    if (visibility == 1 || debug) {
         prints(color_seq);
         prints(logline);
-        prints("\033[0m");
+        prints("\x1b[0m");
     }
-    
     kfree(logline);
     spinlock_release(&loglock);
 }
