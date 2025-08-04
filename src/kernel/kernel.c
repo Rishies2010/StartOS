@@ -68,6 +68,13 @@ void _start(void){
     init_smp();
     #if debug
         log("[KERNEL] Running In Debug Mode.", 2, 1);
+        sleep(200);
+        setcolor(0xFFFFFF, 0xEDEDED);
+        prints("Hello ! Flanterm kernel here, ");
+        setcolor(0xFFF00F, 0xC7C7C7);
+        prints("@mintsuki");
+        setcolor(0xFFFFFF, 0xEDEDED);
+        prints(" !");
     #else
     #endif
     asm volatile("sti");

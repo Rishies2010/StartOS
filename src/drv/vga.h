@@ -11,12 +11,6 @@ void vga_init(void);
 void clr(void);
 void printc(char c);
 void prints(const char *str);
-void printh(uint64_t num);
-void printi(uint64_t num);
-void put_pixel(uint32_t x, uint32_t y, uint32_t color);
-void setfont(int fontnum);
-void setcolor(uint32_t color);
-uint32_t makecolor(int r, int g, int b);
-void draw_char(char c, uint32_t x, uint32_t y);
+void setcolor(uint8_t fg, uint8_t bg);
 
 #endif

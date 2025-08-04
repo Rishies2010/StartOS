@@ -5,10 +5,11 @@
 #include "../libk/string.h"
 #include "../libk/spinlock.h"
 #include "../libk/limine.h"
+#include "../libk/core/mem.h"
 #include "vga.h"
-#include "../libk/gfx/font1_8x16.h"
-#include "../libk/gfx/font2_8x16.h"
-#include "../libk/gfx/font3_8x16.h"
+#include "term/flanterm.h"
+#include "term/flanterm_backends/fb.h"
+#include "../libk/gfx/font_8x16.h"
 #include <stdbool.h>
 
 static volatile struct limine_framebuffer_request framebuffer_request = {
@@ -26,36 +27,11 @@ static int max_rows, max_cols;
 int current_font = 2;
 static spinlock_t vga_lock;
 
-void vga_init(void) {
-    spinlock_init(&vga_lock);
-    if (!framebuffer_request.response || !framebuffer_request.response->framebuffer_count) {
-        log("[VGA] No framebuffer available", 3, 1);
-        return;
-    }
-    
-    fb = framebuffer_request.response->framebuffers[0];
-    framebuffer_addr = (uint8_t *)fb->address;
-    framebuffer_width = fb->width;
-    framebuffer_height = fb->height;
-    framebuffer_pitch = fb->pitch;
-    framebuffer_bpp = fb->bpp;
-    max_rows = framebuffer_height/16; 
-    max_cols = framebuffer_width/8;
-    
-    if (framebuffer_bpp != 16 && framebuffer_bpp != 24 && framebuffer_bpp != 32) {
-        log("[VGA] Unsupported BPP: %i", 3, 1, framebuffer_bpp);
-        return;
-    }
-    
-    current_font = 2;
-    log("[VGA] Framebuffer initialized: %ix%i, %i bpp", 4, 0, 
-        framebuffer_width, framebuffer_height, framebuffer_bpp);
-}
+static struct flanterm_context *ft_ctx = NULL;
 
-void setfont(int fontnum) {
-    if (fontnum >= 1 && fontnum <= 3) {
-        current_font = fontnum;
-    }
+static void flanterm_kfree_wrapper(void *ptr, size_t size) {
+    (void)size;
+    kfree(ptr);
 }
 
 void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
@@ -82,136 +58,130 @@ void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
     }
 }
 
-void setcolor(uint32_t color) {
-    terminal_color = color;
-}
+void draw_double_border() {
+    const int offset = 6;       
+    const int spacing = 2;     
+    const int lines = 3;        
 
-uint32_t makecolor(int r, int g, int b) {
-    return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
-}
+    int outer_start = offset;
+    int outer_end_x = framebuffer_width - offset;
+    int outer_end_y = framebuffer_height - offset;
 
-void draw_char(char c, uint32_t x, uint32_t y) {
-    const uint8_t *font_data;
-    
-    switch (current_font) {
-        case 1: font_data = font1_8x16[(unsigned char)c]; break; 
-        case 3: font_data = font3_8x16[(unsigned char)c]; break;
-        default: font_data = font2_8x16[(unsigned char)c]; break;
-    }
-    
-    for (int row = 0; row < 16; row++) {
-        uint8_t font_row = font_data[row];
-        for (int col = 0; col < 8; col++) {
-            if(font_row & (0x80 >> col))
-                put_pixel(x + col, y + row, terminal_color);
+    for (int i = 0; i < lines; ++i) {
+        int border_inset = i * spacing;
+
+        int x0 = outer_start + border_inset;
+        int y0 = outer_start + border_inset;
+        int x1 = outer_end_x - border_inset - 1;
+        int y1 = outer_end_y - border_inset - 1;
+        for (int x = x0; x <= x1; ++x) {
+            put_pixel(x, y0, 0xFFFFFF);
+            put_pixel(x, y1, 0xFFFFFF);
+        }
+        for (int y = y0; y <= y1; ++y) {
+            put_pixel(x0, y, 0xFFFFFF);
+            put_pixel(x1, y, 0xFFFFFF);
         }
     }
 }
 
-void clr(void) {
-    spinlock_acquire(&vga_lock);
-    if (!framebuffer_addr) {
-        spinlock_release(&vga_lock);
+void vga_init(void) {
+    spinlock_init(&vga_lock);
+    if (!framebuffer_request.response || !framebuffer_request.response->framebuffer_count) {
+        log("[VGA] No framebuffer available", 3, 1);
         return;
     }
     
-    size_t total_bytes = framebuffer_height * framebuffer_pitch;
-    memset(framebuffer_addr, 0, total_bytes);
-    term_col = 0;
-    term_row = 0;
-    spinlock_release(&vga_lock);
-}
-
-void scroll(void) {
-    size_t bytes_per_line = framebuffer_pitch;
-    size_t scroll_size = (framebuffer_height - 16) * bytes_per_line;
+    fb = framebuffer_request.response->framebuffers[0];
+    framebuffer_addr = (uint8_t *)fb->address;
+    framebuffer_width = fb->width;
+    framebuffer_height = fb->height;
+    framebuffer_pitch = fb->pitch;
+    framebuffer_bpp = fb->bpp;
+    max_rows = framebuffer_height/16; 
+    max_cols = framebuffer_width/8;
     
-    memmove(framebuffer_addr, framebuffer_addr + 16 * bytes_per_line, scroll_size);
-    memset(framebuffer_addr + scroll_size, 0, 16 * bytes_per_line);
-}
-
-void printc(char c) {
-    spinlock_acquire(&vga_lock);
-    
-    if (c == '\n') {
-        term_col = 0;
-        term_row++;
-        if (term_row >= max_rows) {
-            scroll();
-            term_row = max_rows - 1;
-        }
-        spinlock_release(&vga_lock);
+    if (framebuffer_bpp != 16 && framebuffer_bpp != 24 && framebuffer_bpp != 32) {
+        log("[VGA] Unsupported BPP: %i", 3, 1, framebuffer_bpp);
         return;
     }
     
-    draw_char(c, term_col * 8, term_row * 16);
-    term_col++;
+    current_font = 1;
     
-    if (term_col >= max_cols) {
-        term_col = 0;
-        term_row++;
-        if (term_row >= max_rows) {
-            scroll();
-            term_row = max_rows - 1;
-        }
+    uint8_t red_shift, green_shift, blue_shift;
+    uint8_t red_size, green_size, blue_size;
+    
+    if (framebuffer_bpp == 32) {
+        red_shift = 16; green_shift = 8; blue_shift = 0;
+        red_size = 8; green_size = 8; blue_size = 8;
+    } else if (framebuffer_bpp == 24) {
+        red_shift = 16; green_shift = 8; blue_shift = 0;
+        red_size = 8; green_size = 8; blue_size = 8;
+    } else if (framebuffer_bpp == 16) {
+        red_shift = 11; green_shift = 5; blue_shift = 0;
+        red_size = 5; green_size = 6; blue_size = 5;
     }
     
-    spinlock_release(&vga_lock);
+    ft_ctx = flanterm_fb_init(
+        kmalloc, flanterm_kfree_wrapper,
+        (uint32_t *)framebuffer_addr,
+        framebuffer_width,
+        framebuffer_height,
+        framebuffer_pitch,
+        red_size, red_shift,
+        green_size, green_shift,
+        blue_size, blue_shift,
+        NULL, //no canvas rn
+        NULL, NULL, // colors
+        NULL, NULL, //default colors
+        NULL, NULL, // default bright
+        font_8x16, 8, 16, 0, 
+        0, 0,
+        16
+    );
+    
+    if (!ft_ctx) {
+        log("[VGA] Failed to initialize flanterm", 3, 0);
+        return;
+    }
+    
+    log("[VGA] Framebuffer initialized: %ix%i, %i bpp", 4, 1, 
+        framebuffer_width, framebuffer_height, framebuffer_bpp);
+
+    draw_double_border();
 }
 
 void prints(const char *str) {
-    while (*str) {
-        printc(*str++);
-    }
-    return;
+    if (!ft_ctx) return;
+    
+    spinlock_acquire(&vga_lock);
+    flanterm_write(ft_ctx, str, strlen(str));
+    spinlock_release(&vga_lock);
 }
 
-void printi(uint64_t num) {
-    char buffer[21];
-    bool is_negative = false;
-    size_t i = 0;
+void printc(char c) {
+    if (!ft_ctx) return;
     
-    if (num == 0) {
-        printc('0');
-        return;
-    }
-    
-    if ((int64_t)num < 0) {
-        is_negative = true;
-        num = -(int64_t)num;
-    }
-    
-    while (num > 0) {
-        buffer[i++] = '0' + (num % 10);
-        num /= 10;
-    }
-    
-    if (is_negative) {
-        buffer[i++] = '-';
-    }
-    
-    while (i > 0) {
-        printc(buffer[--i]);
-    }
+    spinlock_acquire(&vga_lock);
+    flanterm_write(ft_ctx, &c, 1);
+    spinlock_release(&vga_lock);
 }
 
-void printh(uint64_t num) {
-    prints("0x");
-    char hex_digits[] = "0123456789ABCDEF";
-    char buffer[17];
-    int i = 0;
+void clr(void) {
+    if (!ft_ctx) return;
     
-    if (num == 0) {
-        printc('0');
-        return;
-    }
+    spinlock_acquire(&vga_lock);
+    flanterm_write(ft_ctx, "\033[2J\033[H", 7);
+    spinlock_release(&vga_lock);
+}
+
+void setcolor(uint8_t fg, uint8_t bg) {
+    if (!ft_ctx) return;
     
-    while (num > 0) {
-        buffer[i++] = hex_digits[num % 16];
-        num /= 16;
-    }
+    char color_seq[32];
+    snprintf(color_seq, sizeof(color_seq), "\033[38;5;%dm\033[48;5;%dm", fg, bg);
     
-    while (i > 0) {
-        printc(buffer[--i]);
-    }
+    spinlock_acquire(&vga_lock);
+    flanterm_write(ft_ctx, color_seq, strlen(color_seq));
+    spinlock_release(&vga_lock);
 }
