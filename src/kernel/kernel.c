@@ -2,8 +2,6 @@
  * The StartOS Kernel
  */
 
-// Kernel Includes
-
 #include "sched.h"
 #include "../libk/debug/serial.h"
 #include "../libk/debug/log.h"
@@ -24,7 +22,6 @@
 #include "../drv/local_apic.h"
 #include "../drv/ioapic.h"
 #include "../drv/net/e1000.h"
-#include "../drv/net/tcp.h"
 #include "../drv/net/pci.h"
 #include "../cpu/acpi/acpi.h"
 #include "../drv/speaker.h"
@@ -58,10 +55,10 @@ void _start(void){
     AcpiInit();
     LocalApicInit();
     IoApicInit();
-    init_apic_timer(10);
+    rtc_initialize();
+    init_apic_timer(250);
     enable_sse_and_fpu();
     detect_cpu_info(0);
-    rtc_initialize();
     spinlock_init(&loglock);
     ata_init();
     init_keyboard();

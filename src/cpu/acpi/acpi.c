@@ -1,7 +1,3 @@
-// ------------------------------------------------------------------------------------------------
-// acpi/acpi.c
-// ------------------------------------------------------------------------------------------------
-
 #include "acpi.h"
 #include "../../drv/ioapic.h"
 #include "../../drv/local_apic.h"
@@ -11,12 +7,9 @@
 #include "stdbool.h"
 #include "../../drv/vga.h"
 
-// ------------------------------------------------------------------------------------------------
-// Globals
 int g_acpiCpuCount;
 uint8_t g_acpiCpuIds[MAX_CPU_COUNT];
 
-// ------------------------------------------------------------------------------------------------
 typedef struct AcpiHeader
 {
     uint32_t signature;
@@ -29,8 +22,6 @@ typedef struct AcpiHeader
     uint32_t creatorId;
     uint32_t creatorRevision;
 } __attribute__((__packed__)) AcpiHeader;
-
-// ------------------------------------------------------------------------------------------------
 
 typedef struct AcpiFadt
 {
@@ -94,7 +85,6 @@ typedef struct AcpiFadt
 
 static AcpiFadt *s_fadt;
 
-// ------------------------------------------------------------------------------------------------
 typedef struct AcpiMadt
 {
     AcpiHeader header;
@@ -102,19 +92,16 @@ typedef struct AcpiMadt
     uint32_t flags;
 } __attribute__((__packed__)) AcpiMadt;
 
-// ------------------------------------------------------------------------------------------------
 typedef struct ApicHeader
 {
     uint8_t type;
     uint8_t length;
 } __attribute__((__packed__)) ApicHeader;
 
-// APIC structure types
-#define APIC_TYPE_LOCAL_APIC            0
-#define APIC_TYPE_IO_APIC               1
-#define APIC_TYPE_INTERRUPT_OVERRIDE    2
+#define APIC_TYPE_LOCAL_APIC 0
+#define APIC_TYPE_IO_APIC 1
+#define APIC_TYPE_INTERRUPT_OVERRIDE 2
 
-// ------------------------------------------------------------------------------------------------
 typedef struct ApicLocalApic
 {
     ApicHeader header;
@@ -123,7 +110,6 @@ typedef struct ApicLocalApic
     uint32_t flags;
 } __attribute__((__packed__)) ApicLocalApic;
 
-// ------------------------------------------------------------------------------------------------
 typedef struct ApicIoApic
 {
     ApicHeader header;
@@ -133,7 +119,6 @@ typedef struct ApicIoApic
     uint32_t globalSystemInterruptBase;
 } __attribute__((__packed__)) ApicIoApic;
 
-// ------------------------------------------------------------------------------------------------
 typedef struct ApicInterruptOverride
 {
     ApicHeader header;
@@ -143,11 +128,7 @@ typedef struct ApicInterruptOverride
     uint16_t flags;
 } __attribute__((__packed__)) ApicInterruptOverride;
 
-// ------------------------------------------------------------------------------------------------
 static AcpiMadt *s_madt;
-
-// ------------------------------------------------------------------------------------------------
-
 static uint16_t s_slp_typa = 0;
 static uint16_t s_slp_typb = 0;
 static bool s_s5_found = false;
@@ -155,27 +136,34 @@ static bool s_s5_found = false;
 static bool AcpiFindS5(uint8_t *dsdt_addr, uint32_t dsdt_length)
 {
     uint8_t *dsdt = dsdt_addr;
-    uint32_t *signature = (uint32_t*)dsdt;
-    
-    if (*signature != 0x54445344) return false;
-    
+    uint32_t *signature = (uint32_t *)dsdt;
+
+    if (*signature != 0x54445344)
+        return false;
+
     uint8_t *end = dsdt + dsdt_length;
     uint8_t *ptr = dsdt + sizeof(AcpiHeader);
-    
-    while (ptr < end - 4) {
-        if (ptr[0] == '_' && ptr[1] == 'S' && ptr[2] == '5' && ptr[3] == '_') {
+
+    while (ptr < end - 4)
+    {
+        if (ptr[0] == '_' && ptr[1] == 'S' && ptr[2] == '5' && ptr[3] == '_')
+        {
             ptr += 4;
-            
-            if (*ptr == 0x12) {
+
+            if (*ptr == 0x12)
+            {
                 ptr++;
                 uint8_t pkg_length = *ptr++;
-                if (pkg_length >= 4) {
+                if (pkg_length >= 4)
+                {
                     ptr++;
-                    if (*ptr == 0x0A) {
+                    if (*ptr == 0x0A)
+                    {
                         ptr++;
                         s_slp_typa = *ptr++;
                     }
-                    if (*ptr == 0x0A) {
+                    if (*ptr == 0x0A)
+                    {
                         ptr++;
                         s_slp_typb = *ptr++;
                     }
@@ -192,19 +180,21 @@ static bool AcpiFindS5(uint8_t *dsdt_addr, uint32_t dsdt_length)
 static void AcpiParseFacp(AcpiFadt *facp)
 {
     s_fadt = facp;
-    
+
     log("[AcpiParseFacp] PM1A Control Block = 0x%08x", 1, 0, facp->pm1aControlBlk);
     log("[AcpiParseFacp] PM1B Control Block = 0x%08x", 1, 0, facp->pm1bControlBlk);
-    log("[AcpiParseFacp] Reset Register Address = 0x%02x%02x%02x%02x", 1, 0, 
+    log("[AcpiParseFacp] Reset Register Address = 0x%02x%02x%02x%02x", 1, 0,
         facp->resetReg[8], facp->resetReg[9], facp->resetReg[10], facp->resetReg[11]);
     log("[AcpiParseFacp] Reset Value = 0x%02x", 1, 0, facp->resetValue);
     log("[AcpiParseFacp] Flags = 0x%08x", 1, 0, facp->flags);
     log("[AcpiParseFacp] DSDT = 0x%08x", 1, 0, facp->dsdt);
 
-    if (facp->dsdt) {
-        AcpiHeader *dsdt_header = (AcpiHeader*)(uintptr_t)facp->dsdt;
-        AcpiFindS5((uint8_t*)dsdt_header, dsdt_header->length);
-        if (s_s5_found) {
+    if (facp->dsdt)
+    {
+        AcpiHeader *dsdt_header = (AcpiHeader *)(uintptr_t)facp->dsdt;
+        AcpiFindS5((uint8_t *)dsdt_header, dsdt_header->length);
+        if (s_s5_found)
+        {
             log("[AcpiParseFacp] Found _S5_: SLP_TYPa=0x%02x SLP_TYPb=0x%02x", 1, 0, s_slp_typa, s_slp_typb);
         }
     }
@@ -213,9 +203,10 @@ static void AcpiParseFacp(AcpiFadt *facp)
     {
         log("[AcpiParseFacp] Enabling ACPI", 1, 0);
         asm volatile("outb %0, %1" : : "a"((uint8_t)facp->acpiEnable), "Nd"((uint16_t)facp->smiCommandPort));
-        
+
         uint16_t status;
-        do {
+        do
+        {
             asm volatile("inw %1, %0" : "=a"(status) : "Nd"((uint16_t)facp->pm1aControlBlk));
         } while (!(status & 0x0001));
     }
@@ -228,44 +219,47 @@ static void AcpiParseFacp(AcpiFadt *facp)
 void AcpiShutdown()
 {
     log("[ACPI] Shutting down...", 2, 1);
-    if (!s_fadt || !s_s5_found) {
+    if (!s_fadt || !s_s5_found)
+    {
         asm volatile("outb %0, %1" : : "a"((uint8_t)0xFE), "Nd"((uint16_t)0x64));
         asm volatile("cli; hlt" : : : "memory");
         return;
     }
-    
+
     uint16_t pm1a_cnt = s_fadt->pm1aControlBlk;
     uint16_t pm1b_cnt = s_fadt->pm1bControlBlk;
-    
-    if (pm1a_cnt == 0) {
+
+    if (pm1a_cnt == 0)
+    {
         asm volatile("outb %0, %1" : : "a"((uint8_t)0xFE), "Nd"((uint16_t)0x64));
         asm volatile("cli; hlt" : : : "memory");
         return;
     }
-    
+
     uint16_t pm1a_status;
     asm volatile("inw %1, %0" : "=a"(pm1a_status) : "Nd"(pm1a_cnt));
     pm1a_status &= ~(0x7 << 10);
     pm1a_status |= (s_slp_typa << 10) | (1 << 13);
-    
+
     asm volatile("cli" : : : "memory");
     asm volatile("outw %0, %1" : : "a"(pm1a_status), "Nd"(pm1a_cnt));
-    
-    if (pm1b_cnt != 0) {
+
+    if (pm1b_cnt != 0)
+    {
         uint16_t pm1b_status;
         asm volatile("inw %1, %0" : "=a"(pm1b_status) : "Nd"(pm1b_cnt));
         pm1b_status &= ~(0x7 << 10);
         pm1b_status |= (s_slp_typb << 10) | (1 << 13);
         asm volatile("outw %0, %1" : : "a"(pm1b_status), "Nd"(pm1b_cnt));
     }
-    
-    for (volatile int i = 0; i < 1000000; i++);
-    
+
+    for (volatile int i = 0; i < 1000000; i++)
+        ;
+
     asm volatile("outb %0, %1" : : "a"((uint8_t)0xFE), "Nd"((uint16_t)0x64));
     log("[ACPI] Failed to shutdown. Aborting.", 3, 1);
 }
 
-// ------------------------------------------------------------------------------------------------
 static void AcpiParseApic(AcpiMadt *madt)
 {
     s_madt = madt;
@@ -315,7 +309,6 @@ static void AcpiParseApic(AcpiMadt *madt)
     }
 }
 
-// ------------------------------------------------------------------------------------------------
 static void AcpiParseDT(AcpiHeader *header)
 {
     uint32_t signature = header->signature;
@@ -335,11 +328,10 @@ static void AcpiParseDT(AcpiHeader *header)
     }
 }
 
-// ------------------------------------------------------------------------------------------------
 static void AcpiParseRsdt(AcpiHeader *rsdt)
 {
     uint32_t *p = (uint32_t *)(rsdt + 1);
-    uint32_t *end = (uint32_t *)((uint8_t*)rsdt + rsdt->length);
+    uint32_t *end = (uint32_t *)((uint8_t *)rsdt + rsdt->length);
 
     while (p < end)
     {
@@ -348,11 +340,10 @@ static void AcpiParseRsdt(AcpiHeader *rsdt)
     }
 }
 
-// ------------------------------------------------------------------------------------------------
 static void AcpiParseXsdt(AcpiHeader *xsdt)
 {
     uint64_t *p = (uint64_t *)(xsdt + 1);
-    uint64_t *end = (uint64_t *)((uint8_t*)xsdt + xsdt->length);
+    uint64_t *end = (uint64_t *)((uint8_t *)xsdt + xsdt->length);
 
     while (p < end)
     {
@@ -361,13 +352,9 @@ static void AcpiParseXsdt(AcpiHeader *xsdt)
     }
 }
 
-// ------------------------------------------------------------------------------------------------
 static bool AcpiParseRsdp(uint8_t *p)
 {
-    // Parse Root System Description Pointer
     log("[AcpiParseRsdp] RSDP found", 1, 0);
-
-    // Verify checksum
     uint8_t sum = 0;
     for (int i = 0; i < 20; ++i)
     {
@@ -380,13 +367,11 @@ static bool AcpiParseRsdp(uint8_t *p)
         return false;
     }
 
-    // Print OEM
     char oem[7];
     memcpy(oem, p + 9, 6);
     oem[6] = '\0';
     log("[AcpiParseRsdp] OEM = %s", 1, 0, oem);
 
-    // Check version
     uint8_t revision = p[15];
     if (revision == 0)
     {
@@ -419,7 +404,6 @@ static bool AcpiParseRsdp(uint8_t *p)
     return true;
 }
 
-// ------------------------------------------------------------------------------------------------
 void AcpiInit()
 {
     uint8_t *p = (uint8_t *)0x000e0000;
@@ -441,7 +425,6 @@ void AcpiInit()
     }
 }
 
-// ------------------------------------------------------------------------------------------------
 int AcpiRemapIrq(int irq)
 {
     AcpiMadt *madt = s_madt;

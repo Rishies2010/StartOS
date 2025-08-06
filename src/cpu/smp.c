@@ -27,7 +27,7 @@ void ap_entry(struct limine_smp_info *info) {
     LocalApicInit();
     asm volatile("mov %0, %%rsp" : : "r" (ap_stacks[info->processor_id] + STACK_SIZE) : "memory");
     __atomic_add_fetch(&g_activeCpuCount, 1, __ATOMIC_SEQ_CST);
-    init_apic_timer(10);
+    init_apic_timer(250);
     ap_main();
     while(1);
 }

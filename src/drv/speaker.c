@@ -1,9 +1,6 @@
 #include "speaker.h"
 #include "../libk/ports.h"
 
-// SEE: https://wiki.osdev.org/PC_Speaker
-// SEE ALSO: https://web.archive.org/web/20171115162742/http://guideme.itgo.com/atozofc/ch23.pdf
-
 static float notes[7][12] = {
     { 130.81, 138.59, 146.83, 155.56, 164.81, 174.61, 185.0,
         196.0, 207.65, 220.0, 227.31, 246.96 },

@@ -5,6 +5,7 @@
 #include "../../drv/vga.h"
 #include "../string.h"
 #include "../core/mem.h"
+#include "../../drv/local_apic.h"
 #include "../../drv/speaker.h"
 
 spinlock_t loglock;
@@ -22,6 +23,7 @@ void log(const char* fmt, int level, int visibility, ...) {
 
     const char* loglevel;
     const char* color_seq;
+    int cpuid = LocalApicGetId();
     
     switch (level) {
         case 1: 
@@ -42,7 +44,7 @@ void log(const char* fmt, int level, int visibility, ...) {
             color_seq = "\x1b[38;2;50;255;50m";
             break;
         default:
-            loglevel = "-[LOGERROR] - "; 
+            loglevel = "-[LOGERR] - "; 
             color_seq = "\x1b[38;2;255;50;50m";
             break;
     }
@@ -57,12 +59,17 @@ void log(const char* fmt, int level, int visibility, ...) {
         spinlock_release(&loglock);
         return;
     }
-    char* logline = (char*)kmalloc(len + strlen(loglevel) + 3);
+    char cpuid_str[16];
+    if(cpuid != 0) snprintf(cpuid_str, sizeof(cpuid_str), "[CPU%d] - ", cpuid); else cpuid_str[0] = '\0';
+
+    size_t total_len = strlen(loglevel) + strlen(cpuid_str) + len + 2;
+    char* logline = (char*)kmalloc(total_len);
     if (!logline) {
         spinlock_release(&loglock);
         return;
     }
     strcpy(logline, loglevel);
+    strcat(logline, cpuid_str);
     strcat(logline, formatted);
     strcat(logline, "\n");
     serial_write_string(color_seq);

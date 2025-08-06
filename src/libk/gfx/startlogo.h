@@ -1,10 +1,5 @@
-/*  GIMP header image file format (RGB): /home/rishies2010/OSDev/startlogo.h  */
-
 static unsigned int width = 200;
 static unsigned int height = 200;
-
-/*  Call this macro repeatedly.  After each use, the pixel data can be extracted  */
-
 #define HEADER_PIXEL(data,pixel) {\
 pixel[0] = (((data[0] - 33) << 2) | ((data[1] - 33) >> 4)); \
 pixel[1] = ((((data[1] - 33) & 0xF) << 4) | ((data[2] - 33) >> 2)); \

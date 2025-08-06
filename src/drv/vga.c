@@ -5,7 +5,6 @@
 #include "../libk/string.h"
 #include "../libk/spinlock.h"
 #include "../libk/limine.h"
-#include "../libk/core/mem.h"
 #include "vga.h"
 #include "term/flanterm.h"
 #include "term/flanterm_backends/fb.h"
@@ -21,10 +20,6 @@ static struct limine_framebuffer *fb;
 uint8_t *framebuffer_addr;
 uint64_t framebuffer_width, framebuffer_height, framebuffer_pitch;
 uint8_t framebuffer_bpp;
-static uint32_t terminal_color = 0x000000;
-static int term_col = 0, term_row = 0;
-static int max_rows, max_cols;
-int current_font = 2;
 static spinlock_t vga_lock;
 
 static struct flanterm_context *ft_ctx = NULL;
@@ -98,18 +93,13 @@ void vga_init(void) {
     framebuffer_height = fb->height;
     framebuffer_pitch = fb->pitch;
     framebuffer_bpp = fb->bpp;
-    max_rows = framebuffer_height/16; 
-    max_cols = framebuffer_width/8;
     
     if (framebuffer_bpp != 16 && framebuffer_bpp != 24 && framebuffer_bpp != 32) {
         log("[VGA] Unsupported BPP: %i", 3, 1, framebuffer_bpp);
         return;
     }
-    
-    current_font = 1;
-    
-    uint8_t red_shift, green_shift, blue_shift;
-    uint8_t red_size, green_size, blue_size;
+    uint8_t red_shift = 0, green_shift = 0, blue_shift = 0;
+    uint8_t red_size = 0, green_size = 0, blue_size = 0;
     
     if (framebuffer_bpp == 32) {
         red_shift = 16; green_shift = 8; blue_shift = 0;
@@ -131,10 +121,10 @@ void vga_init(void) {
         red_size, red_shift,
         green_size, green_shift,
         blue_size, blue_shift,
-        NULL, //no canvas rn
-        NULL, NULL, // colors
-        NULL, NULL, //default colors
-        NULL, NULL, // default bright
+        NULL,
+        NULL, NULL, 
+        NULL, NULL,
+        NULL, NULL,
         font_8x16, 8, 16, 0, 
         0, 0,
         16
