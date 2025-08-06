@@ -23,6 +23,9 @@
 #include "../drv/mouse.h"
 #include "../drv/local_apic.h"
 #include "../drv/ioapic.h"
+#include "../drv/net/e1000.h"
+#include "../drv/net/tcp.h"
+#include "../drv/net/pci.h"
 #include "../cpu/acpi/acpi.h"
 #include "../drv/speaker.h"
 #include "../drv/keyboard.h"
@@ -66,6 +69,8 @@ void _start(void){
     IoApicSetEntry(g_ioApicAddr, 0, 0x20);
     IoApicSetEntry(g_ioApicAddr, 1, 0x21);
     init_smp();
+    pci_check_all_buses();
+    e1000_init();
     #if debug
         log("[KERNEL] Running In Debug Mode.", 2, 1);
     #else
