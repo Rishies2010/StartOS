@@ -135,7 +135,7 @@ void vga_init(void) {
         return;
     }
     
-    log("[VGA] Framebuffer initialized: %ix%i, %i bpp", 4, 1, 
+    log("[VGA] Framebuffer initialized: %ix%i, %i bpp", 4, 0, 
         framebuffer_width, framebuffer_height, framebuffer_bpp);
 
     draw_double_border();
