@@ -18,75 +18,57 @@ void isr_handler(registers_t* regs)
 {
     switch(regs->int_no) {
         case DIVISION_BY_ZERO:
-            log("\n=== DIVISION BY ZERO EXCEPTION ===\n", 3, 1);
-            log("RIP: 0x%lx, RSP: 0x%lx", 3, 1, regs->rip, regs->userrsp);
-            log("RAX: 0x%lx, RBX: 0x%lx, RCX: 0x%lx, RDX: 0x%lx", 3, 1, 
-                regs->rax, regs->rbx, regs->rcx, regs->rdx);
-            log("\n=== REGISTER DUMP ===\n", 3, 1);
-            log("RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx", 3, 1,
-                regs->rax, regs->rbx, regs->rcx, regs->rdx);
-            log("RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx", 3, 1,
-                regs->rsi, regs->rdi, regs->rbp, regs->userrsp);
-            log("RIP=0x%016lx RFLAGS=0x%016lx", 3, 1, regs->rip, regs->rflags);
+            log("=== DIVISION BY ZERO EXCEPTION ===\n         - RIP: 0x%lx, RSP: 0x%lx\n         - RAX: 0x%lx, RBX: 0x%lx, RCX: 0x%lx, RDX: 0x%lx\n         - \n         - === REGISTER DUMP ===\n         - \n         - RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx\n         - RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx\n         - RIP=0x%016lx RFLAGS=0x%016lx", 3, 1,
+                regs->rip, regs->userrsp,
+                regs->rax, regs->rbx, regs->rcx, regs->rdx,
+                regs->rax, regs->rbx, regs->rcx, regs->rdx,
+                regs->rsi, regs->rdi, regs->rbp, regs->userrsp,
+                regs->rip, regs->rflags);
             for(;;)asm volatile("cli; hlt");
             break;
             
-        case INVALID_OPCODE_EXCEPTION:
-            log("\n=== INVALID OPCODE EXCEPTION ===\n", 3, 1);
-            log("RIP: 0x%lx (instruction pointer)", 3, 1, regs->rip);
-            log("CS: 0x%lx, RFLAGS: 0x%lx", 3, 1, regs->cs, regs->rflags);
-            
+        case INVALID_OPCODE_EXCEPTION: {
             uint8_t* bad_instr = (uint8_t*)regs->rip;
-            log("Instruction bytes: %02x %02x %02x %02x", 3, 1,
-                bad_instr[0], bad_instr[1], bad_instr[2], bad_instr[3]);
-            log("\n=== REGISTER DUMP ===\n", 3, 1);
-            log("RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx", 3, 1,
-                regs->rax, regs->rbx, regs->rcx, regs->rdx);
-            log("RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx", 3, 1,
-                regs->rsi, regs->rdi, regs->rbp, regs->userrsp);
-            log("RIP=0x%016lx RFLAGS=0x%016lx", 3, 1, regs->rip, regs->rflags);
+            log("=== INVALID OPCODE EXCEPTION ===\n         - RIP: 0x%lx (instruction pointer)\n         - CS: 0x%lx, RFLAGS: 0x%lx\n         - Instruction bytes: %02x %02x %02x %02x\n         - \n         - === REGISTER DUMP ===\n         - \n         - RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx\n         - RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx\n         - RIP=0x%016lx RFLAGS=0x%016lx", 3, 1,
+                regs->rip,
+                regs->cs, regs->rflags,
+                bad_instr[0], bad_instr[1], bad_instr[2], bad_instr[3],
+                regs->rax, regs->rbx, regs->rcx, regs->rdx,
+                regs->rsi, regs->rdi, regs->rbp, regs->userrsp,
+                regs->rip, regs->rflags);
             for(;;)asm volatile("cli; hlt");
             break;
-            
-        case GENERAL_PROTECTION_FAULT:
-            log("\n=== GENERAL PROTECTION FAULT ===\n", 3, 1);
-            log("Error Code: 0x%lx", 3, 1, regs->err_code);
-            
-            if(regs->err_code & 1) {
-                log("External event caused fault", 3, 1);
-            } else {
-                log("Internal event caused fault", 3, 1);
-            }
-            
+        }
+        
+        case GENERAL_PROTECTION_FAULT: {
             uint16_t selector = (regs->err_code >> 3) & 0x1FFF;
-            if(selector) {
-                log("Segment selector: 0x%x", 3, 1, selector);
-            }
-            
-            log("RIP: 0x%lx, RSP: 0x%lx", 3, 1, regs->rip, regs->userrsp);
-            log("\n=== REGISTER DUMP ===\n", 3, 1);
-            log("RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx", 3, 1,
-                regs->rax, regs->rbx, regs->rcx, regs->rdx);
-            log("RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx", 3, 1,
-                regs->rsi, regs->rdi, regs->rbp, regs->userrsp);
-            log("RIP=0x%016lx RFLAGS=0x%016lx", 3, 1, regs->rip, regs->rflags);
+            log("=== GENERAL PROTECTION FAULT ===\n         - Error Code: 0x%lx\n         - %s\n         - %s\n         - RIP: 0x%lx, RSP: 0x%lx\n         - \n         - === REGISTER DUMP ===\n         - \n         - RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx\n         - RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx\n         - RIP=0x%016lx RFLAGS=0x%016lx", 3, 1,
+                regs->err_code,
+                (regs->err_code & 1) ? "External event caused fault" : "Internal event caused fault",
+                selector ? "Segment selector involved" : "No segment selector",
+                regs->rip, regs->userrsp,
+                regs->rax, regs->rbx, regs->rcx, regs->rdx,
+                regs->rsi, regs->rdi, regs->rbp, regs->userrsp,
+                regs->rip, regs->rflags);
             for(;;)asm volatile("cli; hlt");
             break;
-            
-        case PAGE_FAULT:
+        }
+        
+        case PAGE_FAULT: {
             uint64_t cr2;
             __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
             log("=== PAGE FAULT ===\n         - Faulting address: 0x%lx\n         - Error code: 0x%lx\n         - %s\n         - %s\n         - %s\n         - RIP: 0x%lx\n         - \n         - === REGISTER DUMP ===\n         - \n         - RAX=0x%016lx RBX=0x%016lx RCX=0x%016lx RDX=0x%016lx\n         - RSI=0x%016lx RDI=0x%016lx RBP=0x%016lx RSP=0x%016lx\n         - RIP=0x%016lx RFLAGS=0x%016lx", 3, 1, 
                 cr2, regs->err_code,
-                (regs->err_code & 1) ? "- Page protection violation" : "- Page not present",
-                (regs->err_code & 2) ? "- Write operation" : "- Read operation", 
-                (regs->err_code & 4) ? "- User mode access" : "- Supervisor mode access",
+                (regs->err_code & 1) ? "Page protection violation" : "Page not present",
+                (regs->err_code & 2) ? "Write operation" : "Read operation", 
+                (regs->err_code & 4) ? "User mode access" : "Supervisor mode access",
                 regs->rip,
                 regs->rax, regs->rbx, regs->rcx, regs->rdx,
                 regs->rsi, regs->rdi, regs->rbp, regs->userrsp,
                 regs->rip, regs->rflags);
-                for(;;)asm volatile("cli; hlt");
-                break;
+            for(;;)asm volatile("cli; hlt");
+            break;
+        }
     }
 
     if(interrupt_handlers[regs->int_no]) {

@@ -575,6 +575,9 @@ static void plot_char_unscaled_uncanvas(struct flanterm_context *_ctx, struct fl
         volatile uint32_t *fb_line = ctx->framebuffer + x + (y + gy) * (ctx->pitch / 4);
         bool *glyph_pointer = glyph + (gy * ctx->font_width);
         for (size_t fx = 0; fx < ctx->font_width; fx++) {
+            if ((x + fx) >= ctx->pitch/4 || (y + gy) >= ctx->height) {
+                continue; // Skip this pixel
+            }
             fb_line[fx] = *(glyph_pointer++) ? fg : bg;
         }
     }
