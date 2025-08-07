@@ -1,6 +1,6 @@
 # StartOS Makefile
 
-CFLAGS = -mcmodel=kernel -m64 -ffreestanding -fno-stack-protector -Wall -Wextra -c -fno-pie -fno-pic -Wno-missing-braces
+CFLAGS = -mcmodel=kernel -m64 -ffreestanding -fno-stack-protector -Wall -Wextra -c -fno-pie -fno-pic -Wno-missing-braces -g
 LDFLAGS = -m elf_x86_64 -T linker.ld
 ASFLAGS = -f elf64
 

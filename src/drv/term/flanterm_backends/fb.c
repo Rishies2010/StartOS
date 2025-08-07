@@ -702,7 +702,9 @@ static void flanterm_fb_set_cursor_pos(struct flanterm_context *_ctx, size_t x, 
 static void flanterm_fb_get_cursor_pos(struct flanterm_context *_ctx, size_t *x, size_t *y) {
     struct flanterm_fb_context *ctx = (void *)_ctx;
 
+    if (x)
     *x = ctx->cursor_x >= _ctx->cols ? _ctx->cols - 1 : ctx->cursor_x;
+    if (y)
     *y = ctx->cursor_y >= _ctx->rows ? _ctx->rows - 1 : ctx->cursor_y;
 }
 

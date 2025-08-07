@@ -73,5 +73,5 @@ void _start(void){
     #else
     #endif
     asm volatile("sti");
-    for(;;);
+    for(;;)printc(wait_for_key());
 }
