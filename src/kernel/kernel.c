@@ -66,7 +66,7 @@ void _start(void){
     IoApicSetEntry(g_ioApicAddr, 0, 0x20);
     IoApicSetEntry(g_ioApicAddr, 1, 0x21);
     init_smp();
-    pci_check_all_buses();
+    pci_initialize_system();
     e1000_init();
     #if debug
         log("[KERNEL] Running In Debug Mode.", 2, 1);

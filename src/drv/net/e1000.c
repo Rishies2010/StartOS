@@ -1,6 +1,8 @@
 #include "e1000.h"
+#include "pci.h"
 
 static e1000_device dev;
+static pci_device_t *pci_dev = NULL;
 
 static uint32_t e1000_read(uint32_t reg) {
     return *((volatile uint32_t *)(dev.mem_base + reg));
@@ -119,71 +121,85 @@ static void e1000_init_tx(void) {
     e1000_write(E1000_REG_TIPG, 0x0060200A);
 }
 
-static void e1000_interrupt_handler() {
+static void e1000_interrupt_handler(registers_t regs) {
     e1000_handle_interrupt();
 }
 
 void e1000_init(void) {
     memset(&dev, 0, sizeof(e1000_device));
     
-    for (int bus = 0; bus < 256; bus++) {
-        for (int slot = 0; slot < 32; slot++) {
-            for (int func = 0; func < 8; func++) {
-                uint16_t vendor = pci_get_vendor(bus, slot);
-                if (vendor == 0xFFFF) continue;
-                
-                if (vendor == E1000_VENDOR_ID) {
-                    uint16_t device = pci_get_device(bus, slot);
-                    if (device == E1000_DEVICE_ID || device == E1000_DEVICE_ID_2 || device == E1000_DEVICE_ID_3) {
-                        dev.bus = bus;
-                        dev.slot = slot;
-                        dev.func = func;
-                        dev.device_id = device;
-                        dev.bar0 = pci_get_bar(bus, slot, func, 0);
-                        dev.mem_base = dev.bar0 & ~0xF;
-                        
-                        uint8_t irq = pci_read(bus, slot, func, 0x3C) & 0xFF;
-                        dev.irq = irq;
-                        
-                        log("[E1000] Found device %04x at %02x:%02x.%x IRQ %d.", 1, 0, device, bus, slot, func, irq);
-                        
-                        pci_write(bus, slot, func, 0x04, 0x06);
-                        
-                        e1000_reset();
-                        
-                        dev.has_eeprom = e1000_detect_eeprom();
-                        if (dev.has_eeprom) {
-                            log("[E1000] EEPROM detected.", 1, 0);
-                        } else {
-                            log("[E1000] Using registers for MAC.", 1, 0);
-                        }
-                        
-                        e1000_read_mac();
-                        e1000_init_rx();
-                        e1000_init_tx();
-                        
-                        e1000_write(E1000_REG_IMASK, 0x1F6DC);
-                        e1000_write(E1000_REG_IMASK, 0xFF & ~4);
-                        e1000_read(0xC0);
-                        
-                        register_interrupt_handler(32 + irq, e1000_interrupt_handler, "E1000 Network");
-                        
-                        log("[E1000] Initialized successfully.", 4, 0);
-                        return;
-                    }
-                }
-                
-                if (func == 0) {
-                    uint32_t header_type = pci_read(bus, slot, 0, 0x0C);
-                    if (!(header_type & 0x800000)) break;
-                }
-            }
+    log("[E1000] Searching for Intel Ethernet controller...", 1, 0);
+    
+    pci_dev = pci_find_device(E1000_VENDOR_ID, E1000_DEVICE_ID);
+    if (!pci_dev) {
+        pci_dev = pci_find_device(E1000_VENDOR_ID, E1000_DEVICE_ID_2);
+    }
+    if (!pci_dev) {
+        pci_dev = pci_find_device(E1000_VENDOR_ID, E1000_DEVICE_ID_3);
+    }
+    if (!pci_dev) {
+        pci_dev = pci_find_device_by_class(PCI_CLASS_NETWORK, PCI_SUBCLASS_ETHERNET);
+        if (pci_dev && pci_dev->vendor_id != E1000_VENDOR_ID) {
+            log("[E1000] Found non-Intel network controller: %04x:%04x", 2, 0, 
+                pci_dev->vendor_id, pci_dev->device_id);
+            pci_dev = NULL;
         }
     }
-    log("[E1000] No compatible device found.", 3, 1);
+    
+    if (!pci_dev) {
+        log("[E1000] No compatible device found.", 3, 1);
+        return;
+    }
+    
+    dev.bus = pci_dev->bus;
+    dev.slot = pci_dev->slot;
+    dev.func = pci_dev->func;
+    dev.device_id = pci_dev->device_id;
+    dev.bar0 = pci_dev->bars[0];
+    dev.mem_base = dev.bar0 & ~0xF;
+    dev.irq = pci_dev->interrupt_line;
+    
+    log("[E1000] Found device %04x at %02x:%02x.%x", 1, 0, 
+        dev.device_id, dev.bus, dev.slot, dev.func);
+    
+    pci_enable_bus_mastering(pci_dev);
+    pci_enable_memory_space(pci_dev);
+    
+    e1000_reset();
+    
+    dev.has_eeprom = e1000_detect_eeprom();
+    if (dev.has_eeprom) {
+        log("[E1000] EEPROM detected.", 1, 0);
+    } else {
+        log("[E1000] Using registers for MAC.", 1, 0);
+    }
+    
+    e1000_read_mac();
+    e1000_init_rx();
+    e1000_init_tx();
+    
+    e1000_write(E1000_REG_IMASK, 0x1F6DC);
+    e1000_write(E1000_REG_IMASK, 0xFF & ~4);
+    e1000_read(0xC0);
+    
+    if (pci_dev->msi_capable) {
+        log("[E1000] Using MSI interrupts (vector 50)", 1, 0);
+        pci_enable_msi(pci_dev, 50, e1000_interrupt_handler, "E1000 MSI");
+    } else {
+        log("[E1000] Using legacy interrupts (IRQ %d)", 1, 0, dev.irq);
+        register_interrupt_handler(32 + dev.irq, e1000_interrupt_handler, "E1000 Legacy");
+    }
+    
+    log("[E1000] Initialized successfully. Link: %s", 4, 0, 
+        e1000_link_up() ? "UP" : "DOWN");
 }
 
 void e1000_send_packet(void *data, uint16_t length) {
+    if (!pci_dev) {
+        log("[E1000] Device not initialized.", 3, 1);
+        return;
+    }
+    
     if (length > TX_BUFFER_SIZE) {
         log("[E1000] Packet too large: %d bytes.", 3, 1, length);
         return;
@@ -203,6 +219,8 @@ void e1000_send_packet(void *data, uint16_t length) {
 }
 
 uint16_t e1000_receive_packet(void *buffer) {
+    if (!pci_dev) return 0;
+    
     uint16_t idx = (e1000_read(E1000_REG_RDT) + 1) % NUM_RX_DESC;
     
     if (!(dev.rx_ring[idx].status & 0x1)) {
@@ -231,19 +249,23 @@ void e1000_get_mac_address(uint8_t *mac) {
 }
 
 uint32_t e1000_link_up(void) {
+    if (!pci_dev) return 0;
     uint32_t status = e1000_read(E1000_REG_STATUS);
     return (status & 2) ? 1 : 0;
 }
 
 void e1000_enable_interrupts(void) {
+    if (!pci_dev) return;
     e1000_write(E1000_REG_IMASK, 0x1F6DC);
 }
 
 void e1000_disable_interrupts(void) {
+    if (!pci_dev) return;
     e1000_write(E1000_REG_IMASK, 0);
 }
 
 uint32_t e1000_get_interrupt_status(void) {
+    if (!pci_dev) return 0;
     return e1000_read(0xC0);
 }
 
@@ -251,7 +273,7 @@ void e1000_handle_interrupt(void) {
     uint32_t status = e1000_get_interrupt_status();
     
     if (status & 0x04) {
-        log("[E1000] Link status changed.", 1, 0);
+        log("[E1000] Link status changed - %s", 1, 0, e1000_link_up() ? "UP" : "DOWN");
     }
     if (status & 0x10) {
         log("[E1000] Good threshold.", 1, 0);

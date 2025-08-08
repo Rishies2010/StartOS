@@ -3,7 +3,7 @@
 #include "stdbool.h"
 #include "../spinlock.h"
 
-#define debug 0
+#define debug 1
 extern char* os_version;
 extern spinlock_t loglock;
 
