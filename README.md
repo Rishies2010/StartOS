@@ -5,3 +5,5 @@
 > ***Goal :*** A Simple Dual-Boot OS or Quick Utilities like Calculator, Text Editor, File Manager, etc.
 ---
 > Made by Rishies2010 and `make`.
+---
+  - **Check the [https://github.com/Rishies2010/StartOS/wiki](Wiki Page.)**
