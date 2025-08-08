@@ -35,7 +35,7 @@ static uint8_t mouse_read(void) {
     return inportb(0x60);
 }
 
-void mouse_handler() {
+void mouse_handler(registers_t* regs) {
     uint8_t data = inportb(0x60);
     
     switch (mouse.cycle) {

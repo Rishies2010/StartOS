@@ -58,10 +58,7 @@ typedef struct registers
 } registers_t;
 
 // Interrupt service routine handler function type
-// This intentionally accepts a *COPY* of the registers.
-// It's slower, but it prevents service routines from messing with them.
-// Maybe messing with them is useful, and we'll change this later.
-typedef void (*isr_handler_t)(registers_t);
+typedef void (*isr_handler_t)(registers_t*);
 
 // Function prototypes
 void register_interrupt_handler(uint8_t interrupt, isr_handler_t handler, const char* handler_name);

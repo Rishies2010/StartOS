@@ -12,7 +12,7 @@
 
 static uint32_t apic_freq = 0;
 
-void apic_timer_handler()
+void apic_timer_handler(registers_t* regs)
 {
     LocalApicSendEOI();
 }

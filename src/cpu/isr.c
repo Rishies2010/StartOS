@@ -72,7 +72,7 @@ void isr_handler(registers_t* regs)
     }
 
     if(interrupt_handlers[regs->int_no]) {
-        interrupt_handlers[regs->int_no](*regs);
+        interrupt_handlers[regs->int_no](regs);
     } else {
         log("[ISR] Unhandled ISR. Interrupt: %i, Error Code: %d.", 3, 1, regs->int_no, regs->err_code);
     }
@@ -81,7 +81,7 @@ void isr_handler(registers_t* regs)
 void irq_handler(registers_t* regs)
 {
     if(interrupt_handlers[regs->int_no]) {
-        interrupt_handlers[regs->int_no](*regs);
+        interrupt_handlers[regs->int_no](regs);
     } else {
         log("[IRQ] Unhandled IRQ: %d", 3, 1, regs->int_no);
     }

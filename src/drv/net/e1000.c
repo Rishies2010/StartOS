@@ -121,7 +121,7 @@ static void e1000_init_tx(void) {
     e1000_write(E1000_REG_TIPG, 0x0060200A);
 }
 
-static void e1000_interrupt_handler(registers_t regs) {
+static void e1000_interrupt_handler(registers_t* regs) {
     e1000_handle_interrupt();
 }
 
