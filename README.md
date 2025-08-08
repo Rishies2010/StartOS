@@ -6,4 +6,4 @@
 ---
 > Made by Rishies2010 and `make`.
 ---
-  - **Check the [https://github.com/Rishies2010/StartOS/wiki](Wiki.)**
+  - **Check the [Wiki Page.](https://github.com/Rishies2010/StartOS/wiki)**
