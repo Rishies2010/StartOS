@@ -46,9 +46,7 @@ void log_internal(const char* file, int line, const char* fmt, int level, int vi
     
     char header[256];
     if(level < 1 || level > 4){
-        snprintf(header, sizeof(header), "KERNEL PANIC !\n\n At : %s:%d.\n\n ERROR MESSAGE : ", file, line);
-        __asm__ __volatile__("cli");
-        for(;;)__asm__ __volatile__("hlt");
+        snprintf(header, sizeof(header), " -> KERNEL PANIC !\n\n   - At : %s:%d.\n\n   - ERROR MESSAGE : ", file, line);
     }
     else
         snprintf(header, sizeof(header), "[%s:%d]- ", file, line);
@@ -83,5 +81,9 @@ void log_internal(const char* file, int line, const char* fmt, int level, int vi
     }
     
     kfree(logline);
+    if(level < 1 || level > 4){
+        __asm__ __volatile__("cli");
+        for(;;)__asm__ __volatile__("hlt");
+    }
     spinlock_release(&loglock);
 }
