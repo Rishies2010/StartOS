@@ -94,7 +94,7 @@ void mouse_init(void) {
     
     mouse.x = framebuffer_width / 2;
     mouse.y = framebuffer_height / 2;
-    log("[MOUSE] Mouse Initialized.", 4, 0);
+    log("Mouse Initialized.", 4, 0);
 }
 
 uint32_t mouse_x(void) {

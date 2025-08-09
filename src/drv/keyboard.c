@@ -297,7 +297,7 @@ void init_keyboard(void) {
     kbd_send_command(KBD_CMD_ENABLE_SCAN);
     
     register_interrupt_handler(IRQ1, kbd_interrupt_handler, "Keyboard Handler");
-    log("[Keyboard] Keyboard Initialized.", 1, 0);
+    log("Keyboard Initialized.", 1, 0);
 }
 
 char get_key(void) {

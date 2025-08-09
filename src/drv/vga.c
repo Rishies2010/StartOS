@@ -53,37 +53,10 @@ void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
     }
 }
 
-void draw_double_border() {
-    const int offset = 6;       
-    const int spacing = 2;     
-    const int lines = 3;        
-
-    int outer_start = offset;
-    int outer_end_x = framebuffer_width - offset;
-    int outer_end_y = framebuffer_height - offset;
-
-    for (int i = 0; i < lines; ++i) {
-        int border_inset = i * spacing;
-
-        int x0 = outer_start + border_inset;
-        int y0 = outer_start + border_inset;
-        int x1 = outer_end_x - border_inset - 1;
-        int y1 = outer_end_y - border_inset - 1;
-        for (int x = x0; x <= x1; ++x) {
-            put_pixel(x, y0, 0xFFFFFF);
-            put_pixel(x, y1, 0xFFFFFF);
-        }
-        for (int y = y0; y <= y1; ++y) {
-            put_pixel(x0, y, 0xFFFFFF);
-            put_pixel(x1, y, 0xFFFFFF);
-        }
-    }
-}
-
 void vga_init(void) {
     spinlock_init(&vga_lock);
     if (!framebuffer_request.response || !framebuffer_request.response->framebuffer_count) {
-        log("[VGA] No framebuffer available", 3, 1);
+        log("No framebuffer available", 3, 1);
         return;
     }
     
@@ -95,7 +68,7 @@ void vga_init(void) {
     framebuffer_bpp = fb->bpp;
     
     if (framebuffer_bpp != 16 && framebuffer_bpp != 24 && framebuffer_bpp != 32) {
-        log("[VGA] Unsupported BPP: %i", 3, 1, framebuffer_bpp);
+        log("Unsupported BPP: %i", 3, 1, framebuffer_bpp);
         return;
     }
     uint8_t red_shift = 0, green_shift = 0, blue_shift = 0;
@@ -127,18 +100,17 @@ void vga_init(void) {
         NULL, NULL,
         font_8x16, 8, 16, 0, 
         0, 0,
-        16
+        0
     );
     
     if (!ft_ctx) {
-        log("[VGA] Failed to initialize flanterm", 3, 0);
+        log("Failed to initialize flanterm", 3, 0);
         return;
     }
     
-    log("[VGA] Framebuffer initialized: %ix%i, %i bpp", 4, 0, 
+    log("Framebuffer initialized: %ix%i, %i bpp", 4, 0, 
         framebuffer_width, framebuffer_height, framebuffer_bpp);
 
-    draw_double_border();
 }
 
 void prints(const char *str) {

@@ -139,7 +139,7 @@ uint64_t alloc_pages(size_t count) {
     
     uint64_t page_idx = find_free_pages(count);
     if (page_idx == UINT64_MAX) {
-        log("PMM: Out of memory!", 3, 1);
+        log("Out of memory!", 3, 1);
         return 0;
     }
     for (size_t i = 0; i < count; i++) {

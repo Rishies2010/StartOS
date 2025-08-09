@@ -35,14 +35,14 @@ void ap_entry(struct limine_smp_info *info) {
 void init_smp() {
     struct limine_smp_response *smp = smp_request.response;
     if (smp == NULL || smp->cpu_count < 1) {
-        log("[SMP] Limine SMP not available, falling back to single CPU", 2, 0);
+        log("Limine SMP not available, falling back to single CPU", 2, 0);
         return;
     }
-    log("[SMP] Bootstrap Processor ID: %d, Total CPUs: %d", 1, 0,
+    log("Bootstrap Processor ID: %d, Total CPUs: %d", 1, 0,
         smp->bsp_lapic_id, smp->cpu_count);
     for (size_t i = 0; i < smp->cpu_count; i++) {
         if (smp->cpus[i]->lapic_id != smp->bsp_lapic_id) {
-            log("[SMP] Starting CPU %lu (LAPIC ID %d)", 1, 0,
+            log("Starting CPU %lu (LAPIC ID %d)", 1, 0,
                 i, smp->cpus[i]->lapic_id);
             smp->cpus[i]->goto_address = ap_entry;
         }
@@ -50,5 +50,5 @@ void init_smp() {
     while (g_activeCpuCount < smp->cpu_count) {
         asm volatile("pause");
     }
-    log("[SMP] All %d CPUs online", 4, 0, smp->cpu_count);
+    log("All %d CPUs online", 4, 0, smp->cpu_count);
 }

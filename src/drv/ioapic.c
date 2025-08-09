@@ -50,12 +50,12 @@ void IoApicInit()
     uint32_t x = IoApicIn(g_ioApicAddr, IOAPICVER);
     int count = ((x >> 16) & 0xff) + 1;    // maximum redirection entry
 
-    log("[IOAPIC] I/O APIC pins = %d", 1, 0, count);
+    log("I/O APIC pins = %d", 1, 0, count);
 
     // Disable all entries
     for (int i = 0; i < count; ++i)
     {
         IoApicSetEntry(g_ioApicAddr, i, 1 << 16);
     }
-    log("[IOAPIC] I/O APIC Initialized.", 1, 0);
+    log("I/O APIC Initialized.", 1, 0);
 }

@@ -21,12 +21,12 @@ void init_apic_timer(uint32_t freq)
 {
     if (freq < 100 || freq > 2000)
     {
-        log("[APIC] Inappropriate frequency range : %i.", 3, 1, freq);
+        log("Inappropriate frequency range : %i.", 3, 1, freq);
         return;
     }
     else if (freq < 250 || freq > 1000)
     {
-        log("[APIC] Frequency outside optimal range : %i.", 2, 1, freq);
+        log("Frequency outside optimal range : %i.", 2, 1, freq);
     }
     volatile uint32_t *apic = (volatile uint32_t *)g_localApicAddr;
 
@@ -38,14 +38,14 @@ void init_apic_timer(uint32_t freq)
         apic_freq = get_apic_timer_frequency();
         if (!apic_freq)
         {
-            log("[APIC] Unable to initialize timer.", 3, 1);
+            log("Unable to initialize timer.", 3, 1);
             return;
         };
     }
 
     if (freq * 16 > apic_freq)
     {
-        log("[APIC] Frequency value too high. Aborting.", 3, 1);
+        log("Frequency value too high. Aborting.", 3, 1);
         return;
     }
     uint32_t ticks_per_int = apic_freq / (16 * freq);
@@ -53,7 +53,7 @@ void init_apic_timer(uint32_t freq)
     apic[APIC_LVT_TIMER / 4] = APIC_TIMER_VEC | 0x20000;
     apic[APIC_TIMER_DIV / 4] = 0x3;
     apic[APIC_TIMER_INIT / 4] = ticks_per_int;
-    log("[APIC] Timer initialized at %uHz.", 4, 0, freq);
+    log("Timer initialized at %uHz.", 4, 0, freq);
 }
 
 uint32_t get_apic_timer_frequency()

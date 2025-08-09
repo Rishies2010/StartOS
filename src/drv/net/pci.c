@@ -243,13 +243,13 @@ pci_device_t* pci_find_device_by_class(uint8_t class_code, uint8_t subclass) {
 void pci_dump_devices(void) {
     pci_device_t *current = device_list;
     while (current) {
-        log("[PCI] %02x:%02x.%x %04x:%04x class=%02x:%02x", 1, 0,
+        log("%02x:%02x.%x %04x:%04x class=%02x:%02x", 1, 0,
             current->bus, current->slot, current->func,
             current->vendor_id, current->device_id,
             current->class_code, current->subclass);
         current = current->next;
     }
-    log("[PCI] Total devices: %d", 1, 0, device_count);
+    log("Total devices: %d", 1, 0, device_count);
 }
 
 void pci_setup_device(pci_device_t *dev) {
@@ -258,7 +258,7 @@ void pci_setup_device(pci_device_t *dev) {
             if (dev->subclass == 0x01 || dev->subclass == 0x06) {
                 pci_enable_bus_mastering(dev);
                 pci_enable_memory_space(dev);
-                log("[PCI] Storage controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
+                log("Storage controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
             }
             break;
             
@@ -267,16 +267,16 @@ void pci_setup_device(pci_device_t *dev) {
                 pci_enable_bus_mastering(dev);
                 pci_enable_memory_space(dev);
                 if (dev->msi_capable) {
-                    log("[PCI] Network controller supports MSI", 1, 0);
+                    log("Network controller supports MSI", 1, 0);
                 }
-                log("[PCI] Network controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
+                log("Network controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
             }
             break;
             
         case 0x03:
             if (dev->subclass == 0x00) {
                 pci_enable_memory_space(dev);
-                log("[PCI] VGA controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
+                log("VGA controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
             }
             break;
             
@@ -284,18 +284,18 @@ void pci_setup_device(pci_device_t *dev) {
             if (dev->subclass == 0x03) {
                 pci_enable_memory_space(dev);
                 pci_enable_bus_mastering(dev);
-                log("[PCI] USB controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
+                log("USB controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
             }
             break;
     }
 }
 
 void pci_initialize_system(void) {
-    log("[PCI] Initializing PCI subsystem...", 1, 0);
+    log("Initializing PCI subsystem...", 1, 0);
     
     pci_init();
     
-    log("[PCI] Scanning complete, configuring devices...", 1, 0);
+    log("Scanning complete, configuring devices...", 1, 0);
     
     pci_device_t *current = device_list;
     while (current) {
@@ -303,6 +303,6 @@ void pci_initialize_system(void) {
         current = current->next;
     }
     
-    log("[PCI] PCI initialization complete. %d devices configured.", 4, 0, device_count);
+    log("PCI initialization complete. %d devices configured.", 4, 0, device_count);
     pci_dump_devices();
 }

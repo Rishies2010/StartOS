@@ -51,7 +51,7 @@ static void get_cache_info(int vis) {
         uint32_t type = eax & 0x1F;
         uint32_t level = (eax >> 5) & 0x7;
         
-        log("[CPUID] L%d %s Cache: %d KB", 1, vis, level, cache_type[type > 3 ? 0 : type], cache_size / 1024);
+        log("L%d %s Cache: %d KB", 1, vis, level, cache_type[type > 3 ? 0 : type], cache_size / 1024);
     }
 }
 
@@ -64,12 +64,12 @@ void detect_cpu_info(int vis) {
     uint32_t max_leaf = eax;
     
     get_vendor_string(vendor);
-    log("[CPUID] CPU Vendor: %s", 1, vis, vendor);
+    log("CPU Vendor: %s", 1, vis, vendor);
     
     cpuid(0x80000000, 0, &eax, &ebx, &ecx, &edx);
     if (eax >= 0x80000004) {
         get_brand_string(brand);
-        log("[CPUID] CPU Brand: %s", 1, vis, brand);
+        log("CPU Brand: %s", 1, vis, brand);
     }
     
     if (max_leaf >= 1) {
@@ -84,38 +84,38 @@ void detect_cpu_info(int vis) {
         if (family == 0xF) family += ext_family;
         if (family == 0x6 || family == 0xF) model |= (ext_model << 4);
         
-        log("[CPUID] Family: %d, Model: %d, Stepping: %d", 1, vis, family, model, stepping);
+        log("Family: %d, Model: %d, Stepping: %d", 1, vis, family, model, stepping);
         
         uint32_t logical_cores = (ebx >> 16) & 0xFF;
-        log("[CPUID] Logical processors: %d", 1, vis, logical_cores);
+        log("Logical processors: %d", 1, vis, logical_cores);
         
         if (edx & (1 << 28)) {
-            log("[CPUID] Hyper-Threading: Supported", 1, vis);
+            log("Hyper-Threading: Supported", 1, vis);
         }
         
         if (edx & (1 << 23)) {
-            log("[CPUID] MMX: Supported", 1, vis);
+            log("MMX: Supported", 1, vis);
         }
         if (edx & (1 << 25)) {
-            log("[CPUID] SSE: Supported", 1, vis);
+            log("SSE: Supported", 1, vis);
         }
         if (edx & (1 << 26)) {
-            log("[CPUID] SSE2: Supported", 1, vis);
+            log("SSE2: Supported", 1, vis);
         }
         if (ecx & (1 << 0)) {
-            log("[CPUID] SSE3: Supported", 1, vis);
+            log("SSE3: Supported", 1, vis);
         }
         if (ecx & (1 << 9)) {
-            log("[CPUID] SSSE3: Supported", 1, vis);
+            log("SSSE3: Supported", 1, vis);
         }
         if (ecx & (1 << 19)) {
-            log("[CPUID] SSE4.1: Supported", 1, vis);
+            log("SSE4.1: Supported", 1, vis);
         }
         if (ecx & (1 << 20)) {
-            log("[CPUID] SSE4.2: Supported", 1, vis);
+            log("SSE4.2: Supported", 1, vis);
         }
         if (ecx & (1 << 28)) {
-            log("[CPUID] AVX: Supported", 1, vis);
+            log("AVX: Supported", 1, vis);
         }
     }
     
@@ -127,7 +127,7 @@ void detect_cpu_info(int vis) {
             
             if (i == 0) {
                 cores = ((eax >> 26) & 0x3F) + 1;
-                log("[CPUID] Physical cores: %d", 1, vis, cores);
+                log("Physical cores: %d", 1, vis, cores);
             }
         }
         get_cache_info(vis);
@@ -138,7 +138,7 @@ void detect_cpu_info(int vis) {
         cpuid(0x80000006, 0, &eax, &ebx, &ecx, &edx);
         uint32_t l3_cache = ((ecx >> 18) & 0x3FFF) * 512;
         if (l3_cache > 0) {
-            log("[CPUID] L3 Cache: %d KB", 1, vis, l3_cache / 1024);
+            log("L3 Cache: %d KB", 1, vis, l3_cache / 1024);
         }
     }
     
@@ -146,12 +146,12 @@ void detect_cpu_info(int vis) {
     if (eax >= 0x80000001) {
         cpuid(0x80000001, 0, &eax, &ebx, &ecx, &edx);
         if (edx & (1 << 29)) {
-            log("[CPUID] x86-64: Supported", 1, vis);
+            log("x86-64: Supported", 1, vis);
         }
         if (edx & (1 << 20)) {
-            log("[CPUID] NX Bit: Supported", 1, vis);
+            log("NX Bit: Supported", 1, vis);
         }
     }
     
-    log("[CPUID] CPU detection complete", 4, vis);
+    log("CPU detection complete", 4, vis);
 }

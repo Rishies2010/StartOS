@@ -181,13 +181,13 @@ static void AcpiParseFacp(AcpiFadt *facp)
 {
     s_fadt = facp;
 
-    log("[AcpiParseFacp] PM1A Control Block = 0x%08x", 1, 0, facp->pm1aControlBlk);
-    log("[AcpiParseFacp] PM1B Control Block = 0x%08x", 1, 0, facp->pm1bControlBlk);
-    log("[AcpiParseFacp] Reset Register Address = 0x%02x%02x%02x%02x", 1, 0,
+    log("PM1A Control Block = 0x%08x", 1, 0, facp->pm1aControlBlk);
+    log("PM1B Control Block = 0x%08x", 1, 0, facp->pm1bControlBlk);
+    log("Reset Register Address = 0x%02x%02x%02x%02x", 1, 0,
         facp->resetReg[8], facp->resetReg[9], facp->resetReg[10], facp->resetReg[11]);
-    log("[AcpiParseFacp] Reset Value = 0x%02x", 1, 0, facp->resetValue);
-    log("[AcpiParseFacp] Flags = 0x%08x", 1, 0, facp->flags);
-    log("[AcpiParseFacp] DSDT = 0x%08x", 1, 0, facp->dsdt);
+    log("Reset Value = 0x%02x", 1, 0, facp->resetValue);
+    log("Flags = 0x%08x", 1, 0, facp->flags);
+    log("DSDT = 0x%08x", 1, 0, facp->dsdt);
 
     if (facp->dsdt)
     {
@@ -195,13 +195,13 @@ static void AcpiParseFacp(AcpiFadt *facp)
         AcpiFindS5((uint8_t *)dsdt_header, dsdt_header->length);
         if (s_s5_found)
         {
-            log("[AcpiParseFacp] Found _S5_: SLP_TYPa=0x%02x SLP_TYPb=0x%02x", 1, 0, s_slp_typa, s_slp_typb);
+            log("Found _S5_: SLP_TYPa=0x%02x SLP_TYPb=0x%02x", 1, 0, s_slp_typa, s_slp_typb);
         }
     }
 
     if (facp->smiCommandPort)
     {
-        log("[AcpiParseFacp] Enabling ACPI", 1, 0);
+        log("Enabling ACPI", 1, 0);
         asm volatile("outb %0, %1" : : "a"((uint8_t)facp->acpiEnable), "Nd"((uint16_t)facp->smiCommandPort));
 
         uint16_t status;
@@ -212,13 +212,13 @@ static void AcpiParseFacp(AcpiFadt *facp)
     }
     else
     {
-        log("[AcpiParseFacp] ACPI already enabled", 1, 0);
+        log("ACPI already enabled", 1, 0);
     }
 }
 
 void AcpiShutdown()
 {
-    log("[ACPI] Shutting down...", 2, 1);
+    log("Shutting down...", 2, 1);
     if (!s_fadt || !s_s5_found)
     {
         asm volatile("outb %0, %1" : : "a"((uint8_t)0xFE), "Nd"((uint16_t)0x64));
@@ -257,14 +257,14 @@ void AcpiShutdown()
         ;
 
     asm volatile("outb %0, %1" : : "a"((uint8_t)0xFE), "Nd"((uint16_t)0x64));
-    log("[ACPI] Failed to shutdown. Aborting.", 3, 1);
+    log("Failed to shutdown. Aborting.", 3, 1);
 }
 
 static void AcpiParseApic(AcpiMadt *madt)
 {
     s_madt = madt;
 
-    log("[AcpiParseApic] Local APIC Address = 0x%08x", 1, 0, madt->localApicAddr);
+    log("Local APIC Address = 0x%08x", 1, 0, madt->localApicAddr);
     g_localApicAddr = (uint8_t *)(uintptr_t)madt->localApicAddr;
 
     uint8_t *p = (uint8_t *)(madt + 1);
@@ -280,7 +280,7 @@ static void AcpiParseApic(AcpiMadt *madt)
         {
             ApicLocalApic *s = (ApicLocalApic *)p;
 
-            log("[AcpiParseApic] Found CPU: %d %d %x", 1, 0, s->acpiProcessorId, s->apicId, s->flags);
+            log("Found CPU: %d %d %x", 1, 0, s->acpiProcessorId, s->apicId, s->flags);
             if (g_acpiCpuCount < MAX_CPU_COUNT)
             {
                 g_acpiCpuIds[g_acpiCpuCount] = s->apicId;
@@ -291,18 +291,18 @@ static void AcpiParseApic(AcpiMadt *madt)
         {
             ApicIoApic *s = (ApicIoApic *)p;
 
-            log("[AcpiParseApic] Found I/O APIC: %d 0x%08x %d", 1, 0, s->ioApicId, s->ioApicAddress, s->globalSystemInterruptBase);
+            log("Found I/O APIC: %d 0x%08x %d", 1, 0, s->ioApicId, s->ioApicAddress, s->globalSystemInterruptBase);
             g_ioApicAddr = (uint8_t *)(uintptr_t)s->ioApicAddress;
         }
         else if (type == APIC_TYPE_INTERRUPT_OVERRIDE)
         {
             ApicInterruptOverride *s = (ApicInterruptOverride *)p;
 
-            log("[AcpiParseApic] Found Interrupt Override: %d %d %d 0x%04x", 1, 0, s->bus, s->source, s->interrupt, s->flags);
+            log("Found Interrupt Override: %d %d %d 0x%04x", 1, 0, s->bus, s->source, s->interrupt, s->flags);
         }
         else
         {
-            log("[AcpiParseApic] Unknown APIC structure %d", 2, 0, type);
+            log("Unknown APIC structure %d", 2, 0, type);
         }
 
         p += length;
@@ -316,7 +316,7 @@ static void AcpiParseDT(AcpiHeader *header)
     char sigStr[5];
     memcpy(sigStr, &signature, 4);
     sigStr[4] = 0;
-    log("[AcpiParseDT] %s 0x%x", 1, 0, sigStr, signature);
+    log("%s 0x%x", 1, 0, sigStr, signature);
 
     if (signature == 0x50434146)
     {
@@ -354,7 +354,7 @@ static void AcpiParseXsdt(AcpiHeader *xsdt)
 
 static bool AcpiParseRsdp(uint8_t *p)
 {
-    log("[AcpiParseRsdp] RSDP found", 1, 0);
+    log("RSDP found", 1, 0);
     uint8_t sum = 0;
     for (int i = 0; i < 20; ++i)
     {
@@ -363,26 +363,26 @@ static bool AcpiParseRsdp(uint8_t *p)
 
     if (sum)
     {
-        log("[AcpiParseRsdp] Checksum failed", 3, 1);
+        log("Checksum failed", 3, 1);
         return false;
     }
 
     char oem[7];
     memcpy(oem, p + 9, 6);
     oem[6] = '\0';
-    log("[AcpiParseRsdp] OEM = %s", 1, 0, oem);
+    log("OEM = %s", 1, 0, oem);
 
     uint8_t revision = p[15];
     if (revision == 0)
     {
-        log("[AcpiParseRsdp] Version 1", 1, 0);
+        log("Version 1", 1, 0);
 
         uint32_t rsdtAddr = *(uint32_t *)(p + 16);
         AcpiParseRsdt((AcpiHeader *)(uintptr_t)rsdtAddr);
     }
     else if (revision == 2)
     {
-        log("[AcpiParseRsdp] Version 2", 1, 0);
+        log("Version 2", 1, 0);
 
         uint32_t rsdtAddr = *(uint32_t *)(p + 16);
         uint64_t xsdtAddr = *(uint64_t *)(p + 24);
@@ -398,7 +398,7 @@ static bool AcpiParseRsdp(uint8_t *p)
     }
     else
     {
-        log("[AcpiParseRsdp] Unsupported ACPI version %d", 3, 1, revision);
+        log("Unsupported ACPI version %d", 3, 1, revision);
     }
 
     return true;

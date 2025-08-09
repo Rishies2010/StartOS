@@ -96,7 +96,7 @@ void LocalApicInit()
 
     // Configure Spurious Interrupt Vector Register
     LocalApicOut(LAPIC_SVR, 0x100 | 0xff);
-    log("[LocalApic] Local APIC Initialized.", 1, 0);
+    log("Local APIC Initialized.", 1, 0);
 }
 
 // ------------------------------------------------------------------------------------------------

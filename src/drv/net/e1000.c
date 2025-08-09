@@ -68,7 +68,7 @@ static void e1000_read_mac(void) {
         dev.mac[5] = (mac_high >> 8) & 0xFF;
     }
     
-    log("[E1000] MAC: %02x:%02x:%02x:%02x:%02x:%02x.", 1, 0,
+    log("MAC: %02x:%02x:%02x:%02x:%02x:%02x.", 1, 0,
         dev.mac[0], dev.mac[1], dev.mac[2], dev.mac[3], dev.mac[4], dev.mac[5]);
 }
 
@@ -128,7 +128,7 @@ static void e1000_interrupt_handler(registers_t* regs) {
 void e1000_init(void) {
     memset(&dev, 0, sizeof(e1000_device));
     
-    log("[E1000] Searching for Intel Ethernet controller...", 1, 0);
+    log("Searching for Intel Ethernet controller...", 1, 0);
     
     pci_dev = pci_find_device(E1000_VENDOR_ID, E1000_DEVICE_ID);
     if (!pci_dev) {
@@ -140,14 +140,14 @@ void e1000_init(void) {
     if (!pci_dev) {
         pci_dev = pci_find_device_by_class(PCI_CLASS_NETWORK, PCI_SUBCLASS_ETHERNET);
         if (pci_dev && pci_dev->vendor_id != E1000_VENDOR_ID) {
-            log("[E1000] Found non-Intel network controller: %04x:%04x", 2, 0, 
+            log("Found non-Intel network controller: %04x:%04x", 2, 0, 
                 pci_dev->vendor_id, pci_dev->device_id);
             pci_dev = NULL;
         }
     }
     
     if (!pci_dev) {
-        log("[E1000] No compatible device found.", 3, 1);
+        log("No compatible device found.", 3, 1);
         return;
     }
     
@@ -159,7 +159,7 @@ void e1000_init(void) {
     dev.mem_base = dev.bar0 & ~0xF;
     dev.irq = pci_dev->interrupt_line;
     
-    log("[E1000] Found device %04x at %02x:%02x.%x", 1, 0, 
+    log("Found device %04x at %02x:%02x.%x", 1, 0, 
         dev.device_id, dev.bus, dev.slot, dev.func);
     
     pci_enable_bus_mastering(pci_dev);
@@ -169,9 +169,9 @@ void e1000_init(void) {
     
     dev.has_eeprom = e1000_detect_eeprom();
     if (dev.has_eeprom) {
-        log("[E1000] EEPROM detected.", 1, 0);
+        log("EEPROM detected.", 1, 0);
     } else {
-        log("[E1000] Using registers for MAC.", 1, 0);
+        log("Using registers for MAC.", 1, 0);
     }
     
     e1000_read_mac();
@@ -183,25 +183,25 @@ void e1000_init(void) {
     e1000_read(0xC0);
     
     if (pci_dev->msi_capable) {
-        log("[E1000] Using MSI interrupts (vector 50)", 1, 0);
+        log("Using MSI interrupts (vector 50)", 1, 0);
         pci_enable_msi(pci_dev, 50, e1000_interrupt_handler, "E1000 MSI");
     } else {
-        log("[E1000] Using legacy interrupts (IRQ %d)", 1, 0, dev.irq);
+        log("Using legacy interrupts (IRQ %d)", 1, 0, dev.irq);
         register_interrupt_handler(32 + dev.irq, e1000_interrupt_handler, "E1000 Legacy");
     }
     
-    log("[E1000] Initialized successfully. Link: %s", 4, 0, 
+    log("Initialized successfully. Link: %s", 4, 0, 
         e1000_link_up() ? "UP" : "DOWN");
 }
 
 void e1000_send_packet(void *data, uint16_t length) {
     if (!pci_dev) {
-        log("[E1000] Device not initialized.", 3, 1);
+        log("Device not initialized.", 3, 1);
         return;
     }
     
     if (length > TX_BUFFER_SIZE) {
-        log("[E1000] Packet too large: %d bytes.", 3, 1, length);
+        log("Packet too large: %d bytes.", 3, 1, length);
         return;
     }
     
@@ -229,7 +229,7 @@ uint16_t e1000_receive_packet(void *buffer) {
     
     uint16_t length = dev.rx_ring[idx].length;
     if (length > RX_BUFFER_SIZE) {
-        log("[E1000] Received oversized packet: %d bytes.", 3, 1, length);
+        log("Received oversized packet: %d bytes.", 3, 1, length);
         dev.rx_ring[idx].status = 0;
         e1000_write(E1000_REG_RDT, idx);
         return 0;
@@ -273,15 +273,15 @@ void e1000_handle_interrupt(void) {
     uint32_t status = e1000_get_interrupt_status();
     
     if (status & 0x04) {
-        log("[E1000] Link status changed - %s", 1, 0, e1000_link_up() ? "UP" : "DOWN");
+        log("Link status changed - %s", 1, 0, e1000_link_up() ? "UP" : "DOWN");
     }
     if (status & 0x10) {
-        log("[E1000] Good threshold.", 1, 0);
+        log("Good threshold.", 1, 0);
     }
     if (status & 0x80) {
-        log("[E1000] Receive packet.", 1, 0);
+        log("Receive packet.", 1, 0);
     }
     if (status & 0x01) {
-        log("[E1000] Transmit packet.", 1, 0);
+        log("Transmit packet.", 1, 0);
     }
 }

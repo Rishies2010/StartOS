@@ -69,7 +69,7 @@ void _start(void){
     pci_initialize_system();
     e1000_init();
     #if debug
-        log("[KERNEL] Running In Debug Mode.", 2, 1);
+        log("Running In Debug Mode.", 2, 1);
     #else
     #endif
     asm volatile("sti");
