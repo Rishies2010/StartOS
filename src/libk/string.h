@@ -16,6 +16,8 @@ char* strrchr(const char* str, int c);
 size_t strspn(const char* str1, const char* str2);
 size_t strcspn(const char* str1, const char* str2);
 char* strstr(const char* haystack, const char* needle);
+char* strtok(char* str, const char* delim);
+char* strtok_r(char* str, const char* delim, char** saveptr);
 
 // Standard memory functions
 void* memset(void* ptr, int value, size_t size);

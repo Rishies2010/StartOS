@@ -71,5 +71,6 @@ ata_error_t ata_read_sectors(uint8_t drive, uint32_t lba, uint8_t count, void* b
 ata_error_t ata_write_sectors(uint8_t drive, uint32_t lba, uint8_t count, const void* buffer);
 ata_device_type_t ata_detect_drive(uint8_t drive);
 ata_error_t ata_identify_drive(uint8_t drive, uint16_t* buffer);
+ata_error_t ata_drive_exists(int pdrv);
 
 #endif

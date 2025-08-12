@@ -2,6 +2,8 @@
 #include <stddef.h>
 #include <stdarg.h>
 
+static char* strtok_save = NULL;
+
 size_t strlen(const char* str) {
     size_t len = 0;
     while (str[len]) {
@@ -171,6 +173,53 @@ void* memchr(const void* ptr, int value, size_t size) {
         p++;
     }
     return NULL;
+}
+
+char* strpbrk(const char* str, const char* accept) {
+    if (!str || !accept) return NULL;
+    
+    while (*str) {
+        const char* a = accept;
+        while (*a) {
+            if (*str == *a) {
+                return (char*)str;
+            }
+            a++;
+        }
+        str++;
+    }
+    
+    return NULL;
+}
+
+char* strtok(char* str, const char* delim) {
+    return strtok_r(str, delim, &strtok_save);
+}
+
+char* strtok_r(char* str, const char* delim, char** saveptr) {
+    char* token;
+    
+    if (str == NULL) {
+        str = *saveptr;
+        if (str == NULL) return NULL;
+    }
+    
+    str += strspn(str, delim);
+    if (*str == '\0') {
+        *saveptr = NULL;
+        return NULL;
+    }
+    
+    token = str;
+    str = strpbrk(token, delim);
+    if (str == NULL) {
+        *saveptr = NULL;
+    } else {
+        *str = '\0';
+        *saveptr = str + 1;
+    }
+    
+    return token;
 }
 
 size_t strspn(const char* str1, const char* str2) {
