@@ -2,7 +2,6 @@
  * The StartOS Kernel
  */
 
-#include "sched.h"
 #include "../libk/debug/serial.h"
 #include "../libk/debug/log.h"
 #include "../libk/core/mem.h"
