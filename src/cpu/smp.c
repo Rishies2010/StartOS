@@ -21,11 +21,11 @@ volatile uint32_t g_activeCpuCount = 1;
 static uint8_t ap_stacks[MAX_CPU_COUNT][STACK_SIZE] __attribute__((aligned(16)));
 
 void ap_entry(struct limine_smp_info *info) {
+    asm volatile("mov %0, %%rsp" : : "r" (ap_stacks[info->processor_id] + STACK_SIZE) : "memory");
     init_gdt();
     init_idt();
     enable_sse_and_fpu();
     LocalApicInit();
-    asm volatile("mov %0, %%rsp" : : "r" (ap_stacks[info->processor_id] + STACK_SIZE) : "memory");
     __atomic_add_fetch(&g_activeCpuCount, 1, __ATOMIC_SEQ_CST);
     init_apic_timer(250);
     ap_main();
