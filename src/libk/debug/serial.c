@@ -12,7 +12,7 @@ void serial_init() {
     outportb(COM1 + 3, 0x03);
     outportb(COM1 + 2, 0xC7);
     outportb(COM1 + 4, 0x0B);
-    serial_write_string("\x1b[38;2;50;255;50m-[PASS] - [Serial] Initialized.\n");
+    serial_write_string("\x1b[38;2;50;255;50m[src/libk/debug/serial.c:15]- Initialized.\n");
 }
 
 void serial_write_char(char c) {

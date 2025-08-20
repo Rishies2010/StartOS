@@ -46,8 +46,8 @@ void play_bootup_sequence() {
 void _start(void){
     serial_init();
     init_pmm();
-    init_kernel_heap();
     init_vmm();
+    init_kernel_heap();
     vga_init();
     init_gdt();
     init_idt();

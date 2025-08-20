@@ -3,6 +3,8 @@
 
 static e1000_device dev;
 static pci_device_t *pci_dev = NULL;
+static void* rx_buf_virt[NUM_RX_DESC];
+static void* tx_buf_virt[NUM_TX_DESC];
 
 static uint32_t e1000_read(uint32_t reg) {
     return *((volatile uint32_t *)(dev.mem_base + reg));
@@ -43,7 +45,7 @@ static void e1000_reset(void) {
     uint32_t ctrl = e1000_read(E1000_REG_CTRL);
     e1000_write(E1000_REG_CTRL, ctrl | 0x04000000);
     while (e1000_read(E1000_REG_CTRL) & 0x04000000);
-    for (int i = 0; i < 10000; i++);
+    for (volatile int i = 0; i < 100000; i++);
 }
 
 static void e1000_read_mac(void) {
@@ -73,50 +75,59 @@ static void e1000_read_mac(void) {
 }
 
 static void e1000_init_rx(void) {
-    dev.rx_ring = (e1000_rx_desc *)kmalloc(NUM_RX_DESC * sizeof(e1000_rx_desc));
-    dev.rx_buffers = (uint8_t *)kmalloc(NUM_RX_DESC * RX_BUFFER_SIZE);
-    
+    uint64_t ring_phys = alloc_page();
+    dev.rx_ring = (e1000_rx_desc*)(ring_phys + KERNEL_VIRT_OFFSET);
+    memset(dev.rx_ring, 0, NUM_RX_DESC * sizeof(e1000_rx_desc));
+
     for (int i = 0; i < NUM_RX_DESC; i++) {
-        dev.rx_ring[i].addr = (uint64_t)(dev.rx_buffers + i * RX_BUFFER_SIZE);
+        uint64_t buf_phys = alloc_page();
+        void* va = (void*)(buf_phys + KERNEL_VIRT_OFFSET);
+        rx_buf_virt[i] = va;
+        dev.rx_ring[i].addr = buf_phys;
         dev.rx_ring[i].status = 0;
+        dev.rx_ring[i].length = 0;
+        dev.rx_ring[i].errors = 0;
     }
-    
-    e1000_write(E1000_REG_RDBAL, (uint32_t)((uint64_t)dev.rx_ring & 0xFFFFFFFF));
-    e1000_write(E1000_REG_RDBAH, (uint32_t)((uint64_t)dev.rx_ring >> 32));
+
+    e1000_write(E1000_REG_RDBAL, (uint32_t)(ring_phys & 0xFFFFFFFF));
+    e1000_write(E1000_REG_RDBAH, (uint32_t)(ring_phys >> 32));
     e1000_write(E1000_REG_RDLEN, NUM_RX_DESC * sizeof(e1000_rx_desc));
+
     e1000_write(E1000_REG_RDH, 0);
     e1000_write(E1000_REG_RDT, NUM_RX_DESC - 1);
-    
     dev.rx_cur = 0;
-    
+
     uint32_t rctl = E1000_RCTL_EN | E1000_RCTL_SBP | E1000_RCTL_UPE | 
-                   E1000_RCTL_MPE | E1000_RCTL_LBM_NO | E1000_RCTL_RDMTS_HALF | 
-                   E1000_RCTL_BAM | E1000_RCTL_SECRC | E1000_RCTL_LPE;
-    
+                    E1000_RCTL_MPE | E1000_RCTL_BAM | E1000_RCTL_SECRC |
+                    E1000_RCTL_RDMTS_HALF | (2 << 16) | (0 << 20);
     e1000_write(E1000_REG_RCTL, rctl);
 }
 
-static void e1000_init_tx(void) {
-    dev.tx_ring = (e1000_tx_desc *)kmalloc(NUM_TX_DESC * sizeof(e1000_tx_desc));
-    dev.tx_buffers = (uint8_t *)kmalloc(NUM_TX_DESC * TX_BUFFER_SIZE);
-    
+void e1000_init_tx(void) {
+    uint64_t ring_phys = alloc_page();
+    dev.tx_ring = (e1000_tx_desc*)(ring_phys + KERNEL_VIRT_OFFSET);
+    memset(dev.tx_ring, 0, NUM_TX_DESC * sizeof(e1000_tx_desc));
+
     for (int i = 0; i < NUM_TX_DESC; i++) {
-        dev.tx_ring[i].addr = (uint64_t)(dev.tx_buffers + i * TX_BUFFER_SIZE);
+        uint64_t buf_phys = alloc_page();
+        void* va = (void*)(buf_phys + KERNEL_VIRT_OFFSET);
+        tx_buf_virt[i] = va;
+        dev.tx_ring[i].addr = buf_phys;
+        dev.tx_ring[i].status = 1;
         dev.tx_ring[i].cmd = 0;
-        dev.tx_ring[i].status = E1000_CMD_RS;
+        dev.tx_ring[i].length = 0;
     }
-    
-    e1000_write(E1000_REG_TDBAL, (uint32_t)((uint64_t)dev.tx_ring & 0xFFFFFFFF));
-    e1000_write(E1000_REG_TDBAH, (uint32_t)((uint64_t)dev.tx_ring >> 32));
+
+    e1000_write(E1000_REG_TDBAL, (uint32_t)(ring_phys & 0xFFFFFFFF));
+    e1000_write(E1000_REG_TDBAH, (uint32_t)(ring_phys >> 32));
     e1000_write(E1000_REG_TDLEN, NUM_TX_DESC * sizeof(e1000_tx_desc));
     e1000_write(E1000_REG_TDH, 0);
     e1000_write(E1000_REG_TDT, 0);
-    
+
     dev.tx_cur = 0;
-    
-    uint32_t tctl = E1000_TCTL_EN | E1000_TCTL_PSP | 
-                   (0x10 << E1000_TCTL_CT) | (0x40 << E1000_TCTL_COLD);
-    
+
+    uint32_t tctl = E1000_TCTL_EN | E1000_TCTL_PSP |
+                    (0x10 << E1000_TCTL_CT) | (0x40 << E1000_TCTL_COLD);
     e1000_write(E1000_REG_TCTL, tctl);
     e1000_write(E1000_REG_TIPG, 0x0060200A);
 }
@@ -140,7 +151,7 @@ void e1000_init(void) {
     if (!pci_dev) {
         pci_dev = pci_find_device_by_class(PCI_CLASS_NETWORK, PCI_SUBCLASS_ETHERNET);
         if (pci_dev && pci_dev->vendor_id != E1000_VENDOR_ID) {
-            log("Found non-Intel network controller: %04x:%04x", 2, 0, 
+            log("Found non-Intel network controller: %04x:%04x", 2, 1, 
                 pci_dev->vendor_id, pci_dev->device_id);
             pci_dev = NULL;
         }
@@ -159,13 +170,15 @@ void e1000_init(void) {
     dev.mem_base = dev.bar0 & ~0xF;
     dev.irq = pci_dev->interrupt_line;
     
-    log("Found device %04x at %02x:%02x.%x", 1, 0, 
-        dev.device_id, dev.bus, dev.slot, dev.func);
+    log("Found device %04x at %02x:%02x.%x BAR0=%08x", 1, 0, 
+        dev.device_id, dev.bus, dev.slot, dev.func, dev.bar0);
     
     pci_enable_bus_mastering(pci_dev);
     pci_enable_memory_space(pci_dev);
     
     e1000_reset();
+    
+    for (volatile int i = 0; i < 1000000; i++);
     
     dev.has_eeprom = e1000_detect_eeprom();
     if (dev.has_eeprom) {
@@ -178,8 +191,9 @@ void e1000_init(void) {
     e1000_init_rx();
     e1000_init_tx();
     
+    for (volatile int i = 0; i < 1000000; i++);
+    
     e1000_write(E1000_REG_IMASK, 0x1F6DC);
-    e1000_write(E1000_REG_IMASK, 0xFF & ~4);
     e1000_read(0xC0);
     
     if (pci_dev->msi_capable) {
@@ -190,56 +204,81 @@ void e1000_init(void) {
         register_interrupt_handler(32 + dev.irq, e1000_interrupt_handler, "E1000 Legacy");
     }
     
-    log("Initialized successfully. Link: %s", 4, 0, 
-        e1000_link_up() ? "UP" : "DOWN");
+    uint32_t status = e1000_read(E1000_REG_STATUS);
+    uint32_t ctrl = e1000_read(E1000_REG_CTRL);
 }
 
-void e1000_send_packet(void *data, uint16_t length) {
-    if (!pci_dev) {
-        log("Device not initialized.", 3, 1);
-        return;
+int e1000_send_packet(void* data, size_t len) {
+    if (len > TX_BUFFER_SIZE) return -1;
+    if (!pci_dev) return -1;
+    
+    if (!e1000_link_up()) {
+        log("Link down, cannot send packets.", 2, 1);
+        return -1;
     }
     
-    if (length > TX_BUFFER_SIZE) {
-        log("Packet too large: %d bytes.", 3, 1, length);
-        return;
+    uint16_t tail = dev.tx_cur;
+    
+    int wait_tries = 100000;
+    while (!(dev.tx_ring[tail].status & 0x1) && --wait_tries > 0) {
+        for (volatile int i = 0; i < 100; i++);
     }
     
-    dev.tx_ring[dev.tx_cur].length = length;
-    dev.tx_ring[dev.tx_cur].status = 0;
-    dev.tx_ring[dev.tx_cur].cmd = E1000_CMD_EOP | E1000_CMD_IFCS | E1000_CMD_RS;
+    if (wait_tries == 0) {
+        log("TX ring full. Descriptor %d, Status : %02x.", 2, 1, tail, dev.tx_ring[tail].status);
+        return -1;
+    }
     
-    memcpy((void *)(dev.tx_buffers + dev.tx_cur * TX_BUFFER_SIZE), data, length);
+    memcpy(tx_buf_virt[tail], data, len);
     
-    uint16_t old_cur = dev.tx_cur;
-    dev.tx_cur = (dev.tx_cur + 1) % NUM_TX_DESC;
+    dev.tx_ring[tail].length = len;
+    dev.tx_ring[tail].cmd = E1000_CMD_EOP | E1000_CMD_IFCS | E1000_CMD_RS;
+    dev.tx_ring[tail].status = 0;
+    
+    dev.tx_cur = (tail + 1) % NUM_TX_DESC;
     e1000_write(E1000_REG_TDT, dev.tx_cur);
     
-    while (!(dev.tx_ring[old_cur].status & 0xFF));
+    int tries = 1000000;
+    while (!(dev.tx_ring[tail].status & 0x1) && --tries > 0) {
+        for (volatile int i = 0; i < 10; i++);
+    }
+    
+    if (tries == 0) {
+        uint32_t tdh = e1000_read(E1000_REG_TDH);
+        uint32_t tdt = e1000_read(E1000_REG_TDT);
+        uint32_t tctl = e1000_read(E1000_REG_TCTL);
+        log("TX Timeout. Descriptor %d, Status : %02x, TDH : %d, TDT : %d, TCTL : %08x", 2, 1, 
+            tail, dev.tx_ring[tail].status, tdh, tdt, tctl);
+        return -1;
+    }
+    
+    return len;
 }
 
-uint16_t e1000_receive_packet(void *buffer) {
-    if (!pci_dev) return 0;
-    
-    uint16_t idx = (e1000_read(E1000_REG_RDT) + 1) % NUM_RX_DESC;
-    
-    if (!(dev.rx_ring[idx].status & 0x1)) {
-        return 0;
-    }
-    
-    uint16_t length = dev.rx_ring[idx].length;
-    if (length > RX_BUFFER_SIZE) {
-        log("Received oversized packet: %d bytes.", 3, 1, length);
-        dev.rx_ring[idx].status = 0;
-        e1000_write(E1000_REG_RDT, idx);
-        return 0;
-    }
-    
-    memcpy(buffer, (void *)(dev.rx_buffers + idx * RX_BUFFER_SIZE), length);
-    dev.rx_ring[idx].status = 0;
+int e1000_receive_packet(void* buf, size_t buf_size) {
+    uint16_t idx = dev.rx_cur;
+    e1000_rx_desc* desc = &dev.rx_ring[idx];
+
+    if (!(desc->status & 0x01))
+        return -1;
+
+    size_t len = desc->length;
+    if (len > buf_size) len = buf_size;
+
+    memcpy(buf, rx_buf_virt[idx], len);
+
+    uint64_t new_buf = alloc_page();
+    void* va = (void*)(uintptr_t)new_buf;
+    rx_buf_virt[idx] = va;
+    desc->addr = new_buf;
+    desc->status = 0;
+    desc->length = 0;
+    desc->errors = 0;
+
+    dev.rx_cur = (idx + 1) % NUM_RX_DESC;
     e1000_write(E1000_REG_RDT, idx);
-    
-    return length;
+
+    return (int)len;
 }
 
 void e1000_get_mac_address(uint8_t *mac) {

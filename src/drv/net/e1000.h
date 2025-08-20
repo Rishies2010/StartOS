@@ -116,8 +116,8 @@ typedef struct {
 } e1000_device;
 
 void e1000_init(void);
-void e1000_send_packet(void *data, uint16_t length);
-uint16_t e1000_receive_packet(void *buffer);
+int e1000_send_packet(void* data, size_t len);
+int e1000_receive_packet(void* buf, size_t buf_size);
 void e1000_get_mac_address(uint8_t *mac);
 uint32_t e1000_link_up(void);
 void e1000_enable_interrupts(void);
