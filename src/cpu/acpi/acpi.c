@@ -212,7 +212,7 @@ static void AcpiParseFacp(AcpiFadt *facp)
     }
     else
     {
-        log("ACPI already enabled", 1, 0);
+        log("ACPI already enabled", 2, 1);
     }
 }
 

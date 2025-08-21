@@ -57,5 +57,5 @@ void IoApicInit()
     {
         IoApicSetEntry(g_ioApicAddr, i, 1 << 16);
     }
-    log("I/O APIC Initialized.", 1, 0);
+    log("I/O APIC Initialized.", 4, 0);
 }

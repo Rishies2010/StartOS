@@ -1,15 +1,10 @@
-// ------------------------------------------------------------------------------------------------
-// local_apic.c
-// ------------------------------------------------------------------------------------------------
-
 #include "local_apic.h"
 #include "../cpu/idt.h"
 #include "../cpu/acpi/acpi.h"
 #include "../libk/debug/log.h"
 
 uint8_t *g_localApicAddr = (uint8_t*)0xFEE00000;
-// ------------------------------------------------------------------------------------------------
-// Local APIC Registers
+
 #define LAPIC_ID                        0x0020  // Local APIC ID
 #define LAPIC_VER                       0x0030  // Local APIC Version
 #define LAPIC_TPR                       0x0080  // Task Priority
@@ -36,10 +31,7 @@ uint8_t *g_localApicAddr = (uint8_t*)0xFEE00000;
 #define LAPIC_TCCR                      0x0390  // Current Count (for Timer)
 #define LAPIC_TDCR                      0x03e0  // Divide Configuration (for Timer)
 
-// ------------------------------------------------------------------------------------------------
-// Interrupt Command Register
 
-// Delivery Mode
 #define ICR_FIXED                       0x00000000
 #define ICR_LOWEST                      0x00000100
 #define ICR_SMI                         0x00000200
@@ -47,65 +39,56 @@ uint8_t *g_localApicAddr = (uint8_t*)0xFEE00000;
 #define ICR_INIT                        0x00000500
 #define ICR_STARTUP                     0x00000600
 
-// Destination Mode
 #define ICR_PHYSICAL                    0x00000000
 #define ICR_LOGICAL                     0x00000800
 
-// Delivery Status
 #define ICR_IDLE                        0x00000000
 #define ICR_SEND_PENDING                0x00001000
 
-// Level
 #define ICR_DEASSERT                    0x00000000
 #define ICR_ASSERT                      0x00004000
 
-// Trigger Mode
 #define ICR_EDGE                        0x00000000
 #define ICR_LEVEL                       0x00008000
 
-// Destination Shorthand
 #define ICR_NO_SHORTHAND                0x00000000
 #define ICR_SELF                        0x00040000
 #define ICR_ALL_INCLUDING_SELF          0x00080000
 #define ICR_ALL_EXCLUDING_SELF          0x000c0000
 
-// Destination Field
 #define ICR_DESTINATION_SHIFT           24
 
-// ------------------------------------------------------------------------------------------------
+
 static uint32_t LocalApicIn(int reg)
 {
     return *(volatile uint32_t *)(g_localApicAddr + reg);
 }
 
-// ------------------------------------------------------------------------------------------------
+
 static void LocalApicOut(int reg, uint32_t data)
 {
     *(volatile uint32_t *)(g_localApicAddr + reg) = data;
 }
 
-// ------------------------------------------------------------------------------------------------
+
 void LocalApicInit()
 {
-    // Clear task priority to enable all interrupts
     LocalApicOut(LAPIC_TPR, 0);
 
-    // Logical Destination Mode
-    LocalApicOut(LAPIC_DFR, 0xffffffff);   // Flat mode
-    LocalApicOut(LAPIC_LDR, 0x01000000);   // All cpus use logical id 1
+    LocalApicOut(LAPIC_DFR, 0xffffffff);
+    LocalApicOut(LAPIC_LDR, 0x01000000);
 
-    // Configure Spurious Interrupt Vector Register
     LocalApicOut(LAPIC_SVR, 0x100 | 0xff);
-    log("Local APIC Initialized.", 1, 0);
+    log("Local APIC Initialized.", 4, 0);
 }
 
-// ------------------------------------------------------------------------------------------------
+
 int LocalApicGetId()
 {
     return LocalApicIn(LAPIC_ID) >> 24;
 }
 
-// ------------------------------------------------------------------------------------------------
+
 void LocalApicSendInit(int apic_id)
 {
     LocalApicOut(LAPIC_ICRHI, apic_id << ICR_DESTINATION_SHIFT);
@@ -116,7 +99,7 @@ void LocalApicSendInit(int apic_id)
         ;
 }
 
-// ------------------------------------------------------------------------------------------------
+
 void LocalApicSendStartup(int apic_id, int vector)
 {
     LocalApicOut(LAPIC_ICRHI, apic_id << ICR_DESTINATION_SHIFT);
