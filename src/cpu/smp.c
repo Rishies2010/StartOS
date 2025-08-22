@@ -8,7 +8,7 @@
 #include "idt.h"
 #include "id/core.h"
 #include "../drv/apic_timer.h"
-
+#include "../libk/core/sched.h"
 
 #define STACK_SIZE 4096
 

@@ -47,6 +47,7 @@ void _start(void){
     serial_init();
     init_pmm();
     init_vmm();
+    spinlock_init(&loglock);
     init_kernel_heap();
     vga_init();
     init_gdt();
@@ -58,7 +59,6 @@ void _start(void){
     init_apic_timer(250);
     enable_sse_and_fpu();
     detect_cpu_info(0);
-    spinlock_init(&loglock);
     ata_init();
     init_keyboard();
     mouse_init();

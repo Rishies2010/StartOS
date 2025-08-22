@@ -1,8 +1,8 @@
 #include "apic_timer.h"
 #include "local_apic.h"
-#include "../cpu/isr.h"
 #include "rtc.h"
 #include "../libk/debug/log.h"
+#include "../libk/core/sched.h"
 
 #define APIC_TIMER_VEC 0x20
 #define APIC_LVT_TIMER 0x320
