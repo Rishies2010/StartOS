@@ -71,17 +71,5 @@ void _start(void){
     #else
     #endif
     asm volatile("sti");
-    for(int x = 1; x < 10; x++){
-    log("This will crash ig", 3, 1);
-    log("This will crash ig", 3, 1);
-    log("This will crash ig", 3, 1);
-    log("This will crash ig", 3, 1);
-    log("This will crash ig", 3, 1);
-    log("This will crash ig", 3, 1);
-    log("This will crash ig", 3, 1);
-    log("This will crash ig", 3, 1);
-    for(int i = 1; i < 300 + (x * 4); i++)
-    for(int j = 1; j < 300 + (x * 4); j++)
-    put_pixel(i, j, 0x0000FF + (x * 64));}
     for(;;);
 }
