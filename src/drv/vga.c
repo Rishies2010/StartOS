@@ -53,6 +53,29 @@ void put_pixel(uint32_t x, uint32_t y, uint32_t color) {
     }
 }
 
+uint32_t get_pixel_at(uint32_t x, uint32_t y) {
+    if (x >= framebuffer_width || y >= framebuffer_height) return 0;
+
+    uint32_t offset = y * framebuffer_pitch + x * (framebuffer_bpp / 8);
+
+    switch (framebuffer_bpp) {
+        case 32:
+            return *(uint32_t*)(framebuffer_addr + offset);
+        case 24:
+            return framebuffer_addr[offset] |
+                  (framebuffer_addr[offset + 1] << 8) |
+                  (framebuffer_addr[offset + 2] << 16);
+        case 16: {
+            uint16_t rgb565 = *(uint16_t*)(framebuffer_addr + offset);
+            uint8_t r = (rgb565 >> 11) & 0x1F;
+            uint8_t g = (rgb565 >> 5)  & 0x3F;
+            uint8_t b = rgb565 & 0x1F;
+            return ((r << 3) << 16) | ((g << 2) << 8) | (b << 3);
+        }
+    }
+    return 0;
+}
+
 void vga_init(void) {
     spinlock_init(&vga_lock);
     if (!framebuffer_request.response || !framebuffer_request.response->framebuffer_count) {
