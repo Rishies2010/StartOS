@@ -9,6 +9,7 @@
 #include "term/flanterm.h"
 #include "term/flanterm_backends/fb.h"
 #include "../libk/gfx/font_8x16.h"
+#include "../libk/gfx/startlogo.h"
 #include <stdbool.h>
 
 static volatile struct limine_framebuffer_request framebuffer_request = {
@@ -74,6 +75,26 @@ uint32_t get_pixel_at(uint32_t x, uint32_t y) {
         }
     }
     return 0;
+}
+
+void plotlogo(uint32_t x_offset, uint32_t y_offset) {
+    unsigned int x, y;
+    const char *data = header_data;
+    unsigned char pixel[3];
+
+    for (y = 0; y < height; y++) {
+        for (x = 0; x < width; x++) {
+            HEADER_PIXEL(data, pixel);
+
+            uint8_t r = 255 - pixel[0];
+            uint8_t g = 255 - pixel[1];
+            uint8_t b = 255 - pixel[2];
+            if (r == 0 && g == 0 && b == 0) continue;
+
+            uint32_t color = (0xFF000000 | (r << 16) | (g << 8) | b);
+            put_pixel(x + x_offset, y + y_offset, color);
+        }
+    }
 }
 
 void vga_init(void) {

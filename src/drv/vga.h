@@ -12,6 +12,7 @@ void clr(void);
 void printc(char c);
 void prints(const char *str);
 void setcolor(uint8_t fg, uint8_t bg);
+void plotlogo(uint32_t x_offset, uint32_t y_offset);
 void put_pixel(uint32_t x, uint32_t y, uint32_t color);
 uint32_t get_pixel_at(uint32_t x, uint32_t y);
 
