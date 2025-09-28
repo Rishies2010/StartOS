@@ -27,7 +27,7 @@ void ap_entry(struct limine_smp_info *info) {
     enable_sse_and_fpu();
     LocalApicInit();
     __atomic_add_fetch(&g_activeCpuCount, 1, __ATOMIC_SEQ_CST);
-    init_apic_timer(250);
+    init_apic_timer(100);
     ap_main();
     while(1);
 }

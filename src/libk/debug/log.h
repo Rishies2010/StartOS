@@ -5,7 +5,6 @@
 #include "../spinlock.h"
 
 #define debug 1
-extern spinlock_t loglock;
 extern char* os_version;
 
 void log_internal(const char* file, int line, const char* fmt, int level, int visibility, ...);

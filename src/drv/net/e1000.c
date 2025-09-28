@@ -78,7 +78,6 @@ static void e1000_init_rx(void) {
     uint64_t ring_phys = alloc_page();
     dev.rx_ring = (e1000_rx_desc*)(ring_phys + KERNEL_VIRT_OFFSET);
     memset(dev.rx_ring, 0, NUM_RX_DESC * sizeof(e1000_rx_desc));
-
     for (int i = 0; i < NUM_RX_DESC; i++) {
         uint64_t buf_phys = alloc_page();
         void* va = (void*)(buf_phys + KERNEL_VIRT_OFFSET);
@@ -268,7 +267,7 @@ int e1000_receive_packet(void* buf, size_t buf_size) {
     memcpy(buf, rx_buf_virt[idx], len);
 
     uint64_t new_buf = alloc_page();
-    void* va = (void*)(uintptr_t)new_buf;
+    void* va = (void*)(new_buf + KERNEL_VIRT_OFFSET);
     rx_buf_virt[idx] = va;
     desc->addr = new_buf;
     desc->status = 0;

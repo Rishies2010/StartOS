@@ -6,6 +6,7 @@
 #include "../spinlock.h"
 
 static spinlock_t heap_lock;
+static spinlock_t pmm_lock;
 
 static uint8_t* pmm_bitmap = NULL;
 static uint64_t total_pages = 0;
@@ -125,6 +126,7 @@ void init_pmm(void) {
             used_pages++;
         }
     }
+    spinlock_init(&pmm_lock);
     serial_write_string("[src/libk/core/mem.c:128]- PMM Initialized successfully\n");
 }
 
@@ -133,20 +135,19 @@ uint64_t alloc_page(void) {
 }
 
 uint64_t alloc_pages(size_t count) {
-    if (!pmm_bitmap || count == 0) {
-        return 0;
-    }
+    if (!pmm_bitmap || count == 0) return 0;
     
+    spinlock_acquire(&pmm_lock);
     uint64_t page_idx = find_free_pages(count);
     if (page_idx == UINT64_MAX) {
-        log("Out of memory!", 3, 1);
+        spinlock_release(&pmm_lock);
         return 0;
     }
     for (size_t i = 0; i < count; i++) {
         set_bit(page_idx + i);
         used_pages++;
     }
-    
+    spinlock_release(&pmm_lock);
     return memory_base + (page_idx * PAGE_SIZE);
 }
 
@@ -158,6 +159,7 @@ void free_pages(uint64_t addr, size_t count) {
     if (!pmm_bitmap || addr < memory_base || addr >= memory_top) {
         return;
     }
+    spinlock_acquire(&pmm_lock);
     
     uint64_t page_idx = (addr - memory_base) / PAGE_SIZE;
     
@@ -167,6 +169,7 @@ void free_pages(uint64_t addr, size_t count) {
             used_pages--;
         }
     }
+    spinlock_release(&pmm_lock);
 }
 
 uint64_t get_total_memory(void) {

@@ -47,7 +47,6 @@ void _start(void){
     serial_init();
     init_pmm();
     init_vmm();
-    spinlock_init(&loglock);
     init_kernel_heap();
     vga_init();
     init_gdt();
@@ -56,15 +55,15 @@ void _start(void){
     LocalApicInit();
     IoApicInit();
     rtc_initialize();
-    init_apic_timer(250);
     enable_sse_and_fpu();
     detect_cpu_info(0);
     ata_init();
     init_keyboard();
     mouse_init();
+    init_smp();
+    // init_apic_timer(100);
     IoApicSetEntry(g_ioApicAddr, 0, 0x20);
     IoApicSetEntry(g_ioApicAddr, 1, 0x21);
-    init_smp();
     pci_initialize_system();
     e1000_init();
     #if debug
@@ -72,5 +71,17 @@ void _start(void){
     #else
     #endif
     asm volatile("sti");
+    for(int x = 1; x < 10; x++){
+    log("This will crash ig", 3, 1);
+    log("This will crash ig", 3, 1);
+    log("This will crash ig", 3, 1);
+    log("This will crash ig", 3, 1);
+    log("This will crash ig", 3, 1);
+    log("This will crash ig", 3, 1);
+    log("This will crash ig", 3, 1);
+    log("This will crash ig", 3, 1);
+    for(int i = 1; i < 300 + (x * 4); i++)
+    for(int j = 1; j < 300 + (x * 4); j++)
+    put_pixel(i, j, 0x0000FF + (x * 64));}
     for(;;);
 }
