@@ -2,6 +2,7 @@
 #include "../../libk/core/mem.h"
 #include "../../libk/debug/log.h"
 #include "../../libk/ports.h"
+#include "../local_apic.h"
 
 static pci_device_t *device_list = NULL;
 static uint32_t device_count = 0;
@@ -74,9 +75,9 @@ void pci_enable_msi(pci_device_t *dev, uint8_t vector, isr_handler_t handler, co
     register_interrupt_handler(vector, handler, handler_name);
     
     uint16_t control = pci_read16(dev->bus, dev->slot, dev->func, dev->msi_offset + 2);
-    uint8_t multi_msg = (control >> 1) & 7;
+    // uint8_t multi_msg = (control >> 1) & 7;
     
-    uint32_t msi_addr = 0xFEE00000 | (0 << 12);
+    uint32_t msi_addr = 0xFEE00000 | (LocalApicGetId() << 12);
     uint32_t msi_data = vector;
     
     pci_write(dev->bus, dev->slot, dev->func, dev->msi_offset + 4, msi_addr);
@@ -97,7 +98,7 @@ void pci_enable_msix(pci_device_t *dev, uint8_t vector, isr_handler_t handler, c
     register_interrupt_handler(vector, handler, handler_name);
     
     uint16_t control = pci_read16(dev->bus, dev->slot, dev->func, dev->msix_offset + 2);
-    uint16_t table_size = (control & 0x7FF) + 1;
+    // uint16_t table_size = (control & 0x7FF) + 1;
     
     uint32_t table_offset = pci_read(dev->bus, dev->slot, dev->func, dev->msix_offset + 4);
     uint8_t table_bar = table_offset & 7;
@@ -106,7 +107,7 @@ void pci_enable_msix(pci_device_t *dev, uint8_t vector, isr_handler_t handler, c
     uint64_t table_addr = (dev->bars[table_bar] & ~0xF) + table_offset;
     uint32_t* msix_table = (uint32_t*)table_addr;
     
-    msix_table[0] = 0xFEE00000;
+    msix_table[0] = 0xFEE00000 | (LocalApicGetId() << 12);
     msix_table[1] = 0;
     msix_table[2] = vector;
     msix_table[3] = 0;

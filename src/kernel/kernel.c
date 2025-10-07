@@ -60,8 +60,9 @@ void _start(void){
     init_keyboard();
     mouse_init();
     init_smp();
-    IoApicSetEntry(g_ioApicAddr, 0, 0x20);
-    IoApicSetEntry(g_ioApicAddr, 1, 0x21);
+    IoApicSetIrq(g_ioApicAddr, 8, 0x28, LocalApicGetId());  // RTC
+    IoApicSetIrq(g_ioApicAddr, 0, 0x20, LocalApicGetId());  // PIT
+    IoApicSetIrq(g_ioApicAddr, 1, 0x21, LocalApicGetId());  // KBD
     pci_initialize_system();
     e1000_init();
     #if debug

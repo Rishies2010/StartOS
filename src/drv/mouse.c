@@ -36,6 +36,7 @@ static uint8_t mouse_read(void) {
 }
 
 void mouse_handler(registers_t* regs) {
+    (void)regs;
     uint8_t data = inportb(0x60);
     
     switch (mouse.cycle) {
@@ -62,7 +63,6 @@ void mouse_handler(registers_t* regs) {
             mouse.ready = true;
             break;
     }
-    LocalApicSendEOI();
 }
 
 void mouse_init(void) {

@@ -246,6 +246,7 @@ static char process_key(uint8_t scancode) {
 }
 
 static void kbd_interrupt_handler(registers_t* regs) {
+    (void)regs;
     if (!(inportb(PS2_STATUS_PORT) & PS2_STATUS_OUTPUT_FULL)) {
         return;
     }

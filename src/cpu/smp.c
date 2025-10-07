@@ -8,7 +8,6 @@
 #include "idt.h"
 #include "id/core.h"
 #include "../drv/vga.h"
-#include "../libk/core/sched.h"
 
 #define STACK_SIZE 4096
 
