@@ -2,7 +2,6 @@
 #include "../libk/ports.h"
 #include "../libk/debug/log.h"
 #include "../cpu/isr.h"
-#include "../kernel/sched.h"
 #include <stdint.h>
 #define CMOS_ADDRESS 0x70
 #define CMOS_DATA 0x71
@@ -40,8 +39,6 @@ void rtc_interrupt_handler(registers_t *regs)
         secs++;
         tick = 0;
     }
-    log("sched_tick();", 1, 0);
-    sched_tick();
     read_cmos_register(0x0C);
 }
 

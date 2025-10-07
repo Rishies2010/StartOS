@@ -38,11 +38,6 @@ void sched_init(void)
     log("Scheduler initialized (no idle task)", 4, 0);
 }
 
-void sched_start(void)
-{
-    scheduler_enabled = 1;
-}
-
 task_t *task_create(void (*entry)(void), const char *name)
 {
     spinlock_acquire(&sched_lock);
@@ -110,6 +105,17 @@ task_t *task_create(void (*entry)(void), const char *name)
 
     log("Created task: %s (PID %d)", 1, 0, name, task->pid);
     return task;
+}
+
+void sched_start(void)
+{
+    scheduler_enabled = 1;
+    if (current_task)
+        return;
+    current_task = task_list_head;
+    if(current_task)
+        current_task->state = TASK_RUNNING;
+    task_switch(NULL, &current_task->regs);
 }
 
 static task_t *get_next_task(void)

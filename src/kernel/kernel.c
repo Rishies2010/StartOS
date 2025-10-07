@@ -16,6 +16,7 @@
 #include "../kernel/sched.h"
 #include "../cpu/id/cpuid.h"
 #include "../drv/rtc.h"
+#include "../drv/hpet.h"
 #include "../drv/vga.h"
 #include "../drv/mouse.h"
 #include "../drv/local_apic.h"
@@ -52,7 +53,6 @@ void test_task_a(void) {
     while(1) {
         log("Task A running: %d", 1, 1, count++);
         for(volatile int i = 0; i < 50000000; i++);
-        sched_yield();
     }
 }
 
@@ -61,7 +61,6 @@ void test_task_b(void) {
     while(1) {
         log("Task B running: %d", 1, 1, count++);
         for(volatile int i = 0; i < 50000000; i++);
-        sched_yield();
     }
 }
 
@@ -78,6 +77,7 @@ void _start(void){
     IoApicInit();
     sched_init();
     rtc_initialize();
+    hpet_init();
     enable_sse_and_fpu();
     detect_cpu_info(0);
     ata_init();
@@ -85,6 +85,7 @@ void _start(void){
     mouse_init();
     init_smp();
     IoApicSetIrq(g_ioApicAddr, 8, 0x28, LocalApicGetId());  // RTC
+    IoApicSetIrq(g_ioApicAddr, 2, 0x22, LocalApicGetId()); // HPET
     IoApicSetIrq(g_ioApicAddr, 0, 0x20, LocalApicGetId());  // PIT
     IoApicSetIrq(g_ioApicAddr, 1, 0x21, LocalApicGetId());  // KBD
     pci_initialize_system();
