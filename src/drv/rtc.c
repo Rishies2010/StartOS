@@ -5,8 +5,7 @@
 #include <stdint.h>
 #define CMOS_ADDRESS 0x70
 #define CMOS_DATA 0x71
-static volatile uint16_t tick = 0;
-static volatile uint64_t secs = 0;
+static volatile uint64_t tick = 0;
 static rtc_time_t boot_time;
 
 static uint8_t read_cmos_register(uint8_t reg)
@@ -34,11 +33,6 @@ void rtc_interrupt_handler(registers_t *regs)
 {
     (void)regs;
     tick++;
-    if (tick >= 1024)
-    {
-        secs++;
-        tick = 0;
-    }
     read_cmos_register(0x0C);
 }
 
