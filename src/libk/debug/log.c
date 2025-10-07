@@ -8,7 +8,7 @@
 #include "../../drv/local_apic.h"
 #include "../../drv/speaker.h"
 
-spinlock_t loglock = {0};
+spinlock_t loglock __attribute__((section(".data"))) = {0};
 char* os_version = debug?"0.90.0 DEBUG_ENABLED":"0.90.0 Unstable";
 
 void sound_err() {

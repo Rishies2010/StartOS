@@ -7,7 +7,6 @@
 #include "gdt.h"
 #include "idt.h"
 #include "id/core.h"
-#include "../drv/apic_timer.h"
 #include "../drv/vga.h"
 #include "../libk/core/sched.h"
 
@@ -28,16 +27,19 @@ void ap_entry(struct limine_smp_info *info) {
     enable_sse_and_fpu();
     LocalApicInit();
     __atomic_add_fetch(&g_activeCpuCount, 1, __ATOMIC_SEQ_CST);
-    init_apic_timer(100);
     ap_main();
     while(1);
 }
 
 void init_smp() {
     struct limine_smp_response *smp = smp_request.response;
-    if (smp == NULL || smp->cpu_count < 1) {
-        log("Limine SMP not available, falling back to single CPU", 2, 0);
-        return;
+    if (smp == NULL || smp->cpu_count < 2) {
+        clr();
+        log("\n\nThis system cannot run StartOS\n\n - This system does not meet the requirement of minimum 2 CPUs.\n\nConsider upgrading your CPU or computer.\nIncrease CPUs available if on a VM.\n ", 3, 1);
+        log(" Halting StartOS.", 2, 1);
+        plotlogo((framebuffer_width / 2) - 100, framebuffer_height - 216);
+        __asm__ __volatile__("cli");
+        for(;;)__asm__ __volatile__("hlt");
     }
     log("Bootstrap Processor ID: %d, Total CPUs: %d", 1, 0,
         smp->bsp_lapic_id, smp->cpu_count);
@@ -50,14 +52,6 @@ void init_smp() {
     }
     while (g_activeCpuCount < smp->cpu_count) {
         asm volatile("pause");
-    }
-    if(smp->cpu_count < 2){
-        clr();
-        log("\n\nThis system cannot run StartOS\n\n - This system does not meet the requirement of minimum 2 CPUs.\n\nConsider upgrading your CPU or computer.\nIncrease CPUs available if on a VM.\n ", 3, 1);
-        log(" Halting StartOS.", 2, 1);
-        plotlogo((framebuffer_width / 2) - 100, framebuffer_height - 216);
-        __asm__ __volatile__("cli");
-        for(;;)__asm__ __volatile__("hlt");
     }
     log("All %d CPUs online", 4, 0, smp->cpu_count);
 }

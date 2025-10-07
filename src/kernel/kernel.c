@@ -14,7 +14,6 @@
 #include "../libk/spinlock.h"
 #include "../cpu/smp.h"
 #include "../cpu/id/cpuid.h"
-#include "../drv/apic_timer.h"
 #include "../drv/rtc.h"
 #include "../drv/vga.h"
 #include "../drv/mouse.h"
@@ -61,7 +60,6 @@ void _start(void){
     init_keyboard();
     mouse_init();
     init_smp();
-    // init_apic_timer(100);
     IoApicSetEntry(g_ioApicAddr, 0, 0x20);
     IoApicSetEntry(g_ioApicAddr, 1, 0x21);
     pci_initialize_system();
@@ -69,6 +67,7 @@ void _start(void){
     #if debug
         log("Running In Debug Mode.", 2, 1);
     #else
+        play_bootup_sequence();
     #endif
     asm volatile("sti");
     for(;;);
