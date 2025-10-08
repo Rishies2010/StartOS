@@ -30,17 +30,17 @@
 
 void play_bootup_sequence() {
     speaker_note(3, 0);  // C4
-    for(volatile int i = 0; i < 8000000; i++);
+    for(int i = 0; i < 2; i++) sched_yield();
     speaker_note(3, 2);  // E4
-    for(volatile int i = 0; i < 8000000; i++);
+    for(int i = 0; i < 6; i++) sched_yield();
     speaker_note(3, 4);  // G4
-    for(volatile int i = 0; i < 8000000; i++);
+    for(int i = 0; i < 6; i++) sched_yield();
     speaker_note(4, 0);  // C5
-    for(volatile int i = 0; i < 16000000; i++);
+    for(int i = 0; i < 13; i++) sched_yield();
     speaker_note(4, 7);  // B5
-    for(volatile int i = 0; i < 8000000; i++);
+    for(int i = 0; i < 6; i++) sched_yield();
     speaker_note(5, 0);  // C6
-    for(volatile int i = 0; i < 32000000; i++);
+    for(int i = 0; i < 23; i++) sched_yield();
     speaker_pause();
 }
 

@@ -16,10 +16,9 @@ void task_exit(void)
     current_task->state = TASK_DEAD;
     spinlock_release(&sched_lock);
 
-    log("Task %s exited.", 2, 0, current_task->name);
+    log("Task %s exited.", 1, 0, current_task->name);
     sched_yield();
-
-    log("Scheduler returned.", 0, 0);
+    log("Scheduler returned.", 0, 1);
 }
 
 static void task_entry_wrapper(void)
@@ -35,7 +34,7 @@ void sched_init(void)
     task_list_head = NULL;
     current_task = NULL;
     scheduler_enabled = 0;
-    log("Scheduler initialized (no idle task)", 4, 0);
+    log("Scheduler initialized.", 4, 1);
 }
 
 void sched_start(void)
