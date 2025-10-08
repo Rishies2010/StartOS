@@ -13,6 +13,7 @@
 #include "../cpu/isr.h"
 #include "../libk/spinlock.h"
 #include "../cpu/smp.h"
+#include "../kernel/sched.h"
 #include "../cpu/id/cpuid.h"
 #include "../drv/rtc.h"
 #include "../drv/hpet.h"
@@ -43,6 +44,26 @@ void play_bootup_sequence() {
     speaker_pause();
 }
 
+void idle(void){
+    for(;;)asm volatile("hlt");
+}
+
+void test_task_a(void) {
+    int count = 0;
+    while(1) {
+        log("Task A running: %d", 1, 1, count++);
+        sched_yield();
+    }
+}
+
+void test_task_b(void) {
+    int count = 0;
+    while(1) {
+        log("Task B running: %d", 1, 1, count++);
+        sched_yield();
+    }
+}
+
 void _start(void){
     serial_init();
     init_pmm();
@@ -54,6 +75,7 @@ void _start(void){
     AcpiInit();
     LocalApicInit();
     IoApicInit();
+    sched_init();
     rtc_initialize();
     hpet_init(100);
     enable_sse_and_fpu();
@@ -70,9 +92,14 @@ void _start(void){
     e1000_init();
     #if debug
         log("Running In Debug Mode.", 2, 1);
+        task_create(idle, "idle");
+        task_create(test_task_a, "a");
+        task_create(test_task_b, "b");
+        task_create(play_bootup_sequence, "Bootup Music");
     #else
         play_bootup_sequence();
     #endif
     asm volatile("sti");
+    sched_start();
     for(;;);
 }

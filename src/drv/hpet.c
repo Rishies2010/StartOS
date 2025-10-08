@@ -2,6 +2,7 @@
 #include "../drv/local_apic.h"
 #include "../libk/ports.h"
 #include "../libk/debug/log.h"
+#include "../kernel/sched.h"
 #include <stdint.h>
 
 #define HPET_BASE 0xFED00000
@@ -34,6 +35,7 @@ void hpet_irq_handler(registers_t *regs)
     (void)regs;
     hpet_ticks++;
     hpet->general_int_status = 1;
+    sched_tick();
 }
 
 void hpet_init(uint32_t frequency_hz)
