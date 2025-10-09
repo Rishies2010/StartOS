@@ -48,7 +48,7 @@ void sched_init(void)
     task_list_head = NULL;
     current_task = NULL;
     scheduler_enabled = 0;
-    log("Scheduler initialized.", 4, 1);
+    log("Scheduler initialized.", 4, 0);
 }
 
 void sched_start(void)
