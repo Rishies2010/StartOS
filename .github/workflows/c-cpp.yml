@@ -20,4 +20,4 @@ jobs:
       run: make
 
     - name: Running the build...
-      run: make qemu
+      run: qemu-system-x86_64 -cdrom StartOS.iso -m 64M -drive file=StartOS.vhd,if=ide,index=0 -boot d -smp 2 -serial stdio -display none
