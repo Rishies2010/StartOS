@@ -32,22 +32,22 @@
 void play_bootup_sequence()
 {
     speaker_note(3, 0);
-    for (int i = 0; i < 2000000; i++)
+    for (int i = 0; i < 7000000; i++)
         asm volatile("nop");
     speaker_note(3, 2);
-    for (int i = 0; i < 6000000; i++)
+    for (int i = 0; i < 7000000; i++)
         asm volatile("nop");
     speaker_note(3, 4);
-    for (int i = 0; i < 6000000; i++)
+    for (int i = 0; i < 7000000; i++)
         asm volatile("nop");
     speaker_note(4, 0);
-    for (int i = 0; i < 13000000; i++)
+    for (int i = 0; i < 14000000; i++)
         asm volatile("nop");
     speaker_note(4, 7);
-    for (int i = 0; i < 6000000; i++)
+    for (int i = 0; i < 7000000; i++)
         asm volatile("nop");
     speaker_note(5, 0);
-    for (int i = 0; i < 23000000; i++)
+    for (int i = 0; i < 30000000; i++)
         asm volatile("nop");
     speaker_pause();
 }
@@ -62,9 +62,15 @@ void idle(void)
 
 void test_task_a(void) {
     int count = 0;
+    uint16_t cs;
+    __asm__ volatile("mov %%cs, %0" : "=r"(cs));
+    log("TaskA CS=0x%x (should be 0x08)", 1, 0, cs);
+    
     while(1) {
-        if (count % 5 == 0) {
-            log("A", 1, 0);}
+        if (count % 50000 == 0) {
+            log("A", 1, 0);
+        }
+        count++;
     }
 }
 
@@ -72,10 +78,20 @@ void test_task_b(void) {
     int count = 0;
     while(1) {
         if (count % 5 == 0) {
-            log("B", 1, 0);}
+            log("B", 1, 0);
+        }
+        count++;
     }
 }
 
+
+void user_task_simple(void)
+{
+    while(1)
+    {
+        log("This is userspace !!!\nFix me, I should have caused a #GPF !", 3, 1);
+    }
+}
 
 void _start(void)
 {
@@ -98,6 +114,7 @@ void _start(void)
     sfs_format(0);
     sfs_init(0);
     init_keyboard();
+    print_mem_info(1);
     mouse_init();
     init_smp();
     IoApicSetIrq(g_ioApicAddr, 8, 0x28, LocalApicGetId());
@@ -112,9 +129,11 @@ void _start(void)
     task_create(idle, "idle");
     task_create(test_task_a, "TaskA");
     task_create(test_task_b, "TaskB");
+    task_create_user(user_task_simple, "UserTask1");
 #else
     task_create(idle, "idle");
-    task_create(play_bootup_sequence, "Bootup Music");
+    task_create(play_bootup_sequence, "Bootup Music");    
+    task_create_user(user_task_simple, "UserTask");
 #endif
     sched_start();
     asm volatile("sti");

@@ -5,7 +5,7 @@
 #include "../cpu/isr.h"
 
 #define TASK_STACK_SIZE 8192
-#define TIME_SLICE 10
+#define TIME_SLICE 4
 
 typedef enum
 {
@@ -22,14 +22,17 @@ typedef struct task
     task_state_t state;
     registers_t regs;
     uint64_t kernel_stack;
+    uint64_t user_stack;      
     uint64_t stack_size;
     uint64_t time_slice_remaining;
+    int is_kernel_task;
     struct task *next;
 } task_t;
 
 void sched_init(void);
 void sched_start(void);
 task_t *task_create(void (*entry)(void), const char *name);
+task_t *task_create_user(void (*entry)(void), const char *name); 
 void sched_yield(void);
 void sched_tick(void);
 task_t *sched_current_task(void);

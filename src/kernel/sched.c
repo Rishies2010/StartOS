@@ -3,6 +3,9 @@
 #include "../libk/string.h"
 #include "../libk/debug/log.h"
 #include "../libk/spinlock.h"
+#include "../cpu/gdt.h"
+
+extern struct tss_struct tss;
 
 static task_t *task_list_head = NULL;
 static task_t *current_task = NULL;
@@ -81,6 +84,7 @@ task_t *task_create(void (*entry)(void), const char *name)
     task->state = TASK_READY;
     task->time_slice_remaining = TIME_SLICE;
     task->stack_size = TASK_STACK_SIZE;
+    task->is_kernel_task = 1;
 
     task->kernel_stack = (uint64_t)kmalloc(TASK_STACK_SIZE);
     if (!task->kernel_stack)
@@ -91,6 +95,7 @@ task_t *task_create(void (*entry)(void), const char *name)
     }
 
     memset((void *)task->kernel_stack, 0, TASK_STACK_SIZE);
+    task->user_stack = 0;
     memset(&task->regs, 0, sizeof(registers_t));
 
     uint64_t stack_top = task->kernel_stack + TASK_STACK_SIZE;
@@ -127,7 +132,6 @@ task_t *task_create(void (*entry)(void), const char *name)
     }
     else if (task_list_head->next == task_list_head)
     {
-
         task_list_head->next = task;
         task->next = task_list_head;
     }
@@ -140,7 +144,101 @@ task_t *task_create(void (*entry)(void), const char *name)
 
     spinlock_release(&sched_lock);
 
-    log("Created task: %s (PID %d)", 1, 0, name, task->pid);
+    log("Created kernel task: %s (PID %d)", 1, 0, name, task->pid);
+    return task;
+}
+
+task_t *task_create_user(void (*entry)(void), const char *name)
+{
+    spinlock_acquire(&sched_lock);
+
+    task_t *task = (task_t *)kmalloc(sizeof(task_t));
+    if (!task)
+    {
+        spinlock_release(&sched_lock);
+        return NULL;
+    }
+
+    memset(task, 0, sizeof(task_t));
+
+    task->pid = next_pid++;
+    strncpy(task->name, name, 63);
+    task->name[63] = '\0';
+    task->state = TASK_READY;
+    task->time_slice_remaining = TIME_SLICE;
+    task->stack_size = TASK_STACK_SIZE;
+    task->is_kernel_task = 0;
+
+    task->kernel_stack = (uint64_t)kmalloc(TASK_STACK_SIZE);
+    if (!task->kernel_stack)
+    {
+        kfree(task);
+        spinlock_release(&sched_lock);
+        return NULL;
+    }
+    memset((void *)task->kernel_stack, 0, TASK_STACK_SIZE);
+
+    task->user_stack = (uint64_t)kmalloc(TASK_STACK_SIZE);
+    if (!task->user_stack)
+    {
+        kfree((void *)task->kernel_stack);
+        kfree(task);
+        spinlock_release(&sched_lock);
+        return NULL;
+    }
+    memset((void *)task->user_stack, 0, TASK_STACK_SIZE);
+
+    memset(&task->regs, 0, sizeof(registers_t));
+
+    uint64_t user_stack_top = task->user_stack + TASK_STACK_SIZE;
+    user_stack_top &= ~0xFULL;
+
+    task->regs.cs = 0x18 | 3;
+    task->regs.ss = 0x20 | 3;
+    task->regs.ds = 0x20 | 3;
+
+    task->regs.rip = (uint64_t)entry;
+    task->regs.userrsp = user_stack_top;
+    task->regs.rbp = user_stack_top;
+    task->regs.rflags = 0x202;
+
+    task->regs.rax = 0;
+    task->regs.rbx = 0;
+    task->regs.rcx = 0;
+    task->regs.rdx = 0;
+    task->regs.rsi = 0;
+    task->regs.rdi = 0;
+    task->regs.r8 = 0;
+    task->regs.r9 = 0;
+    task->regs.r10 = 0;
+    task->regs.r11 = 0;
+    task->regs.r12 = 0;
+    task->regs.r13 = 0;
+    task->regs.r14 = 0;
+    task->regs.r15 = 0;
+
+    if (!task_list_head)
+    {
+        task_list_head = task;
+        task->next = task;
+        task->state = TASK_RUNNING;
+        current_task = task;
+    }
+    else if (task_list_head->next == task_list_head)
+    {
+        task_list_head->next = task;
+        task->next = task_list_head;
+    }
+    else
+    {
+        task_t *old_next = task_list_head->next;
+        task_list_head->next = task;
+        task->next = old_next;
+    }
+
+    spinlock_release(&sched_lock);
+
+    log("Created USER task: %s (PID %d)", 1, 0, name, task->pid);
     return task;
 }
 
@@ -172,7 +270,6 @@ void sched_yield(void)
 
     if (!current_task)
     {
-
         if (rflags & 0x200)
             asm volatile("sti");
         return;
@@ -195,6 +292,8 @@ void sched_yield(void)
     new_task->state = TASK_RUNNING;
     new_task->time_slice_remaining = TIME_SLICE;
 
+    tss.rsp0 = new_task->kernel_stack + TASK_STACK_SIZE;
+
     task_t *prev_task = current_task;
     current_task = new_task;
     task_switch(&prev_task->regs, &new_task->regs);
@@ -210,7 +309,8 @@ void sched_tick(void)
         current_task->time_slice_remaining--;
     }
 
-    if (current_task->time_slice_remaining == 0) sched_yield();
+    if (current_task->time_slice_remaining == 0)
+        sched_yield();
 }
 
 task_t *sched_current_task(void)
