@@ -27,6 +27,7 @@
 #include "../drv/speaker.h"
 #include "../drv/keyboard.h"
 #include "../drv/disk/ata.h"
+#include "../drv/disk/sfs.h"
 
 void play_bootup_sequence()
 {
@@ -94,6 +95,8 @@ void _start(void)
     enable_sse_and_fpu();
     detect_cpu_info(0);
     ata_init();
+    sfs_format(0);
+    sfs_init(0);
     init_keyboard();
     mouse_init();
     init_smp();
