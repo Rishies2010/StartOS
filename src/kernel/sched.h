@@ -5,7 +5,7 @@
 #include "../cpu/isr.h"
 
 #define TASK_STACK_SIZE 8192
-#define TIME_SLICE 10  // 10 RTC ticks
+#define TIME_SLICE 10
 
 typedef enum {
     TASK_READY,

@@ -12,18 +12,32 @@ static volatile int scheduler_enabled = 0;
 
 void task_exit(void)
 {
-    spinlock_acquire(&sched_lock);
+    asm volatile("cli");
     current_task->state = TASK_DEAD;
-    spinlock_release(&sched_lock);
-
+    asm volatile("sti");
     log("Task %s exited.", 1, 0, current_task->name);
     sched_yield();
-    log("Scheduler returned.", 0, 1);
+    log("A Task Exit Function Returned.", 0, 1);
 }
 
 static void task_entry_wrapper(void)
 {
+    if (!current_task)
+    {
+        asm volatile("cli; hlt");
+        while (1)
+            ;
+    }
+    asm volatile("sti");
+
     void (*entry)(void) = (void (*)(void))current_task->regs.rbx;
+
+    if (!entry)
+    {
+        asm volatile("cli; hlt");
+        while (1)
+            ;
+    }
     entry();
     task_exit();
 }
@@ -39,7 +53,13 @@ void sched_init(void)
 
 void sched_start(void)
 {
+    if (!current_task)
+    {
+        log("No tasks created before sched_start();", 3, 1);
+        return;
+    }
     scheduler_enabled = 1;
+    log("Scheduler enabled.", 4, 0);
 }
 
 task_t *task_create(void (*entry)(void), const char *name)
@@ -71,20 +91,32 @@ task_t *task_create(void (*entry)(void), const char *name)
     }
 
     memset((void *)task->kernel_stack, 0, TASK_STACK_SIZE);
-
     memset(&task->regs, 0, sizeof(registers_t));
 
     uint64_t stack_top = task->kernel_stack + TASK_STACK_SIZE;
-    stack_top &= ~0xF;
-
+    stack_top &= ~0xFULL;
     task->regs.rip = (uint64_t)task_entry_wrapper;
     task->regs.rbx = (uint64_t)entry;
+    task->regs.rbp = stack_top;
+    task->regs.userrsp = stack_top;
+    task->regs.rflags = 0x202;
     task->regs.cs = 0x08;
     task->regs.ss = 0x10;
     task->regs.ds = 0x10;
-    task->regs.userrsp = stack_top;
-    task->regs.rbp = stack_top;
-    task->regs.rflags = 0x202;
+
+    task->regs.rax = 0;
+    task->regs.rcx = 0;
+    task->regs.rdx = 0;
+    task->regs.rsi = 0;
+    task->regs.rdi = 0;
+    task->regs.r8 = 0;
+    task->regs.r9 = 0;
+    task->regs.r10 = 0;
+    task->regs.r11 = 0;
+    task->regs.r12 = 0;
+    task->regs.r13 = 0;
+    task->regs.r14 = 0;
+    task->regs.r15 = 0;
 
     if (!task_list_head)
     {
@@ -95,6 +127,7 @@ task_t *task_create(void (*entry)(void), const char *name)
     }
     else if (task_list_head->next == task_list_head)
     {
+
         task_list_head->next = task;
         task->next = task_list_head;
     }
@@ -134,11 +167,14 @@ void sched_yield(void)
     if (!scheduler_enabled)
         return;
 
-    spinlock_acquire(&sched_lock);
+    uint64_t rflags;
+    asm volatile("pushfq; pop %0; cli" : "=r"(rflags));
 
     if (!current_task)
     {
-        spinlock_release(&sched_lock);
+
+        if (rflags & 0x200)
+            asm volatile("sti");
         return;
     }
 
@@ -147,7 +183,8 @@ void sched_yield(void)
 
     if (new_task == old_task)
     {
-        spinlock_release(&sched_lock);
+        if (rflags & 0x200)
+            asm volatile("sti");
         return;
     }
 
@@ -155,14 +192,12 @@ void sched_yield(void)
         old_task->state = TASK_READY;
 
     old_task->time_slice_remaining = TIME_SLICE;
-
     new_task->state = TASK_RUNNING;
     new_task->time_slice_remaining = TIME_SLICE;
+
+    task_t *prev_task = current_task;
     current_task = new_task;
-
-    spinlock_release(&sched_lock);
-
-    task_switch(&old_task->regs, &new_task->regs);
+    task_switch(&prev_task->regs, &new_task->regs);
 }
 
 void sched_tick(void)
@@ -170,19 +205,12 @@ void sched_tick(void)
     if (!scheduler_enabled || !current_task)
         return;
 
-    spinlock_acquire(&sched_lock);
-
     if (current_task->time_slice_remaining > 0)
-        current_task->time_slice_remaining--;
-
-    if (current_task->time_slice_remaining == 0)
     {
-        spinlock_release(&sched_lock);
-        sched_yield();
-        return;
+        current_task->time_slice_remaining--;
     }
 
-    spinlock_release(&sched_lock);
+    if (current_task->time_slice_remaining == 0) sched_yield();
 }
 
 task_t *sched_current_task(void)

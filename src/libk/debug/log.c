@@ -18,6 +18,11 @@ void sound_err() {
 }
 
 void log_internal(const char* file, int line, const char* fmt, int level, int visibility, ...) {
+    char logline[1280];
+    
+    uint64_t rflags;
+    asm volatile("pushfq; pop %0; cli" : "=r"(rflags));
+    
     spinlock_acquire(&loglock);
 
     const char* color_seq;
@@ -41,11 +46,13 @@ void log_internal(const char* file, int line, const char* fmt, int level, int vi
             color_seq = "\x1b[38;2;255;50;50m";
             break;
     }
+    
     va_list args;
     va_start(args, visibility);
     
     char header[256];
     if(level < 1 || level > 4){
+        sound_err();
         snprintf(header, sizeof(header), " -> KERNEL PANIC !\n\n   - At : %s:%d.\n\n   - ERROR MESSAGE : ", file, line);
     }
     else
@@ -56,15 +63,9 @@ void log_internal(const char* file, int line, const char* fmt, int level, int vi
     va_end(args);
 
     char cpuid_str[16];
-    if(cpuid != 0) snprintf(cpuid_str, sizeof(cpuid_str), "[CPU%d]- ", cpuid); else cpuid_str[0] = '\0';
+    if(cpuid != 0) snprintf(cpuid_str, sizeof(cpuid_str), "[CPU%d]- ", cpuid); 
+    else cpuid_str[0] = '\0';
 
-    size_t total_len = strlen(header) + strlen(cpuid_str) + strlen(message) + 2;
-    char* logline = kmalloc(total_len);
-    if (!logline) {
-        spinlock_release(&loglock);
-        return;
-    }
-    
     strcpy(logline, header);
     strcat(logline, cpuid_str);
     strcat(logline, message);
@@ -80,10 +81,12 @@ void log_internal(const char* file, int line, const char* fmt, int level, int vi
         prints("\x1b[0m");
     }
     
-    kfree(logline);
+    spinlock_release(&loglock);
+    
+    if (rflags & 0x200) asm volatile("sti");
+    
     if(level < 1 || level > 4){
         __asm__ __volatile__("cli");
         for(;;)__asm__ __volatile__("hlt");
     }
-    spinlock_release(&loglock);
 }
