@@ -160,6 +160,14 @@ void vga_init(void)
         blue_size = 5;
     }
 
+    static uint32_t *backbuffer = NULL; 
+    size_t num_pixels = framebuffer_width * framebuffer_height;
+    backbuffer = kmalloc(num_pixels * sizeof(uint32_t));
+    if (!backbuffer) {
+        log("Failed to allocate backbuffer.", 0, 0);
+        return;
+    }
+
     ft_ctx = flanterm_fb_init(
         kmalloc, flanterm_kfree_wrapper,
         (uint32_t *)framebuffer_addr,
@@ -169,7 +177,7 @@ void vga_init(void)
         red_size, red_shift,
         green_size, green_shift,
         blue_size, blue_shift,
-        NULL,
+        backbuffer,
         NULL, NULL,
         NULL, NULL,
         NULL, NULL,
