@@ -89,7 +89,7 @@ void user_task_simple(void)
 {
     while(1)
     {
-        log("This is userspace !!!\nFix me, I should have caused a #GPF !", 3, 1);
+        log("C (I am from Userspace, Ring 3!)", 1, 1);
     }
 }
 
@@ -111,7 +111,6 @@ void _start(void)
     enable_sse_and_fpu();
     detect_cpu_info(0);
     ata_init();
-    sfs_format(0);
     sfs_init(0);
     init_keyboard();
     print_mem_info(1);
@@ -126,6 +125,15 @@ void _start(void)
 
 #if debug
     log("Running In Debug Mode.", 2, 1);
+    sfs_list_files();
+    sfs_file_t file;
+    sfs_open("readme", &file);
+    char buffer[1024];
+    uint32_t read;
+    sfs_read(&file, buffer, 1024, &read);
+    buffer[read] = '\0';
+    log("Read: %s", 4, 1, buffer);
+    sfs_close(&file);
     task_create(idle, "idle");
     task_create(test_task_a, "TaskA");
     task_create(test_task_b, "TaskB");
