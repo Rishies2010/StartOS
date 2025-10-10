@@ -6,6 +6,7 @@
 #include "../libk/debug/log.h"
 #include "../libk/core/mem.h"
 #include "../libk/string.h"
+#include "../libk/gfx/tga.h"
 #include "../libk/ports.h"
 #include "../cpu/gdt.h"
 #include "../cpu/idt.h"
@@ -85,7 +86,7 @@ void test_task_b(void) {
 }
 
 
-void user_task_simple(void)
+void user_task(void)
 {
     while(1)
     {
@@ -113,7 +114,6 @@ void _start(void)
     ata_init();
     sfs_init(0);
     init_keyboard();
-    print_mem_info(1);
     mouse_init();
     init_smp();
     IoApicSetIrq(g_ioApicAddr, 8, 0x28, LocalApicGetId());
@@ -126,22 +126,15 @@ void _start(void)
 #if debug
     log("Running In Debug Mode.", 2, 1);
     sfs_list_files();
-    sfs_file_t file;
-    sfs_open("readme", &file);
-    char buffer[1024];
-    uint32_t read;
-    sfs_read(&file, buffer, 1024, &read);
-    buffer[read] = '\0';
-    log("Read: %s", 4, 1, buffer);
-    sfs_close(&file);
+    print_mem_info(1);
     task_create(idle, "idle");
     task_create(test_task_a, "TaskA");
     task_create(test_task_b, "TaskB");
-    task_create_user(user_task_simple, "UserTask1");
+    task_create_user(user_task, "User Mode Task");
 #else
     task_create(idle, "idle");
-    task_create(play_bootup_sequence, "Bootup Music");    
-    task_create_user(user_task_simple, "UserTask");
+    task_create(play_bootup_sequence, "Bootup Music");
+    plotimg("bg.tga", 0, 0);
 #endif
     sched_start();
     asm volatile("sti");
