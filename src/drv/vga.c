@@ -10,7 +10,6 @@
 #include "term/flanterm_backends/fb.h"
 #include "../libk/gfx/font_8x16.h"
 #include "../libk/gfx/startlogo.h"
-#include <stdbool.h>
 
 static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = {0xc7b1dd30df4c8b88, 0x0a82e883a194f07b, 0x9d5827dcd881dd75, 0xa3148604f6fab11b},
@@ -21,7 +20,7 @@ uint8_t *framebuffer_addr;
 uint64_t framebuffer_width, framebuffer_height, framebuffer_pitch;
 uint8_t framebuffer_bpp;
 static spinlock_t vga_lock;
-
+bool flanterm = false;
 static struct flanterm_context *ft_ctx = NULL;
 
 static void flanterm_kfree_wrapper(void *ptr, size_t size)
@@ -183,14 +182,14 @@ void vga_init(void)
         log("Failed to initialize flanterm", 3, 0);
         return;
     }
-
+    flanterm = true;
     log("Framebuffer initialized: %ix%i, %i bpp", 4, 0,
         framebuffer_width, framebuffer_height, framebuffer_bpp);
 }
 
 void prints(const char *str)
 {
-    if (!ft_ctx)
+    if (!ft_ctx || !flanterm)
         return;
 
     spinlock_acquire(&vga_lock);
@@ -200,7 +199,7 @@ void prints(const char *str)
 
 void printc(char c)
 {
-    if (!ft_ctx)
+    if (!ft_ctx || !flanterm)
         return;
 
     spinlock_acquire(&vga_lock);
@@ -210,7 +209,7 @@ void printc(char c)
 
 void clr(void)
 {
-    if (!ft_ctx)
+    if (!ft_ctx || !flanterm)
         return;
 
     spinlock_acquire(&vga_lock);
@@ -218,9 +217,13 @@ void clr(void)
     spinlock_release(&vga_lock);
 }
 
+void ft_run(bool set){
+    flanterm = set;
+}
+
 void setcolor(uint8_t fg, uint8_t bg)
 {
-    if (!ft_ctx)
+    if (!ft_ctx || !flanterm)
         return;
 
     char color_seq[32];

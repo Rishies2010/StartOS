@@ -123,7 +123,7 @@ void _start(void)
     pci_initialize_system();
     e1000_init();
 
-#if debug
+#if debug 
     log("Running In Debug Mode.", 2, 1);
     sfs_list_files();
     print_mem_info(1);
@@ -131,6 +131,8 @@ void _start(void)
     task_create(test_task_a, "TaskA");
     task_create(test_task_b, "TaskB");
     task_create_user(user_task, "User Mode Task");
+    plotimg("bg.tga", 0, 0);
+    ft_run(false);
 #else
     task_create(idle, "idle");
     task_create(play_bootup_sequence, "Bootup Music");
