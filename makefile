@@ -50,7 +50,7 @@ run:
 	virtualboxvm --startvm "StartOS" &
 
 qemu:
-	qemu-system-x86_64 -cdrom StartOS.iso -audiodev pa,id=snd0 -machine pcspk-audiodev=snd0 -m 128M -drive file=StartOS.vhd,if=ide,index=0 -boot d -smp 2 -serial stdio -device virtio-gpu-pci
+	qemu-system-x86_64 -cdrom StartOS.iso -audiodev pa,id=snd0 -machine pcspk-audiodev=snd0 -m 128M -drive file=StartOS.vhd,if=ide,index=0 -boot d -smp 2 -serial stdio
 
 stop:
 	VBoxManage controlvm "StartOS" poweroff
