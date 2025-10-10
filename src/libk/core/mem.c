@@ -182,7 +182,7 @@ uint64_t get_free_memory(void) {
 
 void init_kernel_heap(void) {
     spinlock_init(&heap_lock);
-    uint64_t heap_pages = 2048;
+    uint64_t heap_pages = 16384;
     uint64_t heap_phys = alloc_pages(heap_pages);
     if (!heap_phys) {
         serial_write_string("[src/libk/core/mem.c:???]- Failed to allocate heap pages!\n");

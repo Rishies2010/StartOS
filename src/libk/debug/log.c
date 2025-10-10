@@ -9,62 +9,105 @@
 #include "../../drv/speaker.h"
 
 spinlock_t loglock __attribute__((section(".data"))) = {0};
-char* os_version = debug?"0.90.0 DEBUG_ENABLED":"0.90.0 Unstable";
+char *os_version = debug ? "0.90.0 DEBUG_ENABLED" : "0.90.0 Unstable";
 
-void sound_err() {
+void sound_err()
+{
     speaker_note(0, 0);
-    for(volatile int i = 0; i < 2000000; i++);
+    for (volatile int i = 0; i < 2000000; i++)
+        ;
     speaker_pause();
 }
 
-void log_internal(const char* file, int line, const char* fmt, int level, int visibility, ...) {
-    char logline[1280];
-    
+void log_internal(const char *file, int line, const char *fmt, int level, int visibility, ...)
+{
+    char *logline = kmalloc(1280);
+    if (!logline)
+    {
+        serial_write_string("\x1b[38;2;255;50;50m[log.c]- CRITICAL: kmalloc failed in log_internal!\n");
+        return;
+    }
+
     uint64_t rflags;
     asm volatile("pushfq; pop %0; cli" : "=r"(rflags));
-    
+
     spinlock_acquire(&loglock);
 
-    const char* color_seq;
+    const char *color_seq;
     int cpuid = LocalApicGetId();
-    
-    switch (level) {
-        case 1:
-            color_seq = "\x1b[38;2;150;150;150m";
-            break;
-        case 2:
-            color_seq = "\x1b[38;2;255;90;0m";
-            break;
-        case 3:
-            color_seq = "\x1b[38;2;255;50;50m";
-            if(!debug) sound_err();
-            break;
-        case 4: 
-            color_seq = "\x1b[38;2;50;255;50m";
-            break;
-        default: 
-            color_seq = "\x1b[38;2;255;50;50m";
-            break;
+
+    switch (level)
+    {
+    case 1:
+        color_seq = "\x1b[38;2;150;150;150m";
+        break;
+    case 2:
+        color_seq = "\x1b[38;2;255;90;0m";
+        break;
+    case 3:
+        color_seq = "\x1b[38;2;255;50;50m";
+        if (!debug)
+            sound_err();
+        break;
+    case 4:
+        color_seq = "\x1b[38;2;50;255;50m";
+        break;
+    default:
+        color_seq = "\x1b[38;2;255;50;50m";
+        break;
     }
-    
+
     va_list args;
     va_start(args, visibility);
-    
-    char header[256];
-    if(level < 1 || level > 4){
+
+    char *header = kmalloc(256);
+    if (!header)
+    {
+        kfree(logline);
+        spinlock_release(&loglock);
+        if (rflags & 0x200)
+            asm volatile("sti");
+        return;
+    }
+
+    if (level < 1 || level > 4)
+    {
         sound_err();
-        snprintf(header, sizeof(header), " -> KERNEL PANIC !\n\n   - At : %s:%d.\n\n   - ERROR MESSAGE : ", file, line);
+        snprintf(header, 256, " -> KERNEL PANIC !\n\n   - At : %s:%d.\n\n   - ERROR MESSAGE : ", file, line);
     }
     else
-        snprintf(header, sizeof(header), "[%s:%d]- ", file, line);
-    
-    char message[1024];
-    vsnprintf(message, sizeof(message), fmt, args);
+        snprintf(header, 256, "[%s:%d]- ", file, line);
+
+    char *message = kmalloc(1024);
+    if (!message)
+    {
+        kfree(header);
+        kfree(logline);
+        spinlock_release(&loglock);
+        if (rflags & 0x200)
+            asm volatile("sti");
+        return;
+    }
+
+    vsnprintf(message, 1024, fmt, args);
     va_end(args);
 
-    char cpuid_str[16];
-    if(cpuid != 0) snprintf(cpuid_str, sizeof(cpuid_str), "[CPU%d]- ", cpuid); 
-    else cpuid_str[0] = '\0';
+    char *cpuid_str = kmalloc(16);
+    if (!cpuid_str)
+    {
+        kfree(message);
+        kfree(header);
+        kfree(logline);
+        spinlock_release(&loglock);
+        if (rflags & 0x200)
+            asm volatile("sti");
+        return;
+    }
+
+    if (cpuid != 0)
+        snprintf(cpuid_str, 16, "[CPU%d]- ", cpuid);
+    else
+        cpuid_str[0] = '\0';
 
     strcpy(logline, header);
     strcat(logline, cpuid_str);
@@ -74,19 +117,28 @@ void log_internal(const char* file, int line, const char* fmt, int level, int vi
     serial_write_string(color_seq);
     serial_write_string(logline);
     serial_write_string("\x1b[0m");
-    
-    if (visibility == 1 || debug) {
+
+    if (visibility == 1 || debug)
+    {
         prints(color_seq);
         prints(logline);
         prints("\x1b[0m");
     }
-    
+
+    kfree(cpuid_str);
+    kfree(message);
+    kfree(header);
+    kfree(logline);
+
     spinlock_release(&loglock);
-    
-    if (rflags & 0x200) asm volatile("sti");
-    
-    if(level < 1 || level > 4){
+
+    if (rflags & 0x200)
+        asm volatile("sti");
+
+    if (level < 1 || level > 4)
+    {
         __asm__ __volatile__("cli");
-        for(;;)__asm__ __volatile__("hlt");
+        for (;;)
+            __asm__ __volatile__("hlt");
     }
 }

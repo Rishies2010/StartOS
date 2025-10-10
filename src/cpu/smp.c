@@ -36,7 +36,6 @@ void init_smp() {
         clr();
         log("\n\nThis system cannot run StartOS\n\n - This system does not meet the requirement of minimum 2 CPUs.\n\nConsider upgrading your CPU or computer.\nIncrease CPUs available if on a VM.\n ", 3, 1);
         log(" Halting StartOS.", 2, 1);
-        plotlogo((framebuffer_width / 2) - 100, framebuffer_height - 216);
         __asm__ __volatile__("cli");
         for(;;)__asm__ __volatile__("hlt");
     }

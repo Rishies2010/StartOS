@@ -63,12 +63,8 @@ void idle(void)
 
 void test_task_a(void) {
     int count = 0;
-    uint16_t cs;
-    __asm__ volatile("mov %%cs, %0" : "=r"(cs));
-    log("TaskA CS=0x%x (should be 0x08)", 1, 0, cs);
-    
     while(1) {
-        if (count % 50000 == 0) {
+        if (count % 5 == 0) {
             log("A", 1, 0);
         }
         count++;
@@ -131,8 +127,8 @@ void _start(void)
     task_create(test_task_a, "TaskA");
     task_create(test_task_b, "TaskB");
     task_create_user(user_task, "User Mode Task");
-    plotimg("bg.tga", 0, 0);
     ft_run(false);
+    plotimg("bg.tga", 0, 0);
 #else
     task_create(idle, "idle");
     task_create(play_bootup_sequence, "Bootup Music");
