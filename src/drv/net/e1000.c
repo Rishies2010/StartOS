@@ -46,9 +46,7 @@ static uint8_t e1000_detect_eeprom(void)
     {
         uint32_t val = e1000_read(E1000_REG_EEPROM);
         if (val & (1 << 4))
-        {
             return 1;
-        }
     }
     return 0;
 }
@@ -89,15 +87,19 @@ static void e1000_read_mac(void)
         dev.mac[5] = (mac_high >> 8) & 0xFF;
     }
 
-    log("MAC: %02x:%02x:%02x:%02x:%02x:%02x.", 1, 0,
+    log("MAC: %02x:%02x:%02x:%02x:%02x:%02x", 1, 0,
         dev.mac[0], dev.mac[1], dev.mac[2], dev.mac[3], dev.mac[4], dev.mac[5]);
 }
 
 static void e1000_init_rx(void)
 {
+
     uint64_t ring_phys = alloc_page();
     dev.rx_ring = (e1000_rx_desc *)(ring_phys + KERNEL_VIRT_OFFSET);
     memset(dev.rx_ring, 0, NUM_RX_DESC * sizeof(e1000_rx_desc));
+
+    log("RX ring: phys=0x%llx virt=0x%llx", 1, 0, ring_phys, (uint64_t)dev.rx_ring);
+
     for (int i = 0; i < NUM_RX_DESC; i++)
     {
         uint64_t buf_phys = alloc_page();
@@ -121,13 +123,18 @@ static void e1000_init_rx(void)
                     E1000_RCTL_MPE | E1000_RCTL_BAM | E1000_RCTL_SECRC |
                     E1000_RCTL_RDMTS_HALF | (2 << 16) | (0 << 20);
     e1000_write(E1000_REG_RCTL, rctl);
+
+    log("RX initialized: %d descriptors", 1, 0, NUM_RX_DESC);
 }
 
 void e1000_init_tx(void)
 {
+
     uint64_t ring_phys = alloc_page();
     dev.tx_ring = (e1000_tx_desc *)(ring_phys + KERNEL_VIRT_OFFSET);
     memset(dev.tx_ring, 0, NUM_TX_DESC * sizeof(e1000_tx_desc));
+
+    log("TX ring: phys=0x%llx virt=0x%llx", 1, 0, ring_phys, (uint64_t)dev.tx_ring);
 
     for (int i = 0; i < NUM_TX_DESC; i++)
     {
@@ -152,6 +159,8 @@ void e1000_init_tx(void)
                     (0x10 << E1000_TCTL_CT) | (0x40 << E1000_TCTL_COLD);
     e1000_write(E1000_REG_TCTL, tctl);
     e1000_write(E1000_REG_TIPG, 0x0060200A);
+
+    log("TX initialized: %d descriptors", 1, 0, NUM_TX_DESC);
 }
 
 static void e1000_interrupt_handler_legacy(registers_t *regs)
@@ -175,13 +184,9 @@ void e1000_init(void)
 
     pci_dev = pci_find_device(E1000_VENDOR_ID, E1000_DEVICE_ID);
     if (!pci_dev)
-    {
         pci_dev = pci_find_device(E1000_VENDOR_ID, E1000_DEVICE_ID_2);
-    }
     if (!pci_dev)
-    {
         pci_dev = pci_find_device(E1000_VENDOR_ID, E1000_DEVICE_ID_3);
-    }
     if (!pci_dev)
     {
         pci_dev = pci_find_device_by_class(PCI_CLASS_NETWORK, PCI_SUBCLASS_ETHERNET);
@@ -195,7 +200,7 @@ void e1000_init(void)
 
     if (!pci_dev)
     {
-        log("No compatible device found.", 3, 1);
+        log("No compatible device found.", 3, 0);
         return;
     }
 
@@ -220,13 +225,9 @@ void e1000_init(void)
 
     dev.has_eeprom = e1000_detect_eeprom();
     if (dev.has_eeprom)
-    {
         log("EEPROM detected.", 1, 0);
-    }
     else
-    {
         log("Using registers for MAC.", 1, 0);
-    }
 
     e1000_read_mac();
     e1000_init_rx();
@@ -249,9 +250,7 @@ void e1000_init(void)
         register_interrupt_handler(32 + dev.irq, e1000_interrupt_handler_legacy, "E1000 Legacy");
     }
 
-    // uint32_t status = e1000_read(E1000_REG_STATUS);
-    // uint32_t ctrl = e1000_read(E1000_REG_CTRL);
-    e1000_write(E1000_REG_IMASK, 0x1F6DC);
+    log("E1000 initialization complete!", 4, 0);
 }
 
 int e1000_send_packet(void *data, size_t len)
@@ -263,7 +262,7 @@ int e1000_send_packet(void *data, size_t len)
 
     if (!e1000_link_up())
     {
-        log("Link down, cannot send packets.", 2, 1);
+        log("Link down, cannot send.", 2, 1);
         return -1;
     }
 
@@ -278,7 +277,7 @@ int e1000_send_packet(void *data, size_t len)
 
     if (wait_tries == 0)
     {
-        log("TX ring full. Descriptor %d, Status : %02x.", 2, 1, tail, dev.tx_ring[tail].status);
+        log("TX ring full. Descriptor %d, Status: %02x", 2, 1, tail, dev.tx_ring[tail].status);
         return -1;
     }
 
@@ -303,7 +302,7 @@ int e1000_send_packet(void *data, size_t len)
         uint32_t tdh = e1000_read(E1000_REG_TDH);
         uint32_t tdt = e1000_read(E1000_REG_TDT);
         uint32_t tctl = e1000_read(E1000_REG_TCTL);
-        log("TX Timeout. Descriptor %d, Status : %02x, TDH : %d, TDT : %d, TCTL : %08x", 2, 1,
+        log("TX Timeout. Desc %d, Status: %02x, TDH: %d, TDT: %d, TCTL: %08x", 2, 1,
             tail, dev.tx_ring[tail].status, tdh, tdt, tctl);
         return -1;
     }
@@ -313,6 +312,7 @@ int e1000_send_packet(void *data, size_t len)
 
 int e1000_receive_packet(void *buf, size_t buf_size)
 {
+
     uint16_t idx = dev.rx_cur;
     e1000_rx_desc *desc = &dev.rx_ring[idx];
 
@@ -334,6 +334,7 @@ int e1000_receive_packet(void *buf, size_t buf_size)
     desc->errors = 0;
 
     dev.rx_cur = (idx + 1) % NUM_RX_DESC;
+
     e1000_write(E1000_REG_RDT, idx);
 
     return (int)len;
@@ -342,9 +343,7 @@ int e1000_receive_packet(void *buf, size_t buf_size)
 void e1000_get_mac_address(uint8_t *mac)
 {
     for (int i = 0; i < 6; i++)
-    {
         mac[i] = dev.mac[i];
-    }
 }
 
 uint32_t e1000_link_up(void)
@@ -381,19 +380,11 @@ void e1000_handle_interrupt(void)
     uint32_t status = e1000_get_interrupt_status();
 
     if (status & 0x04)
-    {
         log("Link status changed - %s", 1, 0, e1000_link_up() ? "UP" : "DOWN");
-    }
     if (status & 0x10)
-    {
         log("Good threshold.", 1, 0);
-    }
     if (status & 0x80)
-    {
         log("Receive packet.", 1, 0);
-    }
     if (status & 0x01)
-    {
         log("Transmit packet.", 1, 0);
-    }
 }
