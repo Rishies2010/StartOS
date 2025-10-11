@@ -46,6 +46,7 @@ static ata_error_t ata_wait_ready(uint16_t base_io)
 static ata_error_t ata_wait_drq(uint16_t base_io)
 {
     timeout_counter = 0;
+    asm volatile("sti");
 
     while (timeout_counter < ATA_TIMEOUT_MS)
     {
@@ -53,18 +54,23 @@ static ata_error_t ata_wait_drq(uint16_t base_io)
 
         if (!(status & ATA_SR_BSY))
         {
-            if (status & ATA_SR_ERR)
-                return ATA_ERR_GENERAL;
-            if (status & ATA_SR_DF)
-                return ATA_ERR_DRIVE_FAULT;
-            if (status & ATA_SR_DRQ)
-                return ATA_SUCCESS;
+            if (status & ATA_SR_ERR){
+                asm volatile("cli");
+                return ATA_ERR_GENERAL;}
+            if (status & ATA_SR_DF){
+                asm volatile("cli");
+                return ATA_ERR_DRIVE_FAULT;}
+            if (status & ATA_SR_DRQ){
+                asm volatile("cli");
+                return ATA_SUCCESS;}
+            asm volatile("cli");
             return ATA_ERR_NO_DRQ;
         }
 
         timeout_counter++;
         ata_delay(base_io);
     }
+    asm volatile("cli");
 
     return ATA_ERR_TIMEOUT;
 }

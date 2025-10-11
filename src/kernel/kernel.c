@@ -3,6 +3,7 @@
  */
 
 #include "../libk/debug/serial.h"
+#include "../libk/debug/shell.h"
 #include "../libk/debug/log.h"
 #include "../libk/core/mem.h"
 #include "../libk/string.h"
@@ -61,30 +62,35 @@ void idle(void)
     }
 }
 
-void test_task_a(void) {
+void test_task_a(void)
+{
     int count = 0;
-    while(1) {
-        if (count % 5 == 0) {
+    while (1)
+    {
+        if (count % 5 == 0)
+        {
             log("A", 1, 0);
         }
         count++;
     }
 }
 
-void test_task_b(void) {    
+void test_task_b(void)
+{
     int count = 0;
-    while(1) {
-        if (count % 5 == 0) {
+    while (1)
+    {
+        if (count % 5 == 0)
+        {
             log("B", 1, 0);
         }
         count++;
     }
 }
 
-
 void user_task(void)
 {
-    while(1)
+    while (1)
     {
         log("C (I am from Userspace, Ring 3!)", 1, 1);
     }
@@ -119,22 +125,22 @@ void _start(void)
     pci_initialize_system();
     e1000_init();
 
-#if debug 
+#if debug
     log("Running In Debug Mode.", 2, 1);
     sfs_list_files();
     print_mem_info(1);
     task_create(idle, "idle");
-    task_create(test_task_a, "TaskA");
     task_create(test_task_b, "TaskB");
     task_create_user(user_task, "User Mode Task");
-    ft_run(false);
-    plotimg("bg.tga", 0, 0);
+    // ft_run(false);
+    // plotimg("bg.tga", 0, 0);
 #else
     task_create(idle, "idle");
     task_create(play_bootup_sequence, "Bootup Music");
     plotimg("bg.tga", 0, 0);
 #endif
-    sched_start();
-    asm volatile("sti");
-    idle();
+    // sched_start();
+    shell_run();
+    for (;;)
+        ;
 }
