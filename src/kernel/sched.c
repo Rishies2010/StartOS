@@ -45,6 +45,28 @@ static void task_entry_wrapper(void)
     task_exit();
 }
 
+static void user_task_entry_wrapper(void)
+{
+    if (!current_task)
+    {
+        asm volatile("cli; hlt");
+        while (1)
+            ;
+    }
+
+    void (*entry)(void) = (void (*)(void))current_task->regs.rbx;
+
+    if (!entry)
+    {
+        asm volatile("cli; hlt");
+        while (1)
+            ;
+    }
+
+    entry();
+    task_exit();
+}
+
 void sched_init(void)
 {
     spinlock_init(&sched_lock);
@@ -197,13 +219,13 @@ task_t *task_create_user(void (*entry)(void), const char *name)
     task->regs.ss = 0x20 | 3;
     task->regs.ds = 0x20 | 3;
 
-    task->regs.rip = (uint64_t)entry;
+    task->regs.rip = (uint64_t)task_entry_wrapper;  
+    task->regs.rbx = (uint64_t)entry;                
     task->regs.userrsp = user_stack_top;
     task->regs.rbp = user_stack_top;
     task->regs.rflags = 0x202;
 
     task->regs.rax = 0;
-    task->regs.rbx = 0;
     task->regs.rcx = 0;
     task->regs.rdx = 0;
     task->regs.rsi = 0;

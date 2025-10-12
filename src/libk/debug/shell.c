@@ -346,21 +346,6 @@ static void cmd_exec(int argc, char *argv[])
         }
         prints(")\n");
     }
-    else
-    {
-        prints(" Program exited with code: ");
-        if (ret >= 100) {
-            printc('0' + (ret / 100));
-            printc('0' + ((ret / 10) % 10));
-            printc('0' + (ret % 10));
-        } else if (ret >= 10) {
-            printc('0' + (ret / 10));
-            printc('0' + (ret % 10));
-        } else {
-            printc('0' + ret);
-        }
-        prints("\n");
-    }
 }
 
 static void cmd_write(int argc, char *argv[])
