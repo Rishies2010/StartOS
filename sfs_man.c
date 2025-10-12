@@ -7,12 +7,18 @@
 
 #define SFS_MAGIC 0x53465321
 #define SFS_BLOCK_SIZE 4096
-#define SFS_MAX_FILES 64
-#define SFS_MAX_FILENAME 32
+#define SFS_MAX_ENTRIES 64
+#define SFS_MAX_FILENAME 28
 #define SFS_SUPERBLOCK_LBA 0
 #define SFS_FILETABLE_LBA 1
 #define SFS_FILETABLE_SIZE 8
 #define SFS_DATA_START_LBA 9
+
+#define SFS_ROOT_DIR_INDEX 0
+
+#define SFS_TYPE_UNUSED 0
+#define SFS_TYPE_FILE 1
+#define SFS_TYPE_DIRECTORY 2
 
 #define VHD_COOKIE 0x636f6e6563746978ULL
 
@@ -39,24 +45,25 @@ typedef struct {
     uint32_t magic;
     uint32_t total_blocks;
     uint32_t free_blocks;
-    uint32_t file_count;
+    uint32_t entry_count;
     uint8_t drive_number;
     uint8_t reserved[495];
 } __attribute__((packed)) sfs_superblock_t;
 
 typedef struct {
-    char filename[SFS_MAX_FILENAME];
+    char name[SFS_MAX_FILENAME];
     uint32_t size;
     uint32_t start_block;
     uint32_t block_count;
-    uint8_t used;
-    uint8_t reserved[23];
-} __attribute__((packed)) sfs_file_entry_t;
+    uint8_t type;
+    uint8_t parent_index;
+    uint8_t reserved[26];
+} __attribute__((packed)) sfs_entry_t;
 
 static int vhd_fd = -1;
 static off_t vhd_data_offset = 0;
 static sfs_superblock_t superblock;
-static sfs_file_entry_t file_table[SFS_MAX_FILES];
+static sfs_entry_t entry_table[SFS_MAX_ENTRIES];
 
 uint32_t swap32(uint32_t val) {
     return ((val & 0xFF000000) >> 24) |
@@ -135,8 +142,8 @@ int load_filesystem() {
         return -1;
     }
     
-    if (read_sector(SFS_FILETABLE_LBA, file_table, SFS_FILETABLE_SIZE) != 0) {
-        fprintf(stderr, "Failed to read file table\n");
+    if (read_sector(SFS_FILETABLE_LBA, entry_table, SFS_FILETABLE_SIZE) != 0) {
+        fprintf(stderr, "Failed to read entry table\n");
         return -1;
     }
     
@@ -149,11 +156,100 @@ int save_filesystem() {
         return -1;
     }
     
-    if (write_sector(SFS_FILETABLE_LBA, file_table, SFS_FILETABLE_SIZE) != 0) {
-        fprintf(stderr, "Failed to write file table\n");
+    if (write_sector(SFS_FILETABLE_LBA, entry_table, SFS_FILETABLE_SIZE) != 0) {
+        fprintf(stderr, "Failed to write entry table\n");
         return -1;
     }
     
+    return 0;
+}
+
+void build_path(uint8_t index, char *path, size_t max_size) {
+    if (index == SFS_ROOT_DIR_INDEX) {
+        strncpy(path, "/", max_size);
+        return;
+    }
+    
+    char temp[256] = {0};
+    char *parts[16];
+    int depth = 0;
+    uint8_t idx = index;
+    
+    while (idx != SFS_ROOT_DIR_INDEX && depth < 16) {
+        parts[depth++] = entry_table[idx].name;
+        idx = entry_table[idx].parent_index;
+    }
+    
+    path[0] = '\0';
+    for (int i = depth - 1; i >= 0; i--) {
+        strcat(path, "/");
+        strcat(path, parts[i]);
+    }
+    
+    if (path[0] == '\0') {
+        strncpy(path, "/", max_size);
+    }
+}
+
+int resolve_path(const char *path, uint8_t *out_parent, char *out_name) {
+    if (!path || !out_parent || !out_name) return -1;
+    
+    if (path[0] == '/') {
+        *out_parent = SFS_ROOT_DIR_INDEX;
+        path++;
+    } else {
+        *out_parent = SFS_ROOT_DIR_INDEX;
+    }
+    
+    if (strlen(path) == 0) {
+        out_name[0] = '\0';
+        return 0;
+    }
+    
+    char temp[SFS_MAX_FILENAME];
+    int idx = 0;
+    uint8_t current = *out_parent;
+    
+    for (size_t i = 0; i <= strlen(path); i++) {
+        if (path[i] == '/' || path[i] == '\0') {
+            if (idx > 0) {
+                temp[idx] = '\0';
+                
+                if (strcmp(temp, "..") == 0) {
+                    if (current != SFS_ROOT_DIR_INDEX) {
+                        current = entry_table[current].parent_index;
+                    }
+                } else if (strcmp(temp, ".") != 0) {
+                    if (path[i] == '\0') {
+                        strncpy(out_name, temp, SFS_MAX_FILENAME - 1);
+                        out_name[SFS_MAX_FILENAME - 1] = '\0';
+                        *out_parent = current;
+                        return 0;
+                    } else {
+                        int found = -1;
+                        for (int j = 0; j < SFS_MAX_ENTRIES; j++) {
+                            if (entry_table[j].type == SFS_TYPE_DIRECTORY &&
+                                entry_table[j].parent_index == current &&
+                                strcmp(entry_table[j].name, temp) == 0) {
+                                found = j;
+                                break;
+                            }
+                        }
+                        if (found < 0) return -1;
+                        current = found;
+                    }
+                }
+                idx = 0;
+            }
+        } else {
+            if (idx < SFS_MAX_FILENAME - 1) {
+                temp[idx++] = path[i];
+            }
+        }
+    }
+    
+    out_name[0] = '\0';
+    *out_parent = current;
     return 0;
 }
 
@@ -168,9 +264,13 @@ void cmd_format() {
     uint32_t data_sectors = total_sectors - SFS_DATA_START_LBA;
     superblock.total_blocks = data_sectors / 8;
     superblock.free_blocks = superblock.total_blocks;
-    superblock.file_count = 0;
+    superblock.entry_count = 1;
     
-    memset(file_table, 0, sizeof(file_table));
+    memset(entry_table, 0, sizeof(entry_table));
+    
+    strcpy(entry_table[0].name, "/");
+    entry_table[0].type = SFS_TYPE_DIRECTORY;
+    entry_table[0].parent_index = 0;
     
     if (save_filesystem() != 0) {
         fprintf(stderr, "Format failed\n");
@@ -182,43 +282,134 @@ void cmd_format() {
 }
 
 void cmd_info() {
+    int file_count = 0;
+    int dir_count = 0;
+    
+    for (int i = 0; i < SFS_MAX_ENTRIES; i++) {
+        if (entry_table[i].type == SFS_TYPE_FILE) file_count++;
+        else if (entry_table[i].type == SFS_TYPE_DIRECTORY) dir_count++;
+    }
+    
     printf("\nStartFS Statistics:\n");
-    printf("  Total space: %d KB\n", superblock.total_blocks * 4);
-    printf("  Used space:  %d KB\n", 
+    printf("  Total space:  %d KB\n", superblock.total_blocks * 4);
+    printf("  Used space:   %d KB\n", 
            (superblock.total_blocks - superblock.free_blocks) * 4);
-    printf("  Free space:  %d KB\n", superblock.free_blocks * 4);
-    printf("  Files:       %d / %d\n\n", superblock.file_count, SFS_MAX_FILES);
+    printf("  Free space:   %d KB\n", superblock.free_blocks * 4);
+    printf("  Entries:      %d / %d\n", superblock.entry_count, SFS_MAX_ENTRIES);
+    printf("  Directories:  %d\n", dir_count);
+    printf("  Files:        %d\n\n", file_count);
 }
 
-void cmd_list() {
-    printf("\nFiles in StartFS:\n");
-    printf("%-56s %10s %10s\n", "Filename", "Size", "Block");
+void cmd_list(const char *path) {
+    uint8_t parent;
+    char name[SFS_MAX_FILENAME];
+    
+    if (!path || strcmp(path, "") == 0 || strcmp(path, "/") == 0) {
+        parent = SFS_ROOT_DIR_INDEX;
+    } else {
+        if (resolve_path(path, &parent, name) < 0) {
+            fprintf(stderr, "Invalid path: %s\n", path);
+            return;
+        }
+        
+        if (strlen(name) > 0) {
+            int found = -1;
+            for (int i = 0; i < SFS_MAX_ENTRIES; i++) {
+                if (entry_table[i].type == SFS_TYPE_DIRECTORY &&
+                    entry_table[i].parent_index == parent &&
+                    strcmp(entry_table[i].name, name) == 0) {
+                    found = i;
+                    break;
+                }
+            }
+            if (found < 0) {
+                fprintf(stderr, "Directory not found: %s\n", path);
+                return;
+            }
+            parent = found;
+        }
+    }
+    
+    char full_path[256];
+    build_path(parent, full_path, sizeof(full_path));
+    
+    printf("\nDirectory: %s\n", full_path);
+    printf("%-5s %-40s %10s %10s\n", "Type", "Name", "Size", "Block");
     printf("--------------------------------------------------------------------------------\n");
     
-    int count = 0;
-    for (int i = 0; i < SFS_MAX_FILES; i++) {
-        if (file_table[i].used) {
-            printf("%-56s %10u %10u\n", 
-                   file_table[i].filename,
-                   file_table[i].size,
-                   file_table[i].start_block);
-            count++;
+    int file_count = 0;
+    int dir_count = 0;
+    
+    for (int i = 0; i < SFS_MAX_ENTRIES; i++) {
+        if (entry_table[i].type != SFS_TYPE_UNUSED &&
+            entry_table[i].parent_index == parent) {
+            if (entry_table[i].type == SFS_TYPE_DIRECTORY) {
+                printf("%-5s %-40s %10s %10s\n", 
+                       "[DIR]", entry_table[i].name, "-", "-");
+                dir_count++;
+            } else if (entry_table[i].type == SFS_TYPE_FILE) {
+                printf("%-5s %-40s %10u %10u\n",
+                       "", entry_table[i].name,
+                       entry_table[i].size,
+                       entry_table[i].start_block);
+                file_count++;
+            }
         }
     }
     
-    if (count == 0) {
-        printf("(no files)\n");
+    if (file_count == 0 && dir_count == 0) {
+        printf("(empty)\n");
     }
-    printf("\nTotal: %d files\n\n", count);
+    printf("\nTotal: %d directories, %d files\n\n", dir_count, file_count);
 }
 
-int find_file(const char *filename) {
-    for (int i = 0; i < SFS_MAX_FILES; i++) {
-        if (file_table[i].used && strcmp(file_table[i].filename, filename) == 0) {
-            return i;
+void cmd_mkdir(const char *path) {
+    uint8_t parent;
+    char name[SFS_MAX_FILENAME];
+    
+    if (resolve_path(path, &parent, name) < 0 || strlen(name) == 0) {
+        fprintf(stderr, "Invalid path: %s\n", path);
+        return;
+    }
+    
+    for (int i = 0; i < SFS_MAX_ENTRIES; i++) {
+        if (entry_table[i].type != SFS_TYPE_UNUSED &&
+            entry_table[i].parent_index == parent &&
+            strcmp(entry_table[i].name, name) == 0) {
+            fprintf(stderr, "Already exists: %s\n", name);
+            return;
         }
     }
-    return -1;
+    
+    int free_idx = -1;
+    for (int i = 0; i < SFS_MAX_ENTRIES; i++) {
+        if (entry_table[i].type == SFS_TYPE_UNUSED) {
+            free_idx = i;
+            break;
+        }
+    }
+    
+    if (free_idx < 0) {
+        fprintf(stderr, "No free entries\n");
+        return;
+    }
+    
+    strncpy(entry_table[free_idx].name, name, SFS_MAX_FILENAME - 1);
+    entry_table[free_idx].name[SFS_MAX_FILENAME - 1] = '\0';
+    entry_table[free_idx].type = SFS_TYPE_DIRECTORY;
+    entry_table[free_idx].parent_index = parent;
+    entry_table[free_idx].size = 0;
+    entry_table[free_idx].start_block = 0;
+    entry_table[free_idx].block_count = 0;
+    
+    superblock.entry_count++;
+    
+    if (save_filesystem() != 0) {
+        fprintf(stderr, "Failed to update filesystem\n");
+        return;
+    }
+    
+    printf("Created directory: %s\n", name);
 }
 
 uint32_t find_free_space(uint32_t blocks_needed) {
@@ -228,10 +419,10 @@ uint32_t find_free_space(uint32_t blocks_needed) {
     for (uint32_t block = 0; block < superblock.total_blocks; block++) {
         int is_free = 1;
         
-        for (int i = 0; i < SFS_MAX_FILES; i++) {
-            if (file_table[i].used) {
-                uint32_t file_start = file_table[i].start_block;
-                uint32_t file_end = file_start + file_table[i].block_count;
+        for (int i = 0; i < SFS_MAX_ENTRIES; i++) {
+            if (entry_table[i].type == SFS_TYPE_FILE) {
+                uint32_t file_start = entry_table[i].start_block;
+                uint32_t file_end = file_start + entry_table[i].block_count;
                 
                 if (block >= file_start && block < file_end) {
                     is_free = 0;
@@ -257,7 +448,7 @@ uint32_t find_free_space(uint32_t blocks_needed) {
     return 0xFFFFFFFF;
 }
 
-void cmd_import(const char *host_path, const char *sfs_name) {
+void cmd_import(const char *host_path, const char *sfs_path) {
     FILE *f = fopen(host_path, "rb");
     if (!f) {
         fprintf(stderr, "Cannot open host file: %s\n", host_path);
@@ -268,16 +459,23 @@ void cmd_import(const char *host_path, const char *sfs_name) {
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
     
-    if (strlen(sfs_name) >= SFS_MAX_FILENAME) {
-        fprintf(stderr, "Filename too long (max %d)\n", SFS_MAX_FILENAME - 1);
+    uint8_t parent;
+    char name[SFS_MAX_FILENAME];
+    
+    if (resolve_path(sfs_path, &parent, name) < 0 || strlen(name) == 0) {
+        fprintf(stderr, "Invalid path: %s\n", sfs_path);
         fclose(f);
         return;
     }
     
-    if (find_file(sfs_name) != -1) {
-        fprintf(stderr, "File already exists: %s\n", sfs_name);
-        fclose(f);
-        return;
+    for (int i = 0; i < SFS_MAX_ENTRIES; i++) {
+        if (entry_table[i].type != SFS_TYPE_UNUSED &&
+            entry_table[i].parent_index == parent &&
+            strcmp(entry_table[i].name, name) == 0) {
+            fprintf(stderr, "Already exists: %s\n", name);
+            fclose(f);
+            return;
+        }
     }
     
     uint32_t blocks_needed = (size + SFS_BLOCK_SIZE - 1) / SFS_BLOCK_SIZE;
@@ -291,15 +489,15 @@ void cmd_import(const char *host_path, const char *sfs_name) {
     }
     
     int free_entry = -1;
-    for (int i = 0; i < SFS_MAX_FILES; i++) {
-        if (!file_table[i].used) {
+    for (int i = 0; i < SFS_MAX_ENTRIES; i++) {
+        if (entry_table[i].type == SFS_TYPE_UNUSED) {
             free_entry = i;
             break;
         }
     }
     
     if (free_entry == -1) {
-        fprintf(stderr, "Too many files (max %d)\n", SFS_MAX_FILES);
+        fprintf(stderr, "Too many entries (max %d)\n", SFS_MAX_ENTRIES);
         fclose(f);
         return;
     }
@@ -334,13 +532,15 @@ void cmd_import(const char *host_path, const char *sfs_name) {
     free(block_buffer);
     fclose(f);
     
-    strcpy(file_table[free_entry].filename, sfs_name);
-    file_table[free_entry].size = size;
-    file_table[free_entry].start_block = start_block;
-    file_table[free_entry].block_count = blocks_needed;
-    file_table[free_entry].used = 1;
+    strncpy(entry_table[free_entry].name, name, SFS_MAX_FILENAME - 1);
+    entry_table[free_entry].name[SFS_MAX_FILENAME - 1] = '\0';
+    entry_table[free_entry].size = size;
+    entry_table[free_entry].start_block = start_block;
+    entry_table[free_entry].block_count = blocks_needed;
+    entry_table[free_entry].type = SFS_TYPE_FILE;
+    entry_table[free_entry].parent_index = parent;
     
-    superblock.file_count++;
+    superblock.entry_count++;
     superblock.free_blocks -= blocks_needed;
     
     if (save_filesystem() != 0) {
@@ -348,13 +548,33 @@ void cmd_import(const char *host_path, const char *sfs_name) {
         return;
     }
     
-    printf("Imported: %s (%ld bytes, %d blocks)\n", sfs_name, size, blocks_needed);
+    char full_path[256];
+    build_path(parent, full_path, sizeof(full_path));
+    printf("Imported: %s -> %s/%s (%ld bytes, %d blocks)\n", 
+           host_path, full_path, name, size, blocks_needed);
 }
 
-void cmd_export(const char *sfs_name, const char *host_path) {
-    int idx = find_file(sfs_name);
-    if (idx == -1) {
-        fprintf(stderr, "File not found: %s\n", sfs_name);
+void cmd_export(const char *sfs_path, const char *host_path) {
+    uint8_t parent;
+    char name[SFS_MAX_FILENAME];
+    
+    if (resolve_path(sfs_path, &parent, name) < 0 || strlen(name) == 0) {
+        fprintf(stderr, "Invalid path: %s\n", sfs_path);
+        return;
+    }
+    
+    int idx = -1;
+    for (int i = 0; i < SFS_MAX_ENTRIES; i++) {
+        if (entry_table[i].type == SFS_TYPE_FILE &&
+            entry_table[i].parent_index == parent &&
+            strcmp(entry_table[i].name, name) == 0) {
+            idx = i;
+            break;
+        }
+    }
+    
+    if (idx < 0) {
+        fprintf(stderr, "File not found: %s\n", sfs_path);
         return;
     }
     
@@ -364,7 +584,7 @@ void cmd_export(const char *sfs_name, const char *host_path) {
         return;
     }
     
-    sfs_file_entry_t *entry = &file_table[idx];
+    sfs_entry_t *entry = &entry_table[idx];
     uint8_t *block_buffer = malloc(SFS_BLOCK_SIZE);
     if (!block_buffer) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -391,20 +611,37 @@ void cmd_export(const char *sfs_name, const char *host_path) {
     free(block_buffer);
     fclose(f);
     
-    printf("Exported: %s -> %s (%u bytes)\n", sfs_name, host_path, entry->size);
+    printf("Exported: %s -> %s (%u bytes)\n", name, host_path, entry->size);
 }
 
-void cmd_delete(const char *sfs_name) {
-    int idx = find_file(sfs_name);
-    if (idx == -1) {
-        fprintf(stderr, "File not found: %s\n", sfs_name);
+void cmd_delete(const char *sfs_path) {
+    uint8_t parent;
+    char name[SFS_MAX_FILENAME];
+    
+    if (resolve_path(sfs_path, &parent, name) < 0 || strlen(name) == 0) {
+        fprintf(stderr, "Invalid path: %s\n", sfs_path);
         return;
     }
     
-    uint32_t freed_blocks = file_table[idx].block_count;
-    memset(&file_table[idx], 0, sizeof(sfs_file_entry_t));
+    int idx = -1;
+    for (int i = 0; i < SFS_MAX_ENTRIES; i++) {
+        if (entry_table[i].type == SFS_TYPE_FILE &&
+            entry_table[i].parent_index == parent &&
+            strcmp(entry_table[i].name, name) == 0) {
+            idx = i;
+            break;
+        }
+    }
     
-    superblock.file_count--;
+    if (idx < 0) {
+        fprintf(stderr, "File not found: %s\n", sfs_path);
+        return;
+    }
+    
+    uint32_t freed_blocks = entry_table[idx].block_count;
+    memset(&entry_table[idx], 0, sizeof(sfs_entry_t));
+    
+    superblock.entry_count--;
     superblock.free_blocks += freed_blocks;
     
     if (save_filesystem() != 0) {
@@ -412,25 +649,29 @@ void cmd_delete(const char *sfs_name) {
         return;
     }
     
-    printf("Deleted: %s (%d blocks freed)\n", sfs_name, freed_blocks);
+    printf("Deleted: %s (%d blocks freed)\n", name, freed_blocks);
 }
 
 void show_help() {
     printf("StartFS Manager - Manage StartFS filesystems from Linux\n\n");
     printf("Usage: sfs_man <vhd_file> <command> [args]\n\n");
     printf("Commands:\n");
-    printf("  format              Format the VHD with StartFS\n");
-    printf("  info                Show filesystem statistics\n");
-    printf("  list                List all files\n");
-    printf("  import <src> <dst>  Import file from host to StartFS\n");
-    printf("  export <src> <dst>  Export file from StartFS to host\n");
-    printf("  delete <file>       Delete file from StartFS\n");
-    printf("  help                Show this help\n\n");
+    printf("  format                Format the VHD with StartFS\n");
+    printf("  info                  Show filesystem statistics\n");
+    printf("  list [path]           List directory contents (default: /)\n");
+    printf("  tree                  Show filesystem tree structure\n");
+    printf("  mkdir <path>          Create directory\n");
+    printf("  import <src> <dst>    Import file from host to StartFS\n");
+    printf("  export <src> <dst>    Export file from StartFS to host\n");
+    printf("  delete <file>         Delete file from StartFS\n");
+    printf("  help                  Show this help\n\n");
     printf("Examples:\n");
     printf("  sfs_man StartOS.vhd format\n");
-    printf("  sfs_man StartOS.vhd import build/kernel.bin kernel\n");
-    printf("  sfs_man StartOS.vhd list\n");
-    printf("  sfs_man StartOS.vhd export kernel kernel_backup.bin\n");
+    printf("  sfs_man StartOS.vhd mkdir /boot\n");
+    printf("  sfs_man StartOS.vhd import kernel.bin /boot/kernel\n");
+    printf("  sfs_man StartOS.vhd list /boot\n");
+    printf("  sfs_man StartOS.vhd tree\n");
+    printf("  sfs_man StartOS.vhd export /boot/kernel kernel_backup.bin\n");
 }
 
 int main(int argc, char **argv) {
@@ -470,22 +711,29 @@ int main(int argc, char **argv) {
         if (strcmp(command, "info") == 0) {
             cmd_info();
         } else if (strcmp(command, "list") == 0) {
-            cmd_list();
+            const char *path = (argc >= 4) ? argv[3] : "/";
+            cmd_list(path);
+        } else if (strcmp(command, "mkdir") == 0) {
+            if (argc != 4) {
+                fprintf(stderr, "Usage: mkdir <path>\n");
+            } else {
+                cmd_mkdir(argv[3]);
+            }
         } else if (strcmp(command, "import") == 0) {
             if (argc != 5) {
-                fprintf(stderr, "Usage: import <host_file> <sfs_name>\n");
+                fprintf(stderr, "Usage: import <host_file> <sfs_path>\n");
             } else {
                 cmd_import(argv[3], argv[4]);
             }
         } else if (strcmp(command, "export") == 0) {
             if (argc != 5) {
-                fprintf(stderr, "Usage: export <sfs_name> <host_file>\n");
+                fprintf(stderr, "Usage: export <sfs_path> <host_file>\n");
             } else {
                 cmd_export(argv[3], argv[4]);
             }
         } else if (strcmp(command, "delete") == 0) {
             if (argc != 4) {
-                fprintf(stderr, "Usage: delete <sfs_name>\n");
+                fprintf(stderr, "Usage: delete <sfs_path>\n");
             } else {
                 cmd_delete(argv[3]);
             }
