@@ -295,12 +295,12 @@ static void cmd_cat(int argc, char *argv[])
         return;
     }
 
-    char buffer[1025];
+    char buffer[file.size];
     uint32_t bytes_read;
     
-    if (sfs_read(&file, buffer, 1024, &bytes_read) == SFS_OK)
+    if (sfs_read(&file, buffer, file.size, &bytes_read) == SFS_OK)
     {
-        buffer[bytes_read] = '\0';
+        buffer[file.size] = '\0';
         prints(" ");
         prints(buffer);
         prints("\n");
