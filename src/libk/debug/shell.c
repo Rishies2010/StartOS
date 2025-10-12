@@ -73,7 +73,6 @@ static void cmd_date(void)
     prints("\n");
 }
 
-
 static void cmd_count(void)
 {
     count++;
@@ -134,24 +133,98 @@ static void cmd_shutdown(void)
 
 static void cmd_ls(void)
 {
-    sfs_list_files();
+    sfs_list();
+}
+
+static void cmd_pwd(void)
+{
+    char cwd[256];
+    sfs_get_cwd(cwd, sizeof(cwd));
+    prints(" ");
+    prints(cwd);
+    prints("\n");
+}
+
+static void cmd_cd(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
+        prints(" Usage: cd <directory>\n");
+        return;
+    }
+
+    if (sfs_chdir(argv[1]) == SFS_OK)
+    {
+        prints(" Changed directory to: ");
+        prints(argv[1]);
+        prints("\n");
+    }
+    else
+    {
+        prints(" Failed to change directory: ");
+        prints(argv[1]);
+        prints("\n");
+    }
+}
+
+static void cmd_mkdir(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
+        prints(" Usage: mkdir <directory>\n");
+        return;
+    }
+
+    if (sfs_mkdir(argv[1]) == SFS_OK)
+    {
+        prints(" Directory created: ");
+        prints(argv[1]);
+        prints("\n");
+    }
+    else
+    {
+        prints(" Failed to create directory: ");
+        prints(argv[1]);
+        prints("\n");
+    }
+}
+
+static void cmd_rmdir(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
+        prints(" Usage: rmdir <directory>\n");
+        return;
+    }
+
+    if (sfs_rmdir(argv[1]) == SFS_OK)
+    {
+        prints(" Directory removed: ");
+        prints(argv[1]);
+        prints("\n");
+    }
+    else
+    {
+        prints(" Failed to remove directory: ");
+        prints(argv[1]);
+        prints("\n");
+    }
 }
 
 static void cmd_touch(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        prints("Usage: touch <filename>\n");
+        prints(" Usage: touch <filename>\n");
         return;
     }
 
     if (sfs_create(argv[1], 1024) == SFS_OK)
     {
-
         sfs_file_t file;
         if (sfs_open(argv[1], &file) != SFS_OK)
         {
-            prints("Failed to open file for zeroing: ");
+            prints(" Failed to open file for zeroing: ");
             prints(argv[1]);
             prints("\n");
             return;
@@ -163,19 +236,21 @@ static void cmd_touch(int argc, char *argv[])
 
         if (sfs_write(&file, zeros, 1024) != SFS_OK)
         {
-            prints("Failed to allocate file: ");
+            prints(" Failed to allocate file: ");
             prints(argv[1]);
             prints("\n");
+            sfs_close(&file);
             return;
         }
 
-        prints("File created : ");
+        sfs_close(&file);
+        prints(" File created: ");
         prints(argv[1]);
         prints("\n");
     }
     else
     {
-        prints("Failed to create file: ");
+        prints(" Failed to create file: ");
         prints(argv[1]);
         prints("\n");
     }
@@ -211,13 +286,22 @@ static void cmd_cat(int argc, char *argv[])
         return;
     }
 
-    char buffer[1025];
-    size_t bytes_read;
     sfs_file_t file;
-    sfs_open(argv[1], &file);
+    if (sfs_open(argv[1], &file) != SFS_OK)
+    {
+        prints(" Failed to open file: ");
+        prints(argv[1]);
+        prints("\n");
+        return;
+    }
+
+    char buffer[1025];
+    uint32_t bytes_read;
+    
     if (sfs_read(&file, buffer, 1024, &bytes_read) == SFS_OK)
     {
-        buffer[strlen(buffer)] = '\0';
+        buffer[bytes_read] = '\0';
+        prints(" ");
         prints(buffer);
         prints("\n");
     }
@@ -227,27 +311,15 @@ static void cmd_cat(int argc, char *argv[])
         prints(argv[1]);
         prints("\n");
     }
-}
 
-static void help(void){
-    prints("\n Help:\n\n - help - Display this menu\n - clear - Clear the screen\n - echo - Repeat following text\n - version - Display embedded version\n - date - Show current date\n - uptime - Show system uptime\n - shutdown / exit - Shutdown the system.\n - ls - Display all file names and size\n - format - Format the disk\n - touch - Create a new file 1024bytes big\n - rm - Delete a file\n - count - Increment a counter\n - schedstat - Current task name and PID\n - cpustat - Show CPU info\n - fsstat - Show StartFS statistics\n - mem - Show memory status\n - cat - Show file contents\n - write - Write data to a file as plain text\n - sched - Start the scheduler (will end the shell)\n");
-}
-
-static void schedstat(void){
-    task_t* task = sched_current_task();
-    prints("\n Current Task:\n - Name: ");
-    prints(task->name);
-    prints("\n - PID: ");
-    printc('0' + (task->pid/10));
-    printc('0' + (task->pid%10));
-    prints("\n");
+    sfs_close(&file);
 }
 
 static void cmd_write(int argc, char *argv[])
 {
     if (argc < 3)
     {
-        prints("Usage: write <filename> <content>\n");
+        prints(" Usage: write <filename> <content>\n");
         return;
     }
 
@@ -264,7 +336,7 @@ static void cmd_write(int argc, char *argv[])
     sfs_file_t file;
     if (sfs_open(argv[1], &file) != SFS_OK)
     {
-        prints("Failed to open file: ");
+        prints(" Failed to open file: ");
         prints(argv[1]);
         prints("\n");
         return;
@@ -272,16 +344,60 @@ static void cmd_write(int argc, char *argv[])
 
     if (sfs_write(&file, content, strlen(content)) == SFS_OK)
     {
-        prints("File written: ");
+        prints(" File written: ");
         prints(argv[1]);
         prints("\n");
     }
     else
     {
-        prints("Failed to write file: ");
+        prints(" Failed to write file: ");
         prints(argv[1]);
         prints("\n");
     }
+
+    sfs_close(&file);
+}
+
+static void help(void)
+{
+    prints("\n Help:\n\n");
+    prints(" - help       - Display this menu\n");
+    prints(" - clear      - Clear the screen\n");
+    prints(" - echo       - Repeat following text\n");
+    prints(" - version    - Display embedded version\n");
+    prints(" - date       - Show current date\n");
+    prints(" - uptime     - Show system uptime\n");
+    prints(" - shutdown   - Shutdown the system\n");
+    prints(" - exit       - Shutdown the system\n");
+    prints("\n File System Commands:\n");
+    prints(" - ls         - List files and directories\n");
+    prints(" - pwd        - Show current directory\n");
+    prints(" - cd         - Change directory\n");
+    prints(" - mkdir      - Create a new directory\n");
+    prints(" - rmdir      - Remove an empty directory\n");
+    prints(" - touch      - Create a new file (1024 bytes)\n");
+    prints(" - rm         - Delete a file\n");
+    prints(" - cat        - Show file contents\n");
+    prints(" - write      - Write data to a file as plain text\n");
+    prints(" - format     - Format the disk\n");
+    prints(" - fsstat     - Show StartFS statistics\n");
+    prints("\n System Commands:\n");
+    prints(" - count      - Increment a counter\n");
+    prints(" - schedstat  - Current task name and PID\n");
+    prints(" - cpustat    - Show CPU info\n");
+    prints(" - mem        - Show memory status\n");
+    prints(" - sched      - Start the scheduler\n");
+}
+
+static void schedstat(void)
+{
+    task_t* task = sched_current_task();
+    prints("\n Current Task:\n - Name: ");
+    prints(task->name);
+    prints("\n - PID: ");
+    printc('0' + (task->pid/10));
+    printc('0' + (task->pid%10));
+    prints("\n");
 }
 
 bool shell_execute(const char *command)
@@ -328,6 +444,22 @@ bool shell_execute(const char *command)
     else if (strcmp(argv[0], "ls") == 0)
     {
         cmd_ls();
+    }
+    else if (strcmp(argv[0], "pwd") == 0)
+    {
+        cmd_pwd();
+    }
+    else if (strcmp(argv[0], "cd") == 0)
+    {
+        cmd_cd(argc, argv);
+    }
+    else if (strcmp(argv[0], "mkdir") == 0)
+    {
+        cmd_mkdir(argc, argv);
+    }
+    else if (strcmp(argv[0], "rmdir") == 0)
+    {
+        cmd_rmdir(argc, argv);
     }
     else if (strcmp(argv[0], "format") == 0)
     {

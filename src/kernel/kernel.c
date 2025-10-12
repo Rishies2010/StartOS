@@ -127,19 +127,19 @@ void _start(void)
 
 #if debug
     log("Running In Debug Mode.", 2, 1);
-    sfs_list_files();
     print_mem_info(1);
+    sfs_list();
     task_create(idle, "idle");
     task_create(test_task_b, "TaskB");
     task_create_user(user_task, "User Mode Task");
-    // ft_run(false);
-    // plotimg("bg.tga", 0, 0);
+    
+    
 #else
     task_create(idle, "idle");
     task_create(play_bootup_sequence, "Bootup Music");
     plotimg("bg.tga", 0, 0);
 #endif
-    // sched_start();
+    
     shell_run();
     for (;;)
         ;
