@@ -382,7 +382,6 @@ void sfs_get_cwd(char *buffer, size_t size)
         return;
     }
 
-    char temp[256];
     int depth = 0;
     uint8_t idx = current_dir;
     char *parts[16];

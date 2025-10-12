@@ -196,7 +196,7 @@ void ft_run(bool set){
     flanterm = set;
 }
 
-void setcolor(uint8_t fg, uint8_t bg)
+void setcolor(uint32_t fg, uint32_t bg)
 {
     if (!ft_ctx || !flanterm)
         return;

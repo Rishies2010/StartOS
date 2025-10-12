@@ -14,7 +14,7 @@ void clr(void);
 void ft_run(bool set);
 void printc(char c);
 void prints(const char *str);
-void setcolor(uint8_t fg, uint8_t bg);
+void setcolor(uint32_t fg, uint32_t bg);
 void put_pixel(uint32_t x, uint32_t y, uint32_t color);
 uint32_t get_pixel_at(uint32_t x, uint32_t y);
 

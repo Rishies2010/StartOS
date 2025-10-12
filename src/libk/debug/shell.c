@@ -17,7 +17,6 @@
 
 static char command_buffer[MAX_COMMAND_LENGTH];
 static int count = 0;
-static int font = 1;
 
 static int parse_command(char *command, char *args[], int max_args)
 {
