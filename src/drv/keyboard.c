@@ -396,10 +396,12 @@ void read_line(char *buffer, size_t max_size, bool print)
             {
                 pos--;
             }
+            printc('\b');
         }
         else if (c >= 32 && c <= 126)
         {
-            if(print)printc(c);
+            if(print)
+                printc(c);
             buffer[pos++] = c;
         }
         asm volatile("sti");
