@@ -4,11 +4,8 @@
 #include "../../drv/disk/sfs.h"
 #include "../../drv/vga.h"
 #include "mem.h"
-
-extern void prints(const char *str);
-extern void printc(char c);
-extern void setcolor(uint8_t fg, uint8_t bg);
-extern void log_internal(const char *file, int line, const char *fmt, int level, int visibility, ...);
+#include "../../drv/keyboard.h"
+#include "../../drv/speaker.h"
 
 int elf_exec(const char *filename)
 {
@@ -117,6 +114,8 @@ int elf_exec(const char *filename)
     api.log_internal = log_internal;
     api.kmalloc = kmalloc;
     api.kfree = kfree;
+    api.put_pixel = put_pixel;
+    api.read_line = read_line;
 
     log("API struct at 0x%lx", 1, 0, (uint64_t)&api);
     log("prints at 0x%lx", 1, 0, (uint64_t)prints);

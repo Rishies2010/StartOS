@@ -2,6 +2,8 @@
 #define ELF_H
 
 #include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 
 #define ELF_MAGIC 0x464C457F
 #define ELF_CLASS_64 2
@@ -50,6 +52,8 @@ typedef struct
     void (*log_internal)(const char *file, int line, const char *fmt, int level, int visibility, ...);
     void *(*kmalloc)(uint64_t size);
     void (*kfree)(void *ptr);
+    void (*put_pixel)(uint32_t x, uint32_t y, uint32_t color);
+    void (*read_line)(char *buffer, size_t max_size, bool print);
 } kernel_api_t;
 
 int elf_exec(const char *filename);
