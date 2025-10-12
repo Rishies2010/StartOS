@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include "../../drv/disk/sfs.h"
+#include "../gfx/tga.h"
 #include "../../cpu/id/cpuid.h"
 #include "../core/elf.h"
 #include "../../kernel/sched.h"
@@ -415,6 +416,7 @@ static void help(void)
     prints(" - date       - Show current date\n");
     prints(" - uptime     - Show system uptime\n");
     prints(" - shutdown   - Shutdown the system\n");
+    prints(" - img        - Load image from disk\n");
     prints(" - exit       - Shutdown the system\n");
     prints("\n File System Commands:\n");
     prints(" - ls         - List files and directories\n");
@@ -431,6 +433,7 @@ static void help(void)
     prints("\n System Commands:\n");
     prints(" - count      - Increment a counter\n");
     prints(" - schedstat  - Current task name and PID\n");
+    prints(" - exec       - Execute an ELF file\n");
     prints(" - cpustat    - Show CPU info\n");
     prints(" - mem        - Show memory status\n");
     prints(" - sched      - Start the scheduler\n");
@@ -499,6 +502,10 @@ bool shell_execute(const char *command)
     else if (strcmp(argv[0], "cd") == 0)
     {
         cmd_cd(argc, argv);
+    }
+    else if (strcmp(argv[0], "img") == 0)
+    {
+        plotimg(argv[1], 0, 0);
     }
     else if (strcmp(argv[0], "mkdir") == 0)
     {
