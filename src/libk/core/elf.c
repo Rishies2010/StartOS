@@ -48,7 +48,6 @@ elf_context_t *g_current_elf_context = NULL;
 
 int elf_exec(const char *filename)
 {
-    asm volatile("cli");
     log("Loading %s", 1, 0, filename);
 
     sfs_file_t file;
@@ -185,7 +184,6 @@ int elf_exec(const char *filename)
     }
 
     log("Task created (PID %d)", 4, 0, task->pid);
-    asm volatile("sti");
 
     return 0;
 }
