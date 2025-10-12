@@ -219,7 +219,7 @@ task_t *task_create_user(void (*entry)(void), const char *name)
     task->regs.ss = 0x20 | 3;
     task->regs.ds = 0x20 | 3;
 
-    task->regs.rip = (uint64_t)task_entry_wrapper;  
+    task->regs.rip = (uint64_t)user_task_entry_wrapper;  
     task->regs.rbx = (uint64_t)entry;                
     task->regs.userrsp = user_stack_top;
     task->regs.rbp = user_stack_top;
