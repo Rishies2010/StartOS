@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "../../drv/disk/sfs.h"
 #include "../../cpu/id/cpuid.h"
+#include "../core/elf.h"
 #include "../../kernel/sched.h"
 #include "../ports.h"
 #include "../../drv/rtc.h"
@@ -315,6 +316,52 @@ static void cmd_cat(int argc, char *argv[])
     sfs_close(&file);
 }
 
+// Add this to your shell.c file
+
+static void cmd_exec(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
+        prints(" Usage: exec <filename>\n");
+        return;
+    }
+
+    prints(" Loading ELF binary: ");
+    prints(argv[1]);
+    prints("\n");
+    
+    int ret = elf_exec(argv[1]);
+    
+    if (ret < 0)
+    {
+        prints(" Failed to execute ELF (error code: ");
+        if (ret < -9) {
+            printc('-');
+            printc('0' + ((-ret) / 10));
+            printc('0' + ((-ret) % 10));
+        } else if (ret < 0) {
+            printc('-');
+            printc('0' + (-ret));
+        }
+        prints(")\n");
+    }
+    else
+    {
+        prints(" Program exited with code: ");
+        if (ret >= 100) {
+            printc('0' + (ret / 100));
+            printc('0' + ((ret / 10) % 10));
+            printc('0' + (ret % 10));
+        } else if (ret >= 10) {
+            printc('0' + (ret / 10));
+            printc('0' + (ret % 10));
+        } else {
+            printc('0' + ret);
+        }
+        prints("\n");
+    }
+}
+
 static void cmd_write(int argc, char *argv[])
 {
     if (argc < 3)
@@ -506,6 +553,10 @@ bool shell_execute(const char *command)
     else if (strcmp(argv[0], "write") == 0)
     {
         cmd_write(argc, argv);
+    }
+    else if (strcmp(argv[0], "exec") == 0)
+    {
+        cmd_exec(argc, argv);
     }
     else
     {
