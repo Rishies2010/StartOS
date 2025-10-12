@@ -1,12 +1,12 @@
 #include "elf.h"
 #include "../string.h"
 #include "../debug/log.h"
-#include "../../drv/disk/sfs.h"
 #include "../../drv/vga.h"
 #include "mem.h"
 #include "../../drv/keyboard.h"
 #include "../../drv/speaker.h"
 #include "../../kernel/sched.h"
+#include "../../drv/rtc.h"
 
 typedef struct
 {
@@ -15,6 +15,30 @@ typedef struct
     uint8_t *prog_mem;
     char name[64];
 } elf_context_t;
+
+void f_mk(const char* filename, uint32_t size){
+    sfs_create(filename, size);
+}
+
+void f_rm(const char* filename){
+    sfs_delete(filename);
+}
+
+void f_write(sfs_file_t* file, const void* buffer, uint32_t size){
+    sfs_write(file, buffer, size);
+}
+
+void f_open(const char* filename, sfs_file_t* file){
+    sfs_open(filename, file);
+}
+
+void f_read(sfs_file_t* file, void* buffer, uint32_t size, uint32_t* bytes_read){
+    sfs_read(file, buffer, size, bytes_read);
+}
+
+void f_close(sfs_file_t* file){
+    sfs_close(file);
+}
 
 static void elf_task_wrapper(void)
 {
@@ -157,6 +181,13 @@ int elf_exec(const char *filename)
     ctx->api.kfree = kfree;
     ctx->api.put_pixel = put_pixel;
     ctx->api.read_line = read_line;
+    ctx->api.f_open = f_open;
+    ctx->api.f_read = f_read;
+    ctx->api.f_write = f_write;
+    ctx->api.f_close = f_close;
+    ctx->api.f_rm = f_rm;
+    ctx->api.f_mk = f_mk;
+    ctx->api.sleep = sleep;
 
     uint64_t final_entry = (uint64_t)prog + elf_entry_point - min_addr;
 

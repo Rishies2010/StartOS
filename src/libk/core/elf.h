@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "../../drv/disk/sfs.h"
 
 #define ELF_MAGIC 0x464C457F
 #define ELF_CLASS_64 2
@@ -54,6 +55,13 @@ typedef struct
     void (*kfree)(void *ptr);
     void (*put_pixel)(uint32_t x, uint32_t y, uint32_t color);
     void (*read_line)(char *buffer, size_t max_size, bool print);
+    void (*f_open)(const char* filename, sfs_file_t* file);
+    void (*f_read)(sfs_file_t* file, void* buffer, uint32_t size, uint32_t* bytes_read);
+    void (*f_write)(sfs_file_t* file, const void* buffer, uint32_t size);
+    void (*f_close)(sfs_file_t* file);
+    void (*f_mk)(const char* filename, uint32_t size);
+    void (*f_rm)(const char* filename);
+    void (*sleep)(uint32_t time);
 } kernel_api_t;
 
 int elf_exec(const char *filename);
