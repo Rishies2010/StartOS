@@ -376,7 +376,7 @@ char wait_for_key(void)
     return get_key();
 }
 
-void read_line(char *buffer, size_t max_size)
+void read_line(char *buffer, size_t max_size, bool print)
 {
     size_t pos = 0;
     char c;
@@ -384,7 +384,7 @@ void read_line(char *buffer, size_t max_size)
     while (pos < max_size - 1)
     {
         c = wait_for_key();
-
+        asm volatile("cli");
         if (c == 10)
         {
             buffer[pos] = '\0';
@@ -399,8 +399,10 @@ void read_line(char *buffer, size_t max_size)
         }
         else if (c >= 32 && c <= 126)
         {
+            if(print)printc(c);
             buffer[pos++] = c;
         }
+        asm volatile("sti");
     }
 
     buffer[max_size - 1] = '\0';

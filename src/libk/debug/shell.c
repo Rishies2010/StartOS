@@ -525,7 +525,7 @@ void shell_run(void)
         prints("\nStartOS:~$ ");
         setcolor(0xffffff, 0x000000);
         asm volatile("sti");
-        read_line(command_buffer, MAX_COMMAND_LENGTH);
+        read_line(command_buffer, MAX_COMMAND_LENGTH, true);
         asm volatile("cli");
         printc('\n');
         shell_execute(command_buffer);

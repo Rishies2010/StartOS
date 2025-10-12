@@ -30,7 +30,7 @@
 void init_keyboard(void);
 char get_key(void);
 char wait_for_key(void);
-void read_line(char *buffer, size_t max_size);
+void read_line(char *buffer, size_t max_size, bool print);
 bool is_key_pressed(uint8_t scancode);
 bool is_shift_pressed(void);
 bool is_ctrl_pressed(void);
