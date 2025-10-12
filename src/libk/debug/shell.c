@@ -555,7 +555,7 @@ void shell_run(void)
     asm volatile("cli");
     while (1)
     {
-        setcolor(0x4af626, 0x000000);
+        setcolor(0x00FF00, 0x000000);
         prints("\nStartOS:~$ ");
         setcolor(0xffffff, 0x000000);
         asm volatile("sti");

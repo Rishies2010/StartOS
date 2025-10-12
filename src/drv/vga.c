@@ -201,8 +201,18 @@ void setcolor(uint32_t fg, uint32_t bg)
     if (!ft_ctx || !flanterm)
         return;
 
-    char color_seq[32];
-    snprintf(color_seq, sizeof(color_seq), "\033[38;5;%dm\033[48;5;%dm", fg, bg);
+    uint8_t fr = (fg >> 16) & 0xFF;
+    uint8_t fg_g = (fg >> 8) & 0xFF;
+    uint8_t fb = fg & 0xFF;
+
+    uint8_t br = (bg >> 16) & 0xFF;
+    uint8_t bg_g = (bg >> 8) & 0xFF;
+    uint8_t bb = bg & 0xFF;
+
+    char color_seq[64];
+    snprintf(color_seq, sizeof(color_seq),
+             "\033[38;2;%d;%d;%dm\033[48;2;%d;%d;%dm",
+             fr, fg_g, fb, br, bg_g, bb);
 
     spinlock_acquire(&vga_lock);
     flanterm_write(ft_ctx, color_seq, strlen(color_seq));
