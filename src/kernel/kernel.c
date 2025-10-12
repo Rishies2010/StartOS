@@ -27,6 +27,7 @@
 #include "../drv/net/pci.h"
 #include "../cpu/acpi/acpi.h"
 #include "../drv/speaker.h"
+#include "../libk/core/elf.h"
 #include "../drv/keyboard.h"
 #include "../drv/disk/ata.h"
 #include "../drv/disk/sfs.h"
@@ -62,14 +63,18 @@ void idle(void)
     }
 }
 
+void elf(void){
+    elf_exec("/hello");
+}
+
 void test_task_a(void)
 {
     int count = 0;
     while (1)
     {
-        if (count % 5 == 0)
+        if (count % 10 == 0)
         {
-            log("A", 1, 0);
+            serial_write_string("A");
         }
         count++;
     }
@@ -80,9 +85,9 @@ void test_task_b(void)
     int count = 0;
     while (1)
     {
-        if (count % 5 == 0)
+        if (count % 10 == 0)
         {
-            log("B", 1, 0);
+            serial_write_string("B");
         }
         count++;
     }
@@ -92,7 +97,7 @@ void user_task(void)
 {
     while (1)
     {
-        log("C (I am from Userspace, Ring 3!)", 1, 1);
+        serial_write_string("C");
     }
 }
 
@@ -130,7 +135,9 @@ void _start(void)
     print_mem_info(1);
     sfs_list();
     task_create(idle, "idle");
+    task_create_user(elf, "Hello World");
     task_create(test_task_b, "TaskB");
+    task_create(shell_run, "Shell");
     task_create_user(user_task, "User Mode Task");
     
     
@@ -139,8 +146,8 @@ void _start(void)
     task_create(play_bootup_sequence, "Bootup Music");
     plotimg("bg.tga", 0, 0);
 #endif
-    
-    shell_run();
+    asm volatile("sti");
+    sched_start();
     for (;;)
         ;
 }

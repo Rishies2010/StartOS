@@ -317,8 +317,6 @@ static void cmd_cat(int argc, char *argv[])
     sfs_close(&file);
 }
 
-// Add this to your shell.c file
-
 static void cmd_exec(int argc, char *argv[])
 {
     if (argc < 2)
@@ -421,7 +419,6 @@ static void help(void)
     prints(" - exec       - Execute an ELF file\n");
     prints(" - cpustat    - Show CPU info\n");
     prints(" - mem        - Show memory status\n");
-    prints(" - sched      - Start the scheduler\n");
 }
 
 static void schedstat(void)
@@ -532,12 +529,6 @@ bool shell_execute(const char *command)
     {
         detect_cpu_info(1);
     }
-    else if (strcmp(argv[0], "sched") == 0)
-    {
-        asm volatile("sti");
-        sched_start();
-        for(;;);
-    }
     else if (strcmp(argv[0], "cat") == 0)
     {
         cmd_cat(argc, argv);
@@ -562,6 +553,7 @@ bool shell_execute(const char *command)
 
 void shell_run(void)
 {
+    asm volatile("cli");
     while (1)
     {
         setcolor(0x4af626, 0x000000);
