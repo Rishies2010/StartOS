@@ -2,7 +2,13 @@
 #include "../string.h"
 #include "../debug/log.h"
 #include "../../drv/disk/sfs.h"
+#include "../../drv/vga.h"
 #include "mem.h"
+
+extern void prints(const char *str);
+extern void printc(char c);
+extern void setcolor(uint8_t fg, uint8_t bg);
+extern void log_internal(const char *file, int line, const char *fmt, int level, int visibility, ...);
 
 int elf_exec(const char *filename)
 {
@@ -104,14 +110,25 @@ int elf_exec(const char *filename)
         }
     }
 
-    uint64_t entry_offset = ehdr->e_entry - min_addr;
-    int (*entry)(void) = (int (*)(void))(prog + entry_offset);
+    kernel_api_t api;
+    api.prints = prints;
+    api.printc = printc;
+    api.setcolor = setcolor;
+    api.log_internal = log_internal;
+    api.kmalloc = kmalloc;
+    api.kfree = kfree;
 
-    log("Jumping to 0x%lx", 4, 0, (uint64_t)entry);
+    log("API struct at 0x%lx", 1, 0, (uint64_t)&api);
+    log("prints at 0x%lx", 1, 0, (uint64_t)prints);
+
+    uint64_t entry_offset = ehdr->e_entry - min_addr;
+    int (*entry)(kernel_api_t *) = (int (*)(kernel_api_t *))(prog + entry_offset);
+
+    log("Jumping to 0x%lx with API", 4, 0, (uint64_t)entry);
 
     kfree(elf_data);
 
-    int ret = entry();
+    int ret = entry(&api);
 
     log("Program returned %d", 4, 0, ret);
 

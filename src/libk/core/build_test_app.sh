@@ -1,11 +1,37 @@
+#!/bin/bash
+set -e
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <source_file.c>"
+    exit 1
+fi
+
+SRC="$1"
+BASENAME=$(basename "$SRC" .c)
+OBJ="${BASENAME}.o"
+ELF="${BASENAME}.elf"
+VHD_PATH="../../../StartOS.vhd"
+SFS_MAN="../../../sfs_man"
+
+echo "[*] Deleting old /${BASENAME} from ${VHD_PATH}..."
+${SFS_MAN} "${VHD_PATH}" delete "/${BASENAME}" || true
+
+echo "[*] Compiling ${SRC} -> ${OBJ}"
 clang -m64 -ffreestanding -fno-stack-protector \
       -nostdlib -fno-pie -fPIC \
-      -c test_app.c -o test_app.o
+      -c "${SRC}" -o "${OBJ}"
 
-ld -m elf_x86_64 -e main -T userelf.ld test_app.o -o test_app.elf \
+echo "[*] Linking -> ${ELF}"
+ld -m elf_x86_64 -e main -T userelf.ld "${OBJ}" -o "${ELF}" \
    --warn-unresolved-symbols \
    --noinhibit-exec
 
-if [ ! -f test_app.elf ]; then
+if [ ! -f "${ELF}" ]; then
+    echo "[!] ELF build failed!"
     exit 1
 fi
+
+echo "[*] Importing ${ELF} to /${BASENAME}..."
+${SFS_MAN} "${VHD_PATH}" import "${ELF}" "/${BASENAME}"
+
+echo "[✓] Done! ${ELF} installed as /${BASENAME} inside ${VHD_PATH}"
