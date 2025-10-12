@@ -659,7 +659,6 @@ void show_help() {
     printf("  format                Format the VHD with StartFS\n");
     printf("  info                  Show filesystem statistics\n");
     printf("  list [path]           List directory contents (default: /)\n");
-    printf("  tree                  Show filesystem tree structure\n");
     printf("  mkdir <path>          Create directory\n");
     printf("  import <src> <dst>    Import file from host to StartFS\n");
     printf("  export <src> <dst>    Export file from StartFS to host\n");
@@ -670,7 +669,6 @@ void show_help() {
     printf("  sfs_man StartOS.vhd mkdir /boot\n");
     printf("  sfs_man StartOS.vhd import kernel.bin /boot/kernel\n");
     printf("  sfs_man StartOS.vhd list /boot\n");
-    printf("  sfs_man StartOS.vhd tree\n");
     printf("  sfs_man StartOS.vhd export /boot/kernel kernel_backup.bin\n");
 }
 
