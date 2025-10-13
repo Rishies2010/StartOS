@@ -16,30 +16,6 @@ typedef struct
     char name[64];
 } elf_context_t;
 
-void f_mk(const char* filename, uint32_t size){
-    sfs_create(filename, size);
-}
-
-void f_rm(const char* filename){
-    sfs_delete(filename);
-}
-
-void f_write(sfs_file_t* file, const void* buffer, uint32_t size){
-    sfs_write(file, buffer, size);
-}
-
-void f_open(const char* filename, sfs_file_t* file){
-    sfs_open(filename, file);
-}
-
-void f_read(sfs_file_t* file, void* buffer, uint32_t size, uint32_t* bytes_read){
-    sfs_read(file, buffer, size, bytes_read);
-}
-
-void f_close(sfs_file_t* file){
-    sfs_close(file);
-}
-
 static void elf_task_wrapper(void)
 {
     asm volatile("cli");
@@ -181,13 +157,28 @@ int elf_exec(const char *filename)
     ctx->api.kfree = kfree;
     ctx->api.put_pixel = put_pixel;
     ctx->api.read_line = read_line;
-    ctx->api.f_open = f_open;
-    ctx->api.f_read = f_read;
-    ctx->api.f_write = f_write;
-    ctx->api.f_close = f_close;
-    ctx->api.f_rm = f_rm;
-    ctx->api.f_mk = f_mk;
+    ctx->api.get_key = get_key;
+    ctx->api.wait_for_key = wait_for_key;
+    ctx->api.is_alt_pressed = is_alt_pressed;
+    ctx->api.is_shift_pressed = is_shift_pressed;
+    ctx->api.is_caps_lock_on = is_caps_lock_on;
+    ctx->api.is_ctrl_pressed = is_ctrl_pressed;
+    ctx->api.is_key_pressed = is_key_pressed;
+    ctx->api.f_open = sfs_open;
+    ctx->api.f_read = sfs_read;
+    ctx->api.f_write = sfs_write;
+    ctx->api.f_close = sfs_close;
+    ctx->api.f_rm = sfs_delete;
+    ctx->api.f_mk = sfs_create;
     ctx->api.sleep = sleep;
+    ctx->api.sched_yield = sched_yield;
+    ctx->api.strlen = strlen;
+    ctx->api.strcpy = strcpy;
+    ctx->api.strcat = strcat;
+    ctx->api.strcmp = strcmp;
+    ctx->api.atoi = atoi;
+    ctx->api.itoa = itoa;
+    ctx->api.itoa_hex = itoa_hex;
 
     uint64_t final_entry = (uint64_t)prog + elf_entry_point - min_addr;
 

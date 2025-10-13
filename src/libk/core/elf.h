@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include "../../drv/disk/sfs.h"
 
 #define ELF_MAGIC 0x464C457F
@@ -55,13 +56,28 @@ typedef struct
     void (*kfree)(void *ptr);
     void (*put_pixel)(uint32_t x, uint32_t y, uint32_t color);
     void (*read_line)(char *buffer, size_t max_size, bool print);
-    void (*f_open)(const char* filename, sfs_file_t* file);
-    void (*f_read)(sfs_file_t* file, void* buffer, uint32_t size, uint32_t* bytes_read);
-    void (*f_write)(sfs_file_t* file, const void* buffer, uint32_t size);
-    void (*f_close)(sfs_file_t* file);
-    void (*f_mk)(const char* filename, uint32_t size);
-    void (*f_rm)(const char* filename);
+    char (*get_key)(void);
+    char (*wait_for_key)(void);
+    bool (*is_key_pressed)(uint8_t scancode);
+    bool (*is_shift_pressed)(void);
+    bool (*is_ctrl_pressed)(void);
+    bool (*is_alt_pressed)(void);
+    bool (*is_caps_lock_on)(void);
+    sfs_error_t (*f_open)(const char* filename, sfs_file_t* file);
+    sfs_error_t (*f_read)(sfs_file_t* file, void* buffer, uint32_t size, uint32_t* bytes_read);
+    sfs_error_t (*f_write)(sfs_file_t* file, const void* buffer, uint32_t size);
+    sfs_error_t (*f_close)(sfs_file_t* file);
+    sfs_error_t (*f_mk)(const char* filename, uint32_t size);
+    sfs_error_t (*f_rm)(const char* filename);
     void (*sleep)(uint32_t time);
+    void (*sched_yield)(void);
+    size_t (*strlen)(const char* str);
+    char* (*strcpy)(char* dest, const char* src);
+    char* (*strcat)(char* dest, const char* src);
+    int (*strcmp)(const char* str1, const char* str2);
+    int (*atoi)(const char* str);
+    void (*itoa)(int value, char* str);
+    void (*itoa_hex)(unsigned long value, char* str);
 } kernel_api_t;
 
 int elf_exec(const char *filename);
