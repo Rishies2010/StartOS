@@ -63,44 +63,6 @@ void idle(void)
     }
 }
 
-void elf(void){
-    elf_exec("/hello");
-}
-
-void test_task_a(void)
-{
-    int count = 0;
-    while (1)
-    {
-        if (count % 10 == 0)
-        {
-            serial_write_string("A");
-        }
-        count++;
-    }
-}
-
-void test_task_b(void)
-{
-    int count = 0;
-    while (1)
-    {
-        if (count % 10 == 0)
-        {
-            serial_write_string("B");
-        }
-        count++;
-    }
-}
-
-void user_task(void)
-{
-    while (1)
-    {
-        serial_write_string("C");
-    }
-}
-
 void _start(void)
 {
     serial_init();
@@ -135,16 +97,12 @@ void _start(void)
     print_mem_info(1);
     sfs_list();
     task_create(idle, "idle");
-    task_create_user(elf, "Hello World");
-    task_create(test_task_b, "TaskB");
     task_create(shell_run, "Shell");
-    task_create_user(user_task, "User Mode Task");
     
     
 #else
     task_create(idle, "idle");
     task_create(play_bootup_sequence, "Bootup Music");
-    plotimg("bg.tga", 0, 0);
 #endif
     asm volatile("sti");
     sched_start();

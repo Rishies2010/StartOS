@@ -16,7 +16,6 @@
 #include "../../drv/rtc.h"
 
 static char command_buffer[MAX_COMMAND_LENGTH];
-static int count = 0;
 
 static int parse_command(char *command, char *args[], int max_args)
 {
@@ -71,15 +70,6 @@ static void cmd_date(void)
     printc(':');
     printc('0' + (current_time.seconds / 10));
     printc('0' + (current_time.seconds % 10));
-    prints("\n");
-}
-
-static void cmd_count(void)
-{
-    count++;
-    prints(" Count: ");
-    printc('0' + (count / 10));
-    printc('0' + (count % 10));
     prints("\n");
 }
 
@@ -507,10 +497,6 @@ bool shell_execute(const char *command)
     else if (strcmp(argv[0], "rm") == 0)
     {
         cmd_rm(argc, argv);
-    }
-    else if (strcmp(argv[0], "count") == 0)
-    {
-        cmd_count();
     }
     else if (strcmp(argv[0], "mem") == 0)
     {
