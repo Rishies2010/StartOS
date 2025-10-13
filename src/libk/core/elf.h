@@ -69,7 +69,6 @@ typedef struct
     sfs_error_t (*f_close)(sfs_file_t* file);
     sfs_error_t (*f_mk)(const char* filename, uint32_t size);
     sfs_error_t (*f_rm)(const char* filename);
-    void (*sleep)(uint32_t time);
     void (*sched_yield)(void);
     size_t (*strlen)(const char* str);
     char* (*strcpy)(char* dest, const char* src);

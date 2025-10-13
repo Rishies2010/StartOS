@@ -6,7 +6,6 @@
 #include "../../drv/keyboard.h"
 #include "../../drv/speaker.h"
 #include "../../kernel/sched.h"
-#include "../../drv/rtc.h"
 
 typedef struct
 {
@@ -170,7 +169,6 @@ int elf_exec(const char *filename)
     ctx->api.f_close = sfs_close;
     ctx->api.f_rm = sfs_delete;
     ctx->api.f_mk = sfs_create;
-    ctx->api.sleep = sleep;
     ctx->api.sched_yield = sched_yield;
     ctx->api.strlen = strlen;
     ctx->api.strcpy = strcpy;
