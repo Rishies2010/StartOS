@@ -4,9 +4,10 @@
 #include "../../drv/vga.h"
 #include "mem.h"
 #include "../../drv/keyboard.h"
-#include "../../drv/speaker.h"
 #include "../../kernel/sched.h"
-#include "../../drv/rtc.h"
+#include "../../drv/mouse.h"
+#include "../../drv/speaker.h"
+#include "../../drv/net/e1000.h"
 
 typedef struct
 {
@@ -164,12 +165,23 @@ int elf_exec(const char *filename)
     ctx->api.is_caps_lock_on = is_caps_lock_on;
     ctx->api.is_ctrl_pressed = is_ctrl_pressed;
     ctx->api.is_key_pressed = is_key_pressed;
-    ctx->api.f_open = sfs_open;
-    ctx->api.f_read = sfs_read;
-    ctx->api.f_write = sfs_write;
-    ctx->api.f_close = sfs_close;
-    ctx->api.f_rm = sfs_delete;
-    ctx->api.f_mk = sfs_create;
+    ctx->api.f_format      = sfs_format;
+    ctx->api.f_init        = sfs_init;
+    ctx->api.f_mkdir       = sfs_mkdir;
+    ctx->api.f_rmdir       = sfs_rmdir;
+    ctx->api.f_chdir       = sfs_chdir;
+    ctx->api.f_get_cwd     = sfs_get_cwd;
+    ctx->api.f_create      = sfs_create;
+    ctx->api.f_open        = sfs_open;
+    ctx->api.f_read        = sfs_read;
+    ctx->api.f_write       = sfs_write;
+    ctx->api.f_close       = sfs_close;
+    ctx->api.f_rm          = sfs_delete;
+    ctx->api.f_mk          = sfs_create;
+    ctx->api.f_seek        = sfs_seek;
+    ctx->api.f_list        = sfs_list;
+    ctx->api.f_print_stats = sfs_print_stats;
+    ctx->api.f_unmount     = sfs_unmount;
     ctx->api.sleep = sleep;
     ctx->api.sched_yield = sched_yield;
     ctx->api.strlen = strlen;
@@ -179,6 +191,29 @@ int elf_exec(const char *filename)
     ctx->api.atoi = atoi;
     ctx->api.itoa = itoa;
     ctx->api.itoa_hex = itoa_hex;
+    ctx->api.get_pixel_at = get_pixel_at;
+    ctx->api.exec = elf_exec;
+    ctx->api.mouse_button = mouse_button;
+    ctx->api.mouse_moved = mouse_moved;
+    ctx->api.mouse_set_pos = mouse_set_pos;
+    ctx->api.mouse_x = mouse_x;
+    ctx->api.mouse_y = mouse_y;
+    ctx->api.clr = clr;
+    ctx->api.speaker_note = speaker_note;
+    ctx->api.speaker_pause = speaker_pause;
+    ctx->api.speaker_play = speaker_play;
+    ctx->api.rtc_calculate_uptime = rtc_calculate_uptime;
+    ctx->api.rtc_get_time = rtc_get_time;
+    ctx->api.rtc_boottime = rtc_boottime;
+    ctx->api.net_send_packet        = e1000_send_packet;
+    ctx->api.net_receive_packet     = e1000_receive_packet;
+    ctx->api.net_get_mac_address    = e1000_get_mac_address;
+    ctx->api.net_link_up            = e1000_link_up;
+    ctx->api.net_enable_interrupts  = e1000_enable_interrupts;
+    ctx->api.net_disable_interrupts = e1000_disable_interrupts;
+    ctx->api.net_get_interrupt_status = e1000_get_interrupt_status;
+    ctx->api.net_handle_interrupt   = e1000_handle_interrupt;
+
 
     uint64_t final_entry = (uint64_t)prog + elf_entry_point - min_addr;
 

@@ -8,7 +8,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include "../../drv/disk/sfs.h"
-#include "../gfx/tga.h"
 #include "../../cpu/id/cpuid.h"
 #include "../core/elf.h"
 #include "../../kernel/sched.h"
@@ -473,10 +472,6 @@ bool shell_execute(const char *command)
     else if (strcmp(argv[0], "cd") == 0)
     {
         cmd_cd(argc, argv);
-    }
-    else if (strcmp(argv[0], "img") == 0)
-    {
-        plotimg(argv[1], 0, 0);
     }
     else if (strcmp(argv[0], "mkdir") == 0)
     {

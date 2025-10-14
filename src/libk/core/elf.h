@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include "../../drv/rtc.h"
 #include "../../drv/disk/sfs.h"
 
 #define ELF_MAGIC 0x464C457F
@@ -69,6 +70,17 @@ typedef struct
     sfs_error_t (*f_close)(sfs_file_t* file);
     sfs_error_t (*f_mk)(const char* filename, uint32_t size);
     sfs_error_t (*f_rm)(const char* filename);
+    sfs_error_t (*f_format)(uint8_t drive);
+    sfs_error_t (*f_init)(uint8_t drive);
+    sfs_error_t (*f_mkdir)(const char* dirname);
+    sfs_error_t (*f_rmdir)(const char* dirname);
+    sfs_error_t (*f_chdir)(const char* dirname);
+    void (*f_get_cwd)(char* buffer, size_t size);
+    sfs_error_t (*f_create)(const char* filename, uint32_t size);
+    sfs_error_t (*f_seek)(sfs_file_t* file, uint32_t position);
+    sfs_error_t (*f_list)(void);
+    void (*f_print_stats)(void);
+    sfs_error_t (*f_unmount)(void);
     void (*sleep)(uint32_t time);
     void (*sched_yield)(void);
     size_t (*strlen)(const char* str);
@@ -78,6 +90,28 @@ typedef struct
     int (*atoi)(const char* str);
     void (*itoa)(int value, char* str);
     void (*itoa_hex)(unsigned long value, char* str);
+    uint32_t (*get_pixel_at)(uint32_t x, uint32_t y);
+    int (*exec)(const char* filename);
+    uint32_t (*mouse_x)(void);
+    uint32_t (*mouse_y)(void);
+    uint8_t (*mouse_button)(void);
+    bool (*mouse_moved)(void);
+    void (*mouse_set_pos)(uint32_t x, uint32_t y);
+    void (*clr)(void);
+    void (*speaker_note)(uint8_t octave, uint8_t note);
+    void (*speaker_play)(uint32_t hz);
+    void (*speaker_pause)(void);
+    rtc_time_t (*rtc_get_time)(void);
+    uint32_t (*rtc_calculate_uptime)(const rtc_time_t *start, const rtc_time_t *end);
+    rtc_time_t (*rtc_boottime)(void);
+    int (*net_send_packet)(void* data, size_t len);
+    int (*net_receive_packet)(void* buf, size_t buf_size);
+    void (*net_get_mac_address)(uint8_t* mac);
+    uint32_t (*net_link_up)(void);
+    void (*net_enable_interrupts)(void);
+    void (*net_disable_interrupts)(void);
+    uint32_t (*net_get_interrupt_status)(void);
+    void (*net_handle_interrupt)(void);
 } kernel_api_t;
 
 int elf_exec(const char *filename);

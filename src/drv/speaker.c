@@ -33,6 +33,6 @@ void speaker_play(uint32_t hz) {
     }
 }
 
-void speaker_pause() {
+void speaker_pause(void) {
     outportb(0x61, inportb(0x61) & 0xFC);
 }

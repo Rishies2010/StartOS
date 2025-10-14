@@ -7,7 +7,6 @@
 #include "../libk/debug/log.h"
 #include "../libk/core/mem.h"
 #include "../libk/string.h"
-#include "../libk/gfx/tga.h"
 #include "../libk/ports.h"
 #include "../cpu/gdt.h"
 #include "../cpu/idt.h"
