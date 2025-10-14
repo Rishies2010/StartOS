@@ -452,6 +452,10 @@ bool shell_execute(const char *command)
     {
         f_print_stats();
     }
+    else if (strcmp(argv[0], "exit") == 0 || strcmp(argv[0], "shutdown") == 0)
+    {
+        return false;
+    }
     else if (strcmp(argv[0], "cat") == 0)
     {
         cmd_cat(argc, argv);
@@ -487,7 +491,7 @@ int main(kernel_api_t* api)
         read_line(command_buffer, 256, true);
         asm volatile("cli");
         printc('\n');
-        shell_execute(command_buffer);
+        if(shell_execute(command_buffer) == false) return 0;
         memset(command_buffer, 0, 256);
     }
     return 0;
