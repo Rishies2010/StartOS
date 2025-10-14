@@ -2,6 +2,7 @@
 #include "../libk/ports.h"
 #include "../libk/debug/log.h"
 #include "../cpu/isr.h"
+#include "../kernel/sched.h"
 #include <stdint.h>
 #define CMOS_ADDRESS 0x70
 #define CMOS_DATA 0x71
@@ -75,12 +76,11 @@ rtc_time_t rtc_boottime(void)
 
 void sleep(uint32_t ms)
 {
-    uint32_t ticks_to_wait = (ms * 1024) / 1000;
-
-    uint32_t start_ticks = tick;
-    uint32_t target_ticks = (start_ticks + ticks_to_wait) % 1024;
-
-    while (tick != target_ticks)
+    uint64_t start_tick = tick;
+    uint64_t ticks_to_wait = (ms * 1000) / 1024;
+    
+    while ((tick - start_tick) < ticks_to_wait)
     {
+        sched_yield();
     }
 }
