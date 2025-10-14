@@ -152,6 +152,7 @@ int elf_exec(const char *filename)
 
     ctx->api.prints = prints;
     ctx->api.printc = printc;
+    ctx->api.ft_run = ft_run;
     ctx->api.setcolor = setcolor;
     ctx->api.log_internal = log_internal;
     ctx->api.kmalloc = kmalloc;

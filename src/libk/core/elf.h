@@ -51,6 +51,7 @@ typedef struct
 {
     void (*prints)(const char *str);
     void (*printc)(char c);
+    void (*ft_run)(bool set);
     void (*setcolor)(uint32_t fg, uint32_t bg);
     void (*log_internal)(const char *file, int line, const char *fmt, int level, int visibility, ...);
     void *(*kmalloc)(uint64_t size);

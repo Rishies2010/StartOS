@@ -50,6 +50,7 @@ typedef struct
 {
     void (*prints)(const char *str);
     void (*printc)(char c);
+    void (*ft_run)(bool set);
     void (*setcolor)(uint32_t fg, uint32_t bg);
     void (*log_internal)(const char *file, int line, const char *fmt, int level, int visibility, ...);
     void *(*kmalloc)(uint64_t size);
@@ -135,6 +136,7 @@ typedef struct
 #define log(fmt, level, vis, ...) g_api->log_internal(__FILE__, __LINE__, fmt, level, vis, ##__VA_ARGS__)
 #define prints(str) g_api->prints(str)
 #define printc(c) g_api->printc(c)
+#define ft_run(set) g_api->ft_run(set)
 #define setcolor(fg, bg) g_api->setcolor(fg, bg)
 #define kmalloc(size) g_api->kmalloc(size)
 #define kfree(ptr) g_api->kfree(ptr)
