@@ -10,7 +10,5 @@ int main(kernel_api_t* api)
 {
     g_api = api;
     exec("shell");
-    for(;;)
-        ;
     return 0;
 }
