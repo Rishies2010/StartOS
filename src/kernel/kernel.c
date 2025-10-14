@@ -3,7 +3,6 @@
  */
 
 #include "../libk/debug/serial.h"
-#include "../libk/debug/shell.h"
 #include "../libk/debug/log.h"
 #include "../libk/core/mem.h"
 #include "../libk/string.h"
@@ -105,6 +104,7 @@ void _start(void)
 #else
     task_create(idle, "idle");
     task_create(play_bootup_sequence, "Bootup Music");
+    task_create(init, "Init");
 #endif
     asm volatile("sti");
     sched_start();
