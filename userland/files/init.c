@@ -10,7 +10,6 @@ int main(kernel_api_t* api)
 {
     g_api = api;
     exec("shell");
-    asm volatile("cli");
     for(;;)
         ;
     return 0;
