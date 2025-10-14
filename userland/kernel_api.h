@@ -82,13 +82,32 @@ typedef struct
     sfs_error_t (*f_unmount)(void);
     void (*sleep)(uint32_t time);
     void (*sched_yield)(void);
-    size_t (*strlen)(const char* str);
-    char* (*strcpy)(char* dest, const char* src);
-    char* (*strcat)(char* dest, const char* src);
-    int (*strcmp)(const char* str1, const char* str2);
-    int (*atoi)(const char* str);
-    void (*itoa)(int value, char* str);
-    void (*itoa_hex)(unsigned long value, char* str);
+    size_t   (*strlen)(const char* str);
+    char*    (*strcpy)(char* dest, const char* src);
+    char*    (*strncpy)(char* dest, const char* src, size_t n);
+    char*    (*strcat)(char* dest, const char* src);
+    char*    (*strncat)(char* dest, const char* src, size_t n);
+    int      (*strcmp)(const char* str1, const char* str2);
+    int      (*strncmp)(const char* str1, const char* str2, size_t n);
+    char*    (*strchr)(const char* str, int c);
+    char*    (*strrchr)(const char* str, int c);
+    size_t   (*strspn)(const char* str1, const char* str2);
+    size_t   (*strcspn)(const char* str1, const char* str2);
+    char*    (*strstr)(const char* haystack, const char* needle);
+    char*    (*strtok)(char* str, const char* delim);
+    char*    (*strtok_r)(char* str, const char* delim, char** saveptr);
+    void*    (*memset)(void* ptr, int value, size_t size);
+    void*    (*memcpy)(void* dest, const void* src, size_t size);
+    void*    (*memmove)(void* dest, const void* src, size_t size);
+    int      (*memcmp)(const void* ptr1, const void* ptr2, size_t size);
+    void*    (*memchr)(const void* ptr, int value, size_t size);
+    int      (*atoi)(const char* str);
+    void     (*itoa)(int value, char* str);
+    void     (*itoa_hex)(unsigned long value, char* str);
+    int      (*vsnprintf)(char* str, size_t size, const char* format, va_list args);
+    int      (*snprintf)(char* str, size_t size, const char* format, ...);
+    char     (*toLower)(char c);
+    char     (*toUpper)(char c);
     uint32_t (*get_pixel_at)(uint32_t x, uint32_t y);
     int (*exec)(const char* filename);
     uint32_t (*mouse_x)(void);
@@ -113,68 +132,86 @@ typedef struct
     void (*net_handle_interrupt)(void);
 } kernel_api_t;
 
-#define log(fmt, level, vis, ...) api->log_internal(__FILE__, __LINE__, fmt, level, vis, ##__VA_ARGS__)
-#define prints(str) api->prints(str)
-#define printc(c) api->printc(c)
-#define setcolor(fg, bg) api->setcolor(fg, bg)
-#define kmalloc(size) api->kmalloc(size)
-#define kfree(ptr) api->kfree(ptr)
-#define put_pixel(x, y, color) api->put_pixel(x, y, color)
-#define read_line(buffer, max_size, print) api->read_line(buffer, max_size, print)
-#define get_key() api->get_key()
-#define wait_for_key() api->wait_for_key()
-#define is_key_pressed(scancode) api->is_key_pressed(scancode)
-#define is_shift_pressed() api->is_shift_pressed()
-#define is_ctrl_pressed() api->is_ctrl_pressed()
-#define is_alt_pressed() api->is_alt_pressed()
-#define is_caps_lock_on() api->is_caps_lock_on()
-#define f_format(drive) api->f_format(drive)
-#define f_init(drive) api->f_init(drive)
-#define f_mkdir(dirname) api->f_mkdir(dirname)
-#define f_rmdir(dirname) api->f_rmdir(dirname)
-#define f_chdir(dirname) api->f_chdir(dirname)
-#define f_get_cwd(buffer, size) api->f_get_cwd(buffer, size)
-#define f_create(filename, size) api->f_create(filename, size)
-#define f_open(filename, file) api->f_open(filename, file)
-#define f_read(file, buffer, size, br) api->f_read(file, buffer, size, br)
-#define f_write(file, buffer, size) api->f_write(file, buffer, size)
-#define f_close(file) api->f_close(file)
-#define f_rm(filename) api->f_rm(filename)
-#define f_mk(filename, size) api->f_mk(filename, size)
-#define f_seek(file, position) api->f_seek(file, position)
-#define f_list() api->f_list()
-#define f_print_stats() api->f_print_stats()
-#define f_unmount() api->f_unmount()
-#define sleep(time) api->sleep(time)
-#define sched_yield() api->sched_yield()
-#define strlen(str) api->strlen(str)
-#define strcpy(dest, src) api->strcpy(dest, src)
-#define strcat(dest, src) api->strcat(dest, src)
-#define strcmp(str1, str2) api->strcmp(str1, str2)
-#define atoi(str) api->atoi(str)
-#define itoa(value, str) api->itoa(value, str)
-#define itoa_hex(value, str) api->itoa_hex(value, str)
-#define get_pixel_at(x, y) api->get_pixel_at(x, y)
-#define exec(filename) api->exec(filename)
-#define void mouse_init(void);
-#define mouse_x(void) api->mouse_x(void)
-#define mouse_y(void) api->mouse_y(void)
-#define mouse_button(void) api->mouse_button(void)
-#define mouse_moved(void) api->mouse_moved(void)
-#define clr(void) api->clr(void)
-#define speaker_note(octave, note) api->speaker_note(octave, note)
-#define speaker_play(hz) api->speaker_play(hz)
-#define speaker_pause(void) api->speaker_pause(void)
-#define rtc_get_time(void) api->rtc_get_time(void)
-#define rtc_calculate_uptime(start, end) api->rtc_calculate_uptime(start, end)
-#define rtc_boottime(void) api->rtc_boottime(void)
-#define net_send_packet(data, len) api->net_send_packet(data, len)
-#define net_receive_packet(buf, buf_size) api->net_receive_packet(buf, buf_size)
-#define net_get_mac_address(mac) api->net_get_mac_address(mac)
-#define net_link_up() api->net_link_up()
-#define net_enable_interrupts() api->net_enable_interrupts()
-#define net_disable_interrupts() api->net_disable_interrupts()
-#define net_get_interrupt_status() api->net_get_interrupt_status()
-#define net_handle_interrupt() api->net_handle_interrupt()
+#define log(fmt, level, vis, ...) g_api->log_internal(__FILE__, __LINE__, fmt, level, vis, ##__VA_ARGS__)
+#define prints(str) g_api->prints(str)
+#define printc(c) g_api->printc(c)
+#define setcolor(fg, bg) g_api->setcolor(fg, bg)
+#define kmalloc(size) g_api->kmalloc(size)
+#define kfree(ptr) g_api->kfree(ptr)
+#define put_pixel(x, y, color) g_api->put_pixel(x, y, color)
+#define read_line(buffer, max_size, print) g_api->read_line(buffer, max_size, print)
+#define get_key() g_api->get_key()
+#define wait_for_key() g_api->wait_for_key()
+#define is_key_pressed(scancode) g_api->is_key_pressed(scancode)
+#define is_shift_pressed() g_api->is_shift_pressed()
+#define is_ctrl_pressed() g_api->is_ctrl_pressed()
+#define is_alt_pressed() g_api->is_alt_pressed()
+#define is_caps_lock_on() g_api->is_caps_lock_on()
+#define f_format(drive) g_api->f_format(drive)
+#define f_init(drive) g_api->f_init(drive)
+#define f_mkdir(dirname) g_api->f_mkdir(dirname)
+#define f_rmdir(dirname) g_api->f_rmdir(dirname)
+#define f_chdir(dirname) g_api->f_chdir(dirname)
+#define f_get_cwd(buffer, size) g_api->f_get_cwd(buffer, size)
+#define f_create(filename, size) g_api->f_create(filename, size)
+#define f_open(filename, file) g_api->f_open(filename, file)
+#define f_read(file, buffer, size, br) g_api->f_read(file, buffer, size, br)
+#define f_write(file, buffer, size) g_api->f_write(file, buffer, size)
+#define f_close(file) g_api->f_close(file)
+#define f_rm(filename) g_api->f_rm(filename)
+#define f_mk(filename, size) g_api->f_mk(filename, size)
+#define f_seek(file, position) g_api->f_seek(file, position)
+#define f_list() g_api->f_list()
+#define f_print_stats() g_api->f_print_stats()
+#define f_unmount() g_api->f_unmount()
+#define sleep(time) g_api->sleep(time)
+#define sched_yield() g_api->sched_yield()
+#define strlen(str)                  g_api->strlen(str)
+#define strcpy(dest, src)            g_api->strcpy(dest, src)
+#define strncpy(dest, src, n)        g_api->strncpy(dest, src, n)
+#define strcat(dest, src)            g_api->strcat(dest, src)
+#define strncat(dest, src, n)        g_api->strncat(dest, src, n)
+#define strcmp(str1, str2)           g_api->strcmp(str1, str2)
+#define strncmp(str1, str2, n)       g_api->strncmp(str1, str2, n)
+#define strchr(str, c)               g_api->strchr(str, c)
+#define strrchr(str, c)              g_api->strrchr(str, c)
+#define strspn(str1, str2)           g_api->strspn(str1, str2)
+#define strcspn(str1, str2)          g_api->strcspn(str1, str2)
+#define strstr(hay, needle)          g_api->strstr(hay, needle)
+#define strtok(str, delim)           g_api->strtok(str, delim)
+#define strtok_r(str, delim, sptr)   g_api->strtok_r(str, delim, sptr)
+#define memset(ptr, val, size)       g_api->memset(ptr, val, size)
+#define memcpy(dest, src, size)      g_api->memcpy(dest, src, size)
+#define memmove(dest, src, size)     g_api->memmove(dest, src, size)
+#define memcmp(p1, p2, size)         g_api->memcmp(p1, p2, size)
+#define memchr(ptr, val, size)       g_api->memchr(ptr, val, size)
+#define atoi(str)                    g_api->atoi(str)
+#define itoa(value, str)             g_api->itoa(value, str)
+#define itoa_hex(value, str)         g_api->itoa_hex(value, str)
+#define vsnprintf(str, size, fmt, a) g_api->vsnprintf(str, size, fmt, a)
+#define snprintf(str, size, fmt, ...) g_api->snprintf(str, size, fmt, __VA_ARGS__)
+#define toLower(c)                   g_api->toLower(c)
+#define toUpper(c)                   g_api->toUpper(c)
+#define get_pixel_at(x, y) g_api->get_pixel_at(x, y)
+#define exec(filename) g_api->exec(filename)
+#define mouse_x(void) g_api->mouse_x(void)
+#define mouse_y(void) g_api->mouse_y(void)
+#define mouse_button(void) g_api->mouse_button(void)
+#define mouse_moved(void) g_api->mouse_moved(void)
+#define clr(void) g_api->clr(void)
+#define speaker_note(octave, note) g_api->speaker_note(octave, note)
+#define speaker_play(hz) g_api->speaker_play(hz)
+#define speaker_pause(void) g_api->speaker_pause(void)
+#define rtc_get_time(void) g_api->rtc_get_time(void)
+#define rtc_calculate_uptime(start, end) g_api->rtc_calculate_uptime(start, end)
+#define rtc_boottime(void) g_api->rtc_boottime(void)
+#define net_send_packet(data, len) g_api->net_send_packet(data, len)
+#define net_receive_packet(buf, buf_size) g_api->net_receive_packet(buf, buf_size)
+#define net_get_mac_address(mac) g_api->net_get_mac_address(mac)
+#define net_link_up() g_api->net_link_up()
+#define net_enable_interrupts() g_api->net_enable_interrupts()
+#define net_disable_interrupts() g_api->net_disable_interrupts()
+#define net_get_interrupt_status() g_api->net_get_interrupt_status()
+#define net_handle_interrupt() g_api->net_handle_interrupt()
 
 #endif

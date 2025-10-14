@@ -62,6 +62,11 @@ void idle(void)
     }
 }
 
+void init(void){
+    log("Starting init.", 1, 0);
+    elf_exec("init");
+}
+
 void _start(void)
 {
     serial_init();
@@ -96,9 +101,7 @@ void _start(void)
     print_mem_info(1);
     sfs_list();
     task_create(idle, "idle");
-    task_create(shell_run, "Shell");
-    
-    
+    task_create(init, "Init");
 #else
     task_create(idle, "idle");
     task_create(play_bootup_sequence, "Bootup Music");
