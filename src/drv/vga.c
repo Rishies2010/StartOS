@@ -162,6 +162,24 @@ void vga_init(void)
         framebuffer_width, framebuffer_height, framebuffer_bpp);
 }
 
+void plotchar(char c, uint32_t x, uint32_t y, uint32_t fg, uint32_t bg)
+{
+    if (c < 0 || c > 255)
+        return;
+
+    const uint8_t *glyph = font_8x16[c];
+    for (int row = 0; row < 16; row++)
+    {
+        uint8_t line = glyph[row];
+        for (int col = 0; col < 8; col++)
+        {
+            uint32_t color = (line & (1 << (7 - col))) ? fg : bg;
+            put_pixel(x + col, y + row, color);
+        }
+    }
+}
+
+
 void prints(const char *str)
 {
     if (!ft_ctx || !flanterm)

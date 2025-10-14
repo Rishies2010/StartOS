@@ -53,6 +53,7 @@ typedef struct
     void (*printc)(char c);
     void (*ft_run)(bool set);
     void (*setcolor)(uint32_t fg, uint32_t bg);
+    void (*plotchar)(char c, uint32_t x, uint32_t y, uint32_t fg, uint32_t bg);
     void (*log_internal)(const char *file, int line, const char *fmt, int level, int visibility, ...);
     void *(*kmalloc)(uint64_t size);
     void (*kfree)(void *ptr);
