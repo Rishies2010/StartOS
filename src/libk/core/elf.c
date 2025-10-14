@@ -50,7 +50,7 @@ elf_context_t *g_current_elf_context = NULL;
 int elf_exec(const char *filename)
 {
     log("Loading %s", 1, 0, filename);
-
+    
     sfs_file_t file;
     if (sfs_open(filename, &file) != SFS_OK)
     {

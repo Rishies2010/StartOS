@@ -139,7 +139,7 @@ typedef struct
 #define printc(c) g_api->printc(c)
 #define ft_run(set) g_api->ft_run(set)
 #define setcolor(fg, bg) g_api->setcolor(fg, bg)
-#define plotchar(c, x, y, fg, bg) api->plotchar(c, x, y, fg, bg)
+#define plotchar(c, x, y, fg, bg) g_api->plotchar(c, x, y, fg, bg)
 #define kmalloc(size) g_api->kmalloc(size)
 #define kfree(ptr) g_api->kfree(ptr)
 #define put_pixel(x, y, color) g_api->put_pixel(x, y, color)
