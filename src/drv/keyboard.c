@@ -381,7 +381,6 @@ char wait_for_key(void)
 
 void read_line(char *buffer, size_t max_size, bool print)
 {
-    spinlock_acquire(&kbdlock);
     size_t pos = 0;
     char c;
 
@@ -413,7 +412,6 @@ void read_line(char *buffer, size_t max_size, bool print)
     }
 
     buffer[max_size - 1] = '\0';
-    spinlock_release(&kbdlock);
     return;
 }
 
