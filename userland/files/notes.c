@@ -427,8 +427,10 @@ void save_file()
     sfs_file_t file;
     sfs_error_t err;
 
+    f_rm("notes.txt");
+
     err = f_create("notes.txt", 8192);
-    if (err != SFS_OK && err != SFS_ERR_ALREADY_EXISTS)
+    if (err != SFS_OK)
     {
         log("Failed to create file", 2, 0);
         return;
@@ -440,6 +442,18 @@ void save_file()
         log("Failed to open file", 3, 0);
         return;
     }
+
+    char zero_buf[256];
+    memset(zero_buf, 0, sizeof(zero_buf));
+    uint32_t remaining = 8192;
+    while (remaining > 0)
+    {
+        uint32_t to_write = (remaining > 256) ? 256 : remaining;
+        f_write(&file, zero_buf, to_write);
+        remaining -= to_write;
+    }
+
+    f_seek(&file, 0);
 
     for (int i = 0; i < total_lines; i++)
     {
@@ -464,9 +478,11 @@ void load_file()
     sfs_file_t file;
     sfs_error_t err = f_open("notes.txt", &file);
 
+    // Clear ALL lines first
     for (int i = 0; i < MAX_LINES; i++)
     {
         lines[i].length = 0;
+        lines[i].text[0] = '\0';
     }
     total_lines = 1;
 
@@ -486,8 +502,15 @@ void load_file()
 
             for (uint32_t i = 0; i < bytes_read && line_idx < MAX_LINES; i++)
             {
+                // SKIP NULL BYTES - don't process them
+                if (buffer[i] == '\0')
+                {
+                    break; // stop reading once we hit nulls (end of actual content)
+                }
+                
                 if (buffer[i] == '\n')
                 {
+                    lines[line_idx].text[char_idx] = '\0';
                     lines[line_idx].length = char_idx;
                     line_idx++;
                     char_idx = 0;
@@ -500,17 +523,26 @@ void load_file()
                 }
             }
 
+            // Handle last line if it didn't end with \n
             if (char_idx > 0 && line_idx < MAX_LINES)
             {
+                lines[line_idx].text[char_idx] = '\0';
                 lines[line_idx].length = char_idx;
                 line_idx++;
             }
 
             total_lines = (line_idx > 0) ? line_idx : 1;
-            modified = false;
+            
+            // EXPLICITLY clear any remaining lines after what we loaded
+            for (int i = total_lines; i < MAX_LINES; i++)
+            {
+                lines[i].length = 0;
+                lines[i].text[0] = '\0';
+            }
         }
 
         f_close(&file);
+        modified = false;
     }
 
     cursor_line = 0;
