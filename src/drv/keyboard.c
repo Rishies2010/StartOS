@@ -2,6 +2,7 @@
 #include "vga.h"
 #include "../cpu/isr.h"
 #include "../libk/ports.h"
+#include "../libk/spinlock.h"
 #include "../libk/debug/log.h"
 #include <stdbool.h>
 
@@ -150,6 +151,7 @@ static modifier_state_t modifiers = {0};
 static input_buffer_t key_buffer = {0};
 static bool key_states[256] = {0};
 static bool waiting_for_release_code = false;
+static spinlock_t kbdlock;
 
 static void ps2_wait_input(void)
 {
@@ -330,6 +332,7 @@ static void kbd_interrupt_handler(registers_t *regs)
 
 void init_keyboard(void)
 {
+    spinlock_init(&kbdlock);
     ps2_write_command(PS2_CMD_DISABLE_PORT1);
     ps2_write_command(PS2_CMD_DISABLE_PORT2);
 
@@ -378,6 +381,7 @@ char wait_for_key(void)
 
 void read_line(char *buffer, size_t max_size, bool print)
 {
+    spinlock_acquire(&kbdlock);
     size_t pos = 0;
     char c;
 
@@ -409,6 +413,7 @@ void read_line(char *buffer, size_t max_size, bool print)
     }
 
     buffer[max_size - 1] = '\0';
+    spinlock_release(&kbdlock);
     return;
 }
 
