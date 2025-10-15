@@ -396,7 +396,8 @@ void read_line(char *buffer, size_t max_size, bool print)
             {
                 pos--;
             }
-            printc('\b');
+            if(print)
+                printc('\b');
         }
         else if (c >= 32 && c <= 126)
         {
