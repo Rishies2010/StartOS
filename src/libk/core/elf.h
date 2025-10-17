@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include "../../drv/rtc.h"
 #include "../../drv/disk/sfs.h"
+#include "../../kernel/sched.h"
 
 #define ELF_MAGIC 0x464C457F
 #define ELF_CLASS_64 2
@@ -53,7 +54,8 @@ typedef struct
     void (*printc)(char c);
     void (*ft_run)(bool set);
     void (*setcolor)(uint32_t fg, uint32_t bg);
-    void (*plotchar)(char c, uint32_t x, uint32_t y, uint32_t fg, uint32_t bg);
+    void (*plotchar)(char c, uint32_t x, uint32_t y, uint32_t fg);
+    void (*draw_text_at)(const char *str, uint32_t x, uint32_t y, uint32_t color);
     void (*log_internal)(const char *file, int line, const char *fmt, int level, int visibility, ...);
     void *(*kmalloc)(uint64_t size);
     void (*kfree)(void *ptr);
@@ -85,6 +87,8 @@ typedef struct
     sfs_error_t (*f_unmount)(void);
     void (*sleep)(uint32_t time);
     void (*sched_yield)(void);
+    task_t *(*task_create)(void (*entry)(void), const char *name);
+    task_t *(*task_create_user)(void (*entry)(void), const char *name); 
     size_t   (*strlen)(const char* str);
     char*    (*strcpy)(char* dest, const char* src);
     char*    (*strncpy)(char* dest, const char* src, size_t n);

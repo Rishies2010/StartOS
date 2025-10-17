@@ -4,7 +4,6 @@
 #include "../../drv/vga.h"
 #include "mem.h"
 #include "../../drv/keyboard.h"
-#include "../../kernel/sched.h"
 #include "../../drv/mouse.h"
 #include "../../drv/speaker.h"
 #include "../../drv/net/e1000.h"
@@ -155,6 +154,7 @@ int elf_exec(const char *filename)
     ctx->api.ft_run = ft_run;
     ctx->api.setcolor = setcolor;
     ctx->api.plotchar = plotchar;
+    ctx->api.draw_text_at = draw_text_at;
     ctx->api.log_internal = log_internal;
     ctx->api.kmalloc = kmalloc;
     ctx->api.kfree = kfree;
@@ -186,6 +186,8 @@ int elf_exec(const char *filename)
     ctx->api.f_unmount     = sfs_unmount;
     ctx->api.sleep = sleep;
     ctx->api.sched_yield = sched_yield;
+    ctx->api.task_create = task_create;
+    ctx->api.task_create_user = task_create_user;
     ctx->api.strlen     = strlen;
     ctx->api.strcpy     = strcpy;
     ctx->api.strncpy    = strncpy;

@@ -162,23 +162,43 @@ void vga_init(void)
         framebuffer_width, framebuffer_height, framebuffer_bpp);
 }
 
-void plotchar(char c, uint32_t x, uint32_t y, uint32_t fg, uint32_t bg)
+void plotchar(char c, uint32_t x, uint32_t y, uint32_t fg)
 {
-    if (c < 0 || c > 255)
+    if ((uint8_t)c > 255)
         return;
 
-    const uint8_t *glyph = font_8x16[c];
+    const uint8_t *glyph = font_8x16[(uint8_t)c];
     for (int row = 0; row < 16; row++)
     {
         uint8_t line = glyph[row];
         for (int col = 0; col < 8; col++)
         {
-            uint32_t color = (line & (1 << (7 - col))) ? fg : bg;
-            put_pixel(x + col, y + row, color);
+            if (line & (1 << (7 - col)))
+                put_pixel(x + col, y + row, fg);
         }
     }
 }
 
+void draw_text_at(const char *str, uint32_t x, uint32_t y, uint32_t color)
+{
+    if (!str)
+        return;
+
+    uint32_t start_x = x;
+
+    for (size_t i = 0; str[i] != '\0'; i++)
+    {
+        if (str[i] == '\n')
+        {
+            y += 16;      
+            x = start_x;  
+            continue;
+        }
+
+        plotchar(str[i], x, y, color);
+        x += 8; 
+    }
+}
 
 void prints(const char *str)
 {

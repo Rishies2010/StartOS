@@ -17,6 +17,7 @@ void prints(const char *str);
 void setcolor(uint32_t fg, uint32_t bg);
 void put_pixel(uint32_t x, uint32_t y, uint32_t color);
 uint32_t get_pixel_at(uint32_t x, uint32_t y);
-void plotchar(char c, uint32_t x, uint32_t y, uint32_t fg, uint32_t bg);
+void plotchar(char c, uint32_t x, uint32_t y, uint32_t fg);
+void draw_text_at(const char *str, uint32_t x, uint32_t y, uint32_t color);
 
 #endif

@@ -4,47 +4,51 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "../src/drv/disk/sfs.h"
+#include "../src/drv/rtc.h"
+#include "../src/drv/vga.h"
 #include "../src/libk/string.h"
+#include "../src/kernel/sched.h"
 #include <stdarg.h>
 
-typedef struct {
-    char name[28];
-    uint32_t size;
-    uint32_t start_block;
-    uint32_t position;                  
-    uint8_t entry_index;                
-    uint8_t is_open;
-} sfs_file_t;
+// typedef struct {
+//     char name[28];
+//     uint32_t size;
+//     uint32_t start_block;
+//     uint32_t position;                  
+//     uint8_t entry_index;                
+//     uint8_t is_open;
+// } sfs_file_t;
 
-typedef enum {
-    SFS_OK = 0,
-    SFS_ERR_NOT_INITIALIZED,
-    SFS_ERR_INVALID_DRIVE,
-    SFS_ERR_READ_FAILED,
-    SFS_ERR_WRITE_FAILED,
-    SFS_ERR_NOT_SFS,
-    SFS_ERR_FILE_NOT_FOUND,
-    SFS_ERR_NO_SPACE,
-    SFS_ERR_ALREADY_EXISTS,
-    SFS_ERR_TOO_MANY_ENTRIES,
-    SFS_ERR_NOT_OPEN,
-    SFS_ERR_EOF,
-    SFS_ERR_INVALID_PARAM,
-    SFS_ERR_NOT_EMPTY,
-    SFS_ERR_NOT_A_DIRECTORY,
-    SFS_ERR_IS_DIRECTORY
-} sfs_error_t;
+// typedef enum {
+//     SFS_OK = 0,
+//     SFS_ERR_NOT_INITIALIZED,
+//     SFS_ERR_INVALID_DRIVE,
+//     SFS_ERR_READ_FAILED,
+//     SFS_ERR_WRITE_FAILED,
+//     SFS_ERR_NOT_SFS,
+//     SFS_ERR_FILE_NOT_FOUND,
+//     SFS_ERR_NO_SPACE,
+//     SFS_ERR_ALREADY_EXISTS,
+//     SFS_ERR_TOO_MANY_ENTRIES,
+//     SFS_ERR_NOT_OPEN,
+//     SFS_ERR_EOF,
+//     SFS_ERR_INVALID_PARAM,
+//     SFS_ERR_NOT_EMPTY,
+//     SFS_ERR_NOT_A_DIRECTORY,
+//     SFS_ERR_IS_DIRECTORY
+// } sfs_error_t;
 
-typedef struct
-{
-    uint16_t milliseconds;
-    uint8_t seconds;
-    uint8_t minutes;
-    uint8_t hours;
-    uint8_t day;
-    uint8_t month;
-    uint8_t year;
-} rtc_time_t;
+// typedef struct
+// {
+//     uint16_t milliseconds;
+//     uint8_t seconds;
+//     uint8_t minutes;
+//     uint8_t hours;
+//     uint8_t day;
+//     uint8_t month;
+//     uint8_t year;
+// } rtc_time_t;
 
 typedef struct
 {
@@ -52,7 +56,8 @@ typedef struct
     void (*printc)(char c);
     void (*ft_run)(bool set);
     void (*setcolor)(uint32_t fg, uint32_t bg);
-    void (*plotchar)(char c, uint32_t x, uint32_t y, uint32_t fg, uint32_t bg);
+    void (*plotchar)(char c, uint32_t x, uint32_t y, uint32_t fg);
+    void (*draw_text_at)(const char *str, uint32_t x, uint32_t y, uint32_t color);
     void (*log_internal)(const char *file, int line, const char *fmt, int level, int visibility, ...);
     void *(*kmalloc)(uint64_t size);
     void (*kfree)(void *ptr);
@@ -84,6 +89,8 @@ typedef struct
     sfs_error_t (*f_unmount)(void);
     void (*sleep)(uint32_t time);
     void (*sched_yield)(void);
+    task_t *(*task_create)(void (*entry)(void), const char *name);
+    task_t *(*task_create_user)(void (*entry)(void), const char *name); 
     size_t   (*strlen)(const char* str);
     char*    (*strcpy)(char* dest, const char* src);
     char*    (*strncpy)(char* dest, const char* src, size_t n);
@@ -139,7 +146,8 @@ typedef struct
 #define printc(c) g_api->printc(c)
 #define ft_run(set) g_api->ft_run(set)
 #define setcolor(fg, bg) g_api->setcolor(fg, bg)
-#define plotchar(c, x, y, fg, bg) g_api->plotchar(c, x, y, fg, bg)
+#define plotchar(c, x, y, fg) g_api->plotchar(c, x, y, fg)
+#define draw_text_at(str, x, y, color) g_api->draw_text_at(str, x, y, color)
 #define kmalloc(size) g_api->kmalloc(size)
 #define kfree(ptr) g_api->kfree(ptr)
 #define put_pixel(x, y, color) g_api->put_pixel(x, y, color)
@@ -170,6 +178,8 @@ typedef struct
 #define f_unmount() g_api->f_unmount()
 #define sleep(time) g_api->sleep(time)
 #define sched_yield() g_api->sched_yield()
+#define task_create(entry, name) g_api->task_create(entry, name)
+#define task_create_user(entry, name) g_api->task_create_user(entry, name)
 #define strlen(str)                  g_api->strlen(str)
 #define strcpy(dest, src)            g_api->strcpy(dest, src)
 #define strncpy(dest, src, n)        g_api->strncpy(dest, src, n)
