@@ -31,20 +31,19 @@ typedef struct
     bool (*is_ctrl_pressed)(void);
     bool (*is_alt_pressed)(void);
     bool (*is_caps_lock_on)(void);
-    sfs_error_t (*f_open)(const char* filename, sfs_file_t* file);
-    sfs_error_t (*f_read)(sfs_file_t* file, void* buffer, uint32_t size, uint32_t* bytes_read);
-    sfs_error_t (*f_write)(sfs_file_t* file, const void* buffer, uint32_t size);
-    sfs_error_t (*f_close)(sfs_file_t* file);
-    sfs_error_t (*f_mk)(const char* filename, uint32_t size);
-    sfs_error_t (*f_rm)(const char* filename);
+    sfs_error_t (*f_open)(bool fs_select, const char* filename, void** handle);
+    sfs_error_t (*f_read)(bool fs_select, void* handle, void* buffer, uint32_t size, uint32_t* bytes_read);
+    sfs_error_t (*f_write)(bool fs_select, void* handle, const void* buffer, uint32_t size);
+    sfs_error_t (*f_close)(bool fs_select, void* handle);
+    sfs_error_t (*f_create)(bool fs_select, const char* filename, uint32_t size);
+    sfs_error_t (*f_rm)(bool fs_select, const char* filename);
+    sfs_error_t (*f_seek)(bool fs_select, void* handle, uint32_t position);
     sfs_error_t (*f_format)(uint8_t drive);
     sfs_error_t (*f_init)(uint8_t drive);
     sfs_error_t (*f_mkdir)(const char* dirname);
     sfs_error_t (*f_rmdir)(const char* dirname);
     sfs_error_t (*f_chdir)(const char* dirname);
     void (*f_get_cwd)(char* buffer, size_t size);
-    sfs_error_t (*f_create)(const char* filename, uint32_t size);
-    sfs_error_t (*f_seek)(sfs_file_t* file, uint32_t position);
     sfs_error_t (*f_list)(void);
     void (*f_print_stats)(void);
     sfs_error_t (*f_unmount)(void);
@@ -120,20 +119,19 @@ typedef struct
 #define is_ctrl_pressed() g_api->is_ctrl_pressed()
 #define is_alt_pressed() g_api->is_alt_pressed()
 #define is_caps_lock_on() g_api->is_caps_lock_on()
+#define f_open(fs_select, filename, handle) g_api->f_open(fs_select, filename, handle)
+#define f_read(fs_select, handle, buffer, size, br) g_api->f_read(fs_select, handle, buffer, size, br)
+#define f_write(fs_select, handle, buffer, size) g_api->f_write(fs_select, handle, buffer, size)
+#define f_close(fs_select, handle) g_api->f_close(fs_select, handle)
+#define f_create(fs_select, filename, size) g_api->f_create(fs_select, filename, size)
+#define f_rm(fs_select, filename) g_api->f_rm(fs_select, filename)
+#define f_seek(fs_select, handle, position) g_api->f_seek(fs_select, handle, position)
 #define f_format(drive) g_api->f_format(drive)
 #define f_init(drive) g_api->f_init(drive)
 #define f_mkdir(dirname) g_api->f_mkdir(dirname)
 #define f_rmdir(dirname) g_api->f_rmdir(dirname)
 #define f_chdir(dirname) g_api->f_chdir(dirname)
 #define f_get_cwd(buffer, size) g_api->f_get_cwd(buffer, size)
-#define f_create(filename, size) g_api->f_create(filename, size)
-#define f_open(filename, file) g_api->f_open(filename, file)
-#define f_read(file, buffer, size, br) g_api->f_read(file, buffer, size, br)
-#define f_write(file, buffer, size) g_api->f_write(file, buffer, size)
-#define f_close(file) g_api->f_close(file)
-#define f_rm(filename) g_api->f_rm(filename)
-#define f_mk(filename, size) g_api->f_mk(filename, size)
-#define f_seek(file, position) g_api->f_seek(file, position)
 #define f_list() g_api->f_list()
 #define f_print_stats() g_api->f_print_stats()
 #define f_unmount() g_api->f_unmount()

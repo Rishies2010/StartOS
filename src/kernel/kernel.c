@@ -5,6 +5,7 @@
 #include "../libk/debug/serial.h"
 #include "../libk/debug/log.h"
 #include "../libk/core/mem.h"
+#include "../libk/core/socket.h"
 #include "../libk/string.h"
 #include "../libk/ports.h"
 #include "../cpu/gdt.h"
@@ -95,6 +96,7 @@ void _start(void)
     IoApicSetIrq(g_ioApicAddr, 1, 0x21, LocalApicGetId());
     pci_initialize_system();
     e1000_init();
+    socket_init();
 
 #if debug
     log("Running In Debug Mode.", 2, 1);

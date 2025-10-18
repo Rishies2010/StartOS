@@ -186,10 +186,10 @@ static void cmd_touch(int argc, char *argv[])
         return;
     }
 
-    if (f_mk(argv[1], 1024) == SFS_OK)
+    if (f_create(true, argv[1], 1024) == SFS_OK)
     {
         sfs_file_t file;
-        if (f_open(argv[1], &file) != SFS_OK)
+        if (f_open(true, argv[1], &file) != SFS_OK)
         {
             prints(" Failed to open file for zeroing: ");
             prints(argv[1]);
@@ -201,16 +201,16 @@ static void cmd_touch(int argc, char *argv[])
         for (int i = 0; i < 1024; i++)
             zeros[i] = '\0';
 
-        if (f_write(&file, zeros, 1024) != SFS_OK)
+        if (f_write(true, &file, zeros, 1024) != SFS_OK)
         {
             prints(" Failed to allocate file: ");
             prints(argv[1]);
             prints("\n");
-            f_close(&file);
+            f_close(true, &file);
             return;
         }
 
-        f_close(&file);
+        f_close(true, &file);
         prints(" File created: ");
         prints(argv[1]);
         prints("\n");
@@ -231,7 +231,7 @@ static void cmd_rm(int argc, char *argv[])
         return;
     }
 
-    if (f_rm(argv[1]) == SFS_OK)
+    if (f_rm(true, argv[1]) == SFS_OK)
     {
         prints(" File deleted: ");
         prints(argv[1]);
@@ -254,7 +254,7 @@ static void cmd_cat(int argc, char *argv[])
     }
 
     sfs_file_t file;
-    if (f_open(argv[1], &file) != SFS_OK)
+    if (f_open(true, argv[1], &file) != SFS_OK)
     {
         prints(" Failed to open file: ");
         prints(argv[1]);
@@ -265,7 +265,7 @@ static void cmd_cat(int argc, char *argv[])
     char buffer[1025];
     uint32_t bytes_read;
 
-    if (f_read(&file, buffer, 1024, &bytes_read) == SFS_OK)
+    if (f_read(true, &file, buffer, 1024, &bytes_read) == SFS_OK)
     {
         buffer[bytes_read] = '\0';
         prints(" ");
@@ -279,7 +279,7 @@ static void cmd_cat(int argc, char *argv[])
         prints("\n");
     }
 
-    f_close(&file);
+    f_close(true, &file);
 }
 
 static void cmd_exec(int argc, char *argv[])
@@ -333,7 +333,7 @@ static void cmd_write(int argc, char *argv[])
     }
 
     sfs_file_t file;
-    if (f_open(argv[1], &file) != SFS_OK)
+    if (f_open(true, argv[1], &file) != SFS_OK)
     {
         prints(" Failed to open file: ");
         prints(argv[1]);
@@ -341,7 +341,7 @@ static void cmd_write(int argc, char *argv[])
         return;
     }
 
-    if (f_write(&file, content, strlen(content)) == SFS_OK)
+    if (f_write(true, &file, content, strlen(content)) == SFS_OK)
     {
         prints(" File written: ");
         prints(argv[1]);
@@ -354,7 +354,7 @@ static void cmd_write(int argc, char *argv[])
         prints("\n");
     }
 
-    f_close(&file);
+    f_close(true, &file);
 }
 
 static void help(void)

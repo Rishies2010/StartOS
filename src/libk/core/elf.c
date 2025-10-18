@@ -7,6 +7,7 @@
 #include "../../drv/mouse.h"
 #include "../../drv/speaker.h"
 #include "../../drv/net/e1000.h"
+#include "wrap.h"
 
 typedef struct
 {
@@ -180,23 +181,22 @@ int elf_exec(const char *filename, int argc, char **argv)
     ctx->api.is_caps_lock_on = is_caps_lock_on;
     ctx->api.is_ctrl_pressed = is_ctrl_pressed;
     ctx->api.is_key_pressed = is_key_pressed;
-    ctx->api.f_format      = sfs_format;
-    ctx->api.f_init        = sfs_init;
-    ctx->api.f_mkdir       = sfs_mkdir;
-    ctx->api.f_rmdir       = sfs_rmdir;
-    ctx->api.f_chdir       = sfs_chdir;
-    ctx->api.f_get_cwd     = sfs_get_cwd;
-    ctx->api.f_create      = sfs_create;
-    ctx->api.f_open        = sfs_open;
-    ctx->api.f_read        = sfs_read;
-    ctx->api.f_write       = sfs_write;
-    ctx->api.f_close       = sfs_close;
-    ctx->api.f_rm          = sfs_delete;
-    ctx->api.f_mk          = sfs_create;
-    ctx->api.f_seek        = sfs_seek;
-    ctx->api.f_list        = sfs_list;
-    ctx->api.f_print_stats = sfs_print_stats;
-    ctx->api.f_unmount     = sfs_unmount;
+    ctx->api.f_open        = fs_open;
+    ctx->api.f_read        = fs_read;
+    ctx->api.f_write       = fs_write;
+    ctx->api.f_close       = fs_close;
+    ctx->api.f_create      = fs_create;
+    ctx->api.f_rm          = fs_delete;
+    ctx->api.f_seek        = fs_seek;
+    ctx->api.f_format      = fs_format;
+    ctx->api.f_init        = fs_init;
+    ctx->api.f_mkdir       = fs_mkdir;
+    ctx->api.f_rmdir       = fs_rmdir;
+    ctx->api.f_chdir       = fs_chdir;
+    ctx->api.f_get_cwd     = fs_get_cwd;
+    ctx->api.f_list        = fs_list;
+    ctx->api.f_print_stats = fs_print_stats;
+    ctx->api.f_unmount     = fs_unmount;
     ctx->api.sleep = sleep;
     ctx->api.sched_yield = sched_yield;
     ctx->api.task_create = task_create;
