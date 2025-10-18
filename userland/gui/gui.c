@@ -473,7 +473,7 @@ void wm_cleanup(void)
     asm volatile("sti");
 }
 
-int main(kernel_api_t *api)
+int main(int argc, char **argv, kernel_api_t *api)
 {
     g_api = api;
     asm volatile("cli");

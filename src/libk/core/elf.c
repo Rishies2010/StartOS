@@ -10,10 +10,12 @@
 
 typedef struct
 {
-    int (*entry)(kernel_api_t *);
+    int (*entry)(int argc, char **argv, kernel_api_t *);
     kernel_api_t api;
     uint8_t *prog_mem;
     char name[64];
+    int argc;
+    char **argv;
 } elf_context_t;
 
 static void elf_task_wrapper(void)
@@ -31,9 +33,20 @@ static void elf_task_wrapper(void)
 
     log("Starting execution of %s", 4, 0, ctx->name);
 
-    int ret = ctx->entry(&ctx->api);
+    int ret = ctx->entry(ctx->argc, ctx->argv, &ctx->api);
 
     log("%s returned %d", 4, 0, ctx->name, ret);
+
+    // Free argv strings and array
+    if (ctx->argv)
+    {
+        for (int i = 0; i < ctx->argc; i++)
+        {
+            if (ctx->argv[i])
+                kfree(ctx->argv[i]);
+        }
+        kfree(ctx->argv);
+    }
 
     if (ctx->prog_mem)
     {
@@ -46,7 +59,7 @@ static void elf_task_wrapper(void)
 
 elf_context_t *g_current_elf_context = NULL;
 
-int elf_exec(const char *filename)
+int elf_exec(const char *filename, int argc, char **argv)
 {
     log("Loading %s", 1, 0, filename);
     
@@ -237,10 +250,9 @@ int elf_exec(const char *filename)
     ctx->api.net_get_interrupt_status = e1000_get_interrupt_status;
     ctx->api.net_handle_interrupt   = e1000_handle_interrupt;
 
-
     uint64_t final_entry = (uint64_t)prog + elf_entry_point - min_addr;
 
-    ctx->entry = (int (*)(kernel_api_t *))final_entry;
+    ctx->entry = (int (*)(int, char **, kernel_api_t *))final_entry;
     ctx->prog_mem = prog;
 
     int i = 0;
@@ -251,12 +263,63 @@ int elf_exec(const char *filename)
     }
     ctx->name[i] = '\0';
 
+    // Copy argc/argv
+    ctx->argc = argc;
+    if (argc > 0 && argv)
+    {
+        ctx->argv = (char **)kmalloc(sizeof(char *) * argc);
+        if (!ctx->argv)
+        {
+            log("Failed to allocate argv", 3, 0);
+            kfree(prog);
+            kfree(ctx);
+            return -1;
+        }
+
+        for (int j = 0; j < argc; j++)
+        {
+            if (argv[j])
+            {
+                size_t len = strlen(argv[j]) + 1;
+                ctx->argv[j] = (char *)kmalloc(len);
+                if (ctx->argv[j])
+                {
+                    strcpy(ctx->argv[j], argv[j]);
+                }
+                else
+                {
+                    // Cleanup on failure
+                    for (int k = 0; k < j; k++)
+                        kfree(ctx->argv[k]);
+                    kfree(ctx->argv);
+                    kfree(prog);
+                    kfree(ctx);
+                    return -1;
+                }
+            }
+            else
+            {
+                ctx->argv[j] = NULL;
+            }
+        }
+    }
+    else
+    {
+        ctx->argv = NULL;
+    }
+
     g_current_elf_context = ctx;
 
     task_t *task = task_create_user(elf_task_wrapper, ctx->name);
     if (!task)
     {
         log("Failed to create task", 3, 0);
+        if (ctx->argv)
+        {
+            for (int j = 0; j < argc; j++)
+                kfree(ctx->argv[j]);
+            kfree(ctx->argv);
+        }
         kfree(prog);
         kfree(ctx);
         g_current_elf_context = NULL;

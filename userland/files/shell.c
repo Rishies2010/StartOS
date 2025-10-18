@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "../kernel_api.h"
 
-static kernel_api_t* g_api = NULL;
+static kernel_api_t *g_api = NULL;
 static char command_buffer[256];
 
 static int parse_command(char *command, char *args[])
@@ -68,11 +68,11 @@ static void cmd_uptime(void)
     rtc_time_t boot_time = rtc_boottime();
     uint32_t uptime_ms = rtc_calculate_uptime(&boot_time, &current_time);
     uint32_t uptime_seconds = uptime_ms / 1000;
-    
+
     uint32_t hours = uptime_seconds / 3600;
     uint32_t minutes = (uptime_seconds % 3600) / 60;
     uint32_t seconds = uptime_seconds % 60;
-    
+
     prints(" System uptime: ");
     printc('0' + (hours / 10));
     printc('0' + (hours % 10));
@@ -264,7 +264,7 @@ static void cmd_cat(int argc, char *argv[])
 
     char buffer[1025];
     uint32_t bytes_read;
-    
+
     if (f_read(&file, buffer, 1024, &bytes_read) == SFS_OK)
     {
         buffer[bytes_read] = '\0';
@@ -286,24 +286,27 @@ static void cmd_exec(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        prints(" Usage: exec <filename>\n");
+        prints(" Usage: exec <filename> [args...]\n");
         return;
     }
 
     prints(" Loading ELF binary: ");
     prints(argv[1]);
     prints("\n");
-    
-    int ret = exec(argv[1]);
-    
+
+    int ret = exec(argv[1], argc - 1, &argv[1]);
+
     if (ret < 0)
     {
         prints(" Failed to execute ELF (error code: ");
-        if (ret < -9) {
+        if (ret < -9)
+        {
             printc('-');
             printc('0' + ((-ret) / 10));
             printc('0' + ((-ret) % 10));
-        } else if (ret < 0) {
+        }
+        else if (ret < 0)
+        {
             printc('-');
             printc('0' + (-ret));
         }
@@ -478,7 +481,7 @@ bool shell_execute(const char *command)
     return true;
 }
 
-int main(kernel_api_t* api)
+int main(int argc, char **argv, kernel_api_t *api)
 {
     g_api = api;
     asm volatile("cli");
@@ -491,7 +494,8 @@ int main(kernel_api_t* api)
         read_line(command_buffer, 256, true);
         asm volatile("cli");
         printc('\n');
-        if(shell_execute(command_buffer) == false) return 0;
+        if (shell_execute(command_buffer) == false)
+            return 0;
         memset(command_buffer, 0, 256);
     }
     return 0;

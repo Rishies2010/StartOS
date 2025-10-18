@@ -63,7 +63,7 @@ void idle(void)
 
 void init(void){
     log("Starting init.", 1, 0);
-    if(elf_exec("init") != SFS_OK)
+    if(elf_exec("init", 0, NULL) != SFS_OK)
         log("No init program found.", 0, 0);
 }
 

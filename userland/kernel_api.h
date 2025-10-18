@@ -11,45 +11,6 @@
 #include "../src/kernel/sched.h"
 #include <stdarg.h>
 
-// typedef struct {
-//     char name[28];
-//     uint32_t size;
-//     uint32_t start_block;
-//     uint32_t position;                  
-//     uint8_t entry_index;                
-//     uint8_t is_open;
-// } sfs_file_t;
-
-// typedef enum {
-//     SFS_OK = 0,
-//     SFS_ERR_NOT_INITIALIZED,
-//     SFS_ERR_INVALID_DRIVE,
-//     SFS_ERR_READ_FAILED,
-//     SFS_ERR_WRITE_FAILED,
-//     SFS_ERR_NOT_SFS,
-//     SFS_ERR_FILE_NOT_FOUND,
-//     SFS_ERR_NO_SPACE,
-//     SFS_ERR_ALREADY_EXISTS,
-//     SFS_ERR_TOO_MANY_ENTRIES,
-//     SFS_ERR_NOT_OPEN,
-//     SFS_ERR_EOF,
-//     SFS_ERR_INVALID_PARAM,
-//     SFS_ERR_NOT_EMPTY,
-//     SFS_ERR_NOT_A_DIRECTORY,
-//     SFS_ERR_IS_DIRECTORY
-// } sfs_error_t;
-
-// typedef struct
-// {
-//     uint16_t milliseconds;
-//     uint8_t seconds;
-//     uint8_t minutes;
-//     uint8_t hours;
-//     uint8_t day;
-//     uint8_t month;
-//     uint8_t year;
-// } rtc_time_t;
-
 typedef struct
 {
     void (*prints)(const char *str);
@@ -118,7 +79,7 @@ typedef struct
     char     (*toLower)(char c);
     char     (*toUpper)(char c);
     uint32_t (*get_pixel_at)(uint32_t x, uint32_t y);
-    int (*exec)(const char* filename);
+    int (*exec)(const char* filename, int argc, char **argv);
     uint32_t (*mouse_x)(void);
     uint32_t (*mouse_y)(void);
     uint8_t (*mouse_button)(void);
@@ -207,7 +168,7 @@ typedef struct
 #define toLower(c)                   g_api->toLower(c)
 #define toUpper(c)                   g_api->toUpper(c)
 #define get_pixel_at(x, y) g_api->get_pixel_at(x, y)
-#define exec(filename) g_api->exec(filename)
+#define exec(filename, argc, argv) g_api->exec(filename, argc, argv)
 #define mouse_x(void) g_api->mouse_x(void)
 #define mouse_y(void) g_api->mouse_y(void)
 #define mouse_button(void) g_api->mouse_button(void)

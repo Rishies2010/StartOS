@@ -116,7 +116,7 @@ typedef struct
     char     (*toLower)(char c);
     char     (*toUpper)(char c);
     uint32_t (*get_pixel_at)(uint32_t x, uint32_t y);
-    int (*exec)(const char* filename);
+    int (*exec)(const char* filename, int argc, char **argv);
     uint32_t (*mouse_x)(void);
     uint32_t (*mouse_y)(void);
     uint8_t (*mouse_button)(void);
@@ -139,6 +139,6 @@ typedef struct
     void (*net_handle_interrupt)(void);
 } kernel_api_t;
 
-int elf_exec(const char *filename);
+int elf_exec(const char *filename, int argc, char **argv);
 
 #endif
