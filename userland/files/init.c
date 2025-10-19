@@ -9,7 +9,9 @@ static kernel_api_t* g_api = NULL;
 int main(int argc, char **argv, kernel_api_t* api)
 {
     g_api = api;
-    if(exec("shell", 0, NULL) != SFS_OK)
-        log("No shell program found.", 0, 0);
+    // if(exec("shell", 0, NULL) != SFS_OK)
+    //     log("No shell program found.", 0, 0);
+    log("Init", 2, 1);
+    for(;;);
     return 0;
 }

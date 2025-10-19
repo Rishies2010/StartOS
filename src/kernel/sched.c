@@ -45,28 +45,6 @@ static void task_entry_wrapper(void)
     task_exit();
 }
 
-static void user_task_entry_wrapper(void)
-{
-    if (!current_task)
-    {
-        asm volatile("cli; hlt");
-        while (1)
-            ;
-    }
-
-    void (*entry)(void) = (void (*)(void))current_task->regs.rbx;
-
-    if (!entry)
-    {
-        asm volatile("cli; hlt");
-        while (1)
-            ;
-    }
-
-    entry();
-    task_exit();
-}
-
 void sched_init(void)
 {
     spinlock_init(&sched_lock);
@@ -200,17 +178,16 @@ task_t *task_create_user(void (*entry)(void), const char *name)
     }
     memset((void *)task->kernel_stack, 0, TASK_STACK_SIZE);
 
-    task->user_stack = (uint64_t)kmalloc(TASK_STACK_SIZE);
-    if (!task->user_stack)
+    user_allocation_t stack_alloc = alloc_user_memory(TASK_STACK_SIZE);
+    if (!stack_alloc.virt)
     {
         kfree((void *)task->kernel_stack);
         kfree(task);
         spinlock_release(&sched_lock);
         return NULL;
     }
-    memset((void *)task->user_stack, 0, TASK_STACK_SIZE);
 
-    memset(&task->regs, 0, sizeof(registers_t));
+    task->user_stack = stack_alloc.virt;
 
     uint64_t user_stack_top = task->user_stack + TASK_STACK_SIZE;
     user_stack_top &= ~0xFULL;
@@ -219,25 +196,14 @@ task_t *task_create_user(void (*entry)(void), const char *name)
     task->regs.ss = 0x20 | 3;
     task->regs.ds = 0x20 | 3;
 
-    task->regs.rip = (uint64_t)user_task_entry_wrapper;  
-    task->regs.rbx = (uint64_t)entry;                
+    task->regs.rip = (uint64_t)entry;
     task->regs.userrsp = user_stack_top;
     task->regs.rbp = user_stack_top;
     task->regs.rflags = 0x202;
 
-    task->regs.rax = 0;
-    task->regs.rcx = 0;
-    task->regs.rdx = 0;
-    task->regs.rsi = 0;
-    task->regs.rdi = 0;
-    task->regs.r8 = 0;
-    task->regs.r9 = 0;
-    task->regs.r10 = 0;
-    task->regs.r11 = 0;
-    task->regs.r12 = 0;
-    task->regs.r13 = 0;
-    task->regs.r14 = 0;
-    task->regs.r15 = 0;
+    uint64_t kernel_stack_top = task->kernel_stack + TASK_STACK_SIZE;
+    kernel_stack_top &= ~0xFULL;
+    tss.rsp0 = kernel_stack_top;
 
     if (!task_list_head)
     {
@@ -260,7 +226,9 @@ task_t *task_create_user(void (*entry)(void), const char *name)
 
     spinlock_release(&sched_lock);
 
-    log("Created USER task: %s (PID %d)", 1, 0, name, task->pid);
+    log("Created USER task: %s (PID %d, RIP=0x%lx, RSP=0x%lx, CS=0x%x)", 1, 0,
+        name, task->pid, task->regs.rip, task->regs.userrsp, task->regs.cs);
+
     return task;
 }
 

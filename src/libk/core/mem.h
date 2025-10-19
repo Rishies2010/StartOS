@@ -8,6 +8,9 @@
 #define KERNEL_VIRT_OFFSET 0xffff800000000000
 #define USER_SPACE_BASE 0x400000
 #define USER_STACK_TOP 0x800000000000
+#define USER_SPACE_START 0x400000      
+#define USER_SPACE_END   0x800000000000 
+#define USER_HEAP_START  0x10000000 
 
 #define PAGE_PRESENT    (1ULL << 0)
 #define PAGE_WRITABLE   (1ULL << 1) 
@@ -19,6 +22,12 @@ typedef struct {
     uint64_t entries[512];
 } __attribute__((aligned(4096))) page_table_t;
 
+typedef struct {
+    uint64_t virt;
+    uint64_t phys;
+    uint64_t size;
+} user_allocation_t;
+
 void init_pmm(void);
 uint64_t alloc_page(void);
 uint64_t alloc_pages(size_t count);
@@ -27,6 +36,9 @@ void free_pages(uint64_t addr, size_t count);
 uint64_t get_total_memory(void);
 uint64_t get_free_memory(void);
 void print_mem_info(int vis);
+user_allocation_t alloc_user_memory(size_t size);
+void free_user_memory(user_allocation_t* alloc);
+void* alloc_user_pages_mapped(size_t count, page_table_t* pml4);
 
 void init_kernel_heap(void);
 void* kmalloc(size_t size);
