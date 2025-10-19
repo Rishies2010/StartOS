@@ -249,6 +249,15 @@ int elf_exec(const char *filename, int argc, char **argv)
     ctx->api.net_disable_interrupts = e1000_disable_interrupts;
     ctx->api.net_get_interrupt_status = e1000_get_interrupt_status;
     ctx->api.net_handle_interrupt   = e1000_handle_interrupt;
+    ctx->api.socket_create = socket_create;
+    ctx->api.socket_open = socket_open;
+    ctx->api.socket_read = socket_read;
+    ctx->api.socket_write = socket_write;
+    ctx->api.socket_delete = socket_delete;
+    ctx->api.socket_close = socket_close;
+    ctx->api.socket_available = socket_available;
+    ctx->api.socket_exists = socket_exists;
+
 
     uint64_t final_entry = (uint64_t)prog + elf_entry_point - min_addr;
 

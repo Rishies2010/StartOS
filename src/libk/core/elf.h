@@ -8,6 +8,7 @@
 #include "../../drv/rtc.h"
 #include "../../drv/disk/sfs.h"
 #include "../../kernel/sched.h"
+#include "socket.h"
 
 #define ELF_MAGIC 0x464C457F
 #define ELF_CLASS_64 2
@@ -136,7 +137,16 @@ typedef struct
     void (*net_disable_interrupts)(void);
     uint32_t (*net_get_interrupt_status)(void);
     void (*net_handle_interrupt)(void);
+    socket_error_t (*socket_create)(const char *name);
+    socket_error_t (*socket_open)(const char *name, socket_file_t **file);
+    socket_error_t (*socket_read)(socket_file_t *file, void *buffer, uint32_t size, uint32_t *bytes_read);
+    socket_error_t (*socket_write)(socket_file_t *file, const void *buffer, uint32_t size);
+    socket_error_t (*socket_delete)(const char *name);
+    socket_error_t (*socket_close)(socket_file_t *file);
+    uint32_t (*socket_available)(socket_file_t *file);
+    bool (*socket_exists)(const char *name);
 } kernel_api_t;
+
 
 int elf_exec(const char *filename, int argc, char **argv);
 

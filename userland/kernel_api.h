@@ -9,6 +9,7 @@
 #include "../src/drv/vga.h"
 #include "../src/libk/string.h"
 #include "../src/kernel/sched.h"
+#include "../src/libk/core/socket.h"
 #include <stdarg.h>
 
 typedef struct
@@ -99,6 +100,14 @@ typedef struct
     void (*net_disable_interrupts)(void);
     uint32_t (*net_get_interrupt_status)(void);
     void (*net_handle_interrupt)(void);
+    socket_error_t (*socket_create)(const char *name);
+    socket_error_t (*socket_open)(const char *name, socket_file_t **file);
+    socket_error_t (*socket_read)(socket_file_t *file, void *buffer, uint32_t size, uint32_t *bytes_read);
+    socket_error_t (*socket_write)(socket_file_t *file, const void *buffer, uint32_t size);
+    socket_error_t (*socket_delete)(const char *name);
+    socket_error_t (*socket_close)(socket_file_t *file);
+    uint32_t (*socket_available)(socket_file_t *file);
+    bool (*socket_exists)(const char *name);
 } kernel_api_t;
 
 #define log(fmt, level, vis, ...) g_api->log_internal(__FILE__, __LINE__, fmt, level, vis, ##__VA_ARGS__)
@@ -186,5 +195,13 @@ typedef struct
 #define net_disable_interrupts() g_api->net_disable_interrupts()
 #define net_get_interrupt_status() g_api->net_get_interrupt_status()
 #define net_handle_interrupt() g_api->net_handle_interrupt()
+#define socket_create(name) g_api->socket_create(name)
+#define socket_open(name, file) g_api->socket_open(name, file)
+#define socket_read(file, buffer, size, bytes_read) g_api->socket_read(file, buffer, size, bytes_read)
+#define socket_write(file, buffer, size) g_api->socket_write(file, buffer, size)
+#define socket_delete(name) g_api->socket_delete(name)
+#define socket_close(file) g_api->socket_close(file)
+#define socket_available(file) g_api->socket_available(file)
+#define socket_exists(name) g_api->socket_exists(name)
 
 #endif
