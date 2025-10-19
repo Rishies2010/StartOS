@@ -54,14 +54,6 @@ void play_bootup_sequence()
     speaker_pause();
 }
 
-void idle(void)
-{
-    while (1)
-    {
-        asm volatile("hlt");
-    }
-}
-
 void init(void){
     log("Starting init.", 1, 0);
     if(elf_exec("init", 0, NULL) != SFS_OK)
@@ -102,10 +94,8 @@ void _start(void)
     log("Running In Debug Mode.", 2, 1);
     print_mem_info(1);
     sfs_list();
-    task_create(idle, "idle");
     task_create(init, "Init");
 #else
-    task_create(idle, "idle");
     task_create(play_bootup_sequence, "Bootup Music");
     task_create(init, "Init");
 #endif
