@@ -27,8 +27,6 @@ typedef struct header
 static header_t *heap_start = NULL;
 
 static page_table_t *kernel_pml4 = NULL;
-static uint64_t next_user_virt = USER_HEAP_START;
-static spinlock_t user_alloc_lock = {0};
 
 static volatile struct limine_memmap_request memmap_request = {
     .id = LIMINE_MEMMAP_REQUEST,
@@ -489,120 +487,10 @@ void init_vmm(void)
     uint64_t cr3;
     __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
     kernel_pml4 = (page_table_t *)(cr3 + KERNEL_VIRT_OFFSET);
-    spinlock_init(&user_alloc_lock);
     serial_write_string("[src/libk/core/mem.c:???]- VMM initialized.\n");
 }
 
 page_table_t *get_kernel_pml4(void)
 {
     return kernel_pml4;
-}
-
-user_allocation_t alloc_user_memory(size_t size)
-{
-    user_allocation_t result = {0, 0, 0};
-
-    if (size == 0)
-        return result;
-
-    spinlock_acquire(&user_alloc_lock);
-
-    size_t pages_needed = (size + PAGE_SIZE - 1) / PAGE_SIZE;
-
-    uint64_t phys = alloc_pages(pages_needed);
-    if (!phys)
-    {
-        spinlock_release(&user_alloc_lock);
-        return result;
-    }
-
-    uint64_t virt = next_user_virt;
-    next_user_virt += pages_needed * PAGE_SIZE;
-
-    if (next_user_virt >= USER_SPACE_END)
-    {
-        free_pages(phys, pages_needed);
-        spinlock_release(&user_alloc_lock);
-        return result;
-    }
-
-    page_table_t *pml4 = get_kernel_pml4();
-    for (size_t i = 0; i < pages_needed; i++)
-    {
-        map_page(pml4,
-                 virt + (i * PAGE_SIZE),
-                 phys + (i * PAGE_SIZE),
-                 PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER);
-    }
-
-    for (size_t i = 0; i < pages_needed; i++)
-    {
-        __asm__ volatile("invlpg (%0)" : : "r"(virt + (i * PAGE_SIZE)) : "memory");
-    }
-
-    spinlock_release(&user_alloc_lock);
-
-    uint64_t kernel_addr = phys + KERNEL_VIRT_OFFSET;
-    memset((void *)kernel_addr, 0, pages_needed * PAGE_SIZE);
-
-    result.virt = virt;
-    result.phys = phys;
-    result.size = pages_needed * PAGE_SIZE;
-    return result;
-}
-
-void free_user_memory(user_allocation_t *alloc)
-{
-    if (!alloc || !alloc->virt || alloc->size == 0)
-        return;
-
-    size_t pages = alloc->size / PAGE_SIZE;
-    page_table_t *pml4 = get_kernel_pml4();
-
-    for (size_t i = 0; i < pages; i++)
-    {
-        unmap_page(pml4, alloc->virt + (i * PAGE_SIZE));
-    }
-
-    free_pages(alloc->phys, pages);
-}
-
-void *alloc_user_pages_mapped(size_t count, page_table_t *pml4)
-{
-    if (count == 0 || !pml4)
-        return NULL;
-
-    spinlock_acquire(&user_alloc_lock);
-
-    uint64_t phys = alloc_pages(count);
-    if (!phys)
-    {
-        spinlock_release(&user_alloc_lock);
-        return NULL;
-    }
-
-    uint64_t virt = next_user_virt;
-    next_user_virt += count * PAGE_SIZE;
-
-    if (next_user_virt >= USER_SPACE_END)
-    {
-        free_pages(phys, count);
-        spinlock_release(&user_alloc_lock);
-        return NULL;
-    }
-
-    for (size_t i = 0; i < count; i++)
-    {
-        map_page(pml4,
-                 virt + (i * PAGE_SIZE),
-                 phys + (i * PAGE_SIZE),
-                 PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER);
-    }
-
-    spinlock_release(&user_alloc_lock);
-
-    uint64_t kernel_addr = phys + KERNEL_VIRT_OFFSET;
-    memset((void *)kernel_addr, 0, count * PAGE_SIZE);
-
-    return (void *)virt;
 }

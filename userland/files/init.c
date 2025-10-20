@@ -3,15 +3,9 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include "../kernel_api.h"
-static kernel_api_t* g_api = NULL;
 
-int main(int argc, char **argv, kernel_api_t* api)
+int main(int argc, char **argv)
 {
-    g_api = api;
-    // if(exec("shell", 0, NULL) != SFS_OK)
-    //     log("No shell program found.", 0, 0);
-    log("Init", 2, 1);
     for(;;);
     return 0;
 }

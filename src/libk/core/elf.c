@@ -3,17 +3,13 @@
 #include "../debug/log.h"
 #include "../../drv/vga.h"
 #include "mem.h"
-#include "../../drv/keyboard.h"
-#include "../../drv/mouse.h"
-#include "../../drv/speaker.h"
-#include "../../drv/net/e1000.h"
-#include "wrap.h"
 
 typedef struct
 {
-    int (*entry)(int argc, char **argv, kernel_api_t *);
-    kernel_api_t api;
-    user_allocation_t prog_alloc;  
+    int (*entry)(int argc, char **argv);
+    uint64_t prog_virt;      // Just store virt address
+    uint64_t prog_phys;      // Just store phys address  
+    uint64_t prog_size;      // Just store size
     char name[64];
     int argc;
     char **argv;
@@ -21,8 +17,6 @@ typedef struct
 
 static void elf_task_wrapper(void)
 {
-    asm volatile("cli");
-
     extern elf_context_t *g_current_elf_context;
     elf_context_t *ctx = g_current_elf_context;
 
@@ -33,31 +27,30 @@ static void elf_task_wrapper(void)
     }
 
     log("Starting execution of %s", 4, 0, ctx->name);
-
-    int ret = ctx->entry(ctx->argc, ctx->argv, &ctx->api);
-
+    
+    int ret = ctx->entry(ctx->argc, ctx->argv);
+    
     log("%s returned %d", 4, 0, ctx->name, ret);
 
-    // Free argv strings and array
+    // Cleanup
     if (ctx->argv)
     {
         for (int i = 0; i < ctx->argc; i++)
-        {
-            if (ctx->argv[i])
-                kfree(ctx->argv[i]);
-        }
+            if (ctx->argv[i]) kfree(ctx->argv[i]);
         kfree(ctx->argv);
     }
-
-    // Free user program memory
-    if (ctx->prog_alloc.virt)
+    
+    // Free program memory
+    if (ctx->prog_virt)
     {
-        free_user_memory(&ctx->prog_alloc);
+        page_table_t *pml4 = get_kernel_pml4();
+        size_t pages = (ctx->prog_size + PAGE_SIZE - 1) / PAGE_SIZE;
+        for (size_t i = 0; i < pages; i++)
+            unmap_page(pml4, ctx->prog_virt + (i * PAGE_SIZE));
+        free_pages(ctx->prog_phys, pages);
     }
     
     kfree(ctx);
-
-    asm volatile("sti");
 }
 
 elf_context_t *g_current_elf_context = NULL;
@@ -65,7 +58,7 @@ elf_context_t *g_current_elf_context = NULL;
 int elf_exec(const char *filename, int argc, char **argv)
 {
     log("Loading %s", 1, 0, filename);
-
+    
     sfs_file_t file;
     if (sfs_open(filename, &file) != SFS_OK)
     {
@@ -93,189 +86,94 @@ int elf_exec(const char *filename, int argc, char **argv)
 
     elf64_ehdr_t *ehdr = (elf64_ehdr_t *)elf_data;
 
+    // Validate ELF
     if (ehdr->e_ident[0] != 0x7F || ehdr->e_ident[1] != 'E' ||
         ehdr->e_ident[2] != 'L' || ehdr->e_ident[3] != 'F')
     {
-        log("Invalid magic", 3, 0);
+        log("Invalid ELF magic", 3, 0);
         kfree(elf_data);
         return -1;
     }
 
     if (ehdr->e_ident[4] != ELF_CLASS_64)
     {
-        log("Not 64-bit", 3, 0);
+        log("Not 64-bit ELF", 3, 0);
         kfree(elf_data);
         return -1;
     }
 
+    // Find load address range
     uint64_t min_addr = 0xFFFFFFFFFFFFFFFF;
     uint64_t max_addr = 0;
 
     for (int i = 0; i < ehdr->e_phnum; i++)
     {
         elf64_phdr_t *phdr = (elf64_phdr_t *)(elf_data + ehdr->e_phoff + i * ehdr->e_phentsize);
-
         if (phdr->p_type == PT_LOAD)
         {
-            if (phdr->p_vaddr < min_addr)
-                min_addr = phdr->p_vaddr;
-            if (phdr->p_vaddr + phdr->p_memsz > max_addr)
-            {
-                max_addr = phdr->p_vaddr + phdr->p_memsz;
-            }
+            if (phdr->p_vaddr < min_addr) min_addr = phdr->p_vaddr;
+            if (phdr->p_vaddr + phdr->p_memsz > max_addr) max_addr = phdr->p_vaddr + phdr->p_memsz;
         }
     }
-    log("ELF min_addr=0x%lx, max_addr=0x%lx, e_entry=0x%lx", 1, 0, min_addr, max_addr, ehdr->e_entry); //!
-    uint64_t total_size = max_addr - min_addr;
 
-    user_allocation_t prog_alloc = alloc_user_memory(total_size);
-    if (!prog_alloc.virt)
+    uint64_t total_size = max_addr - min_addr;
+    log("ELF: min=0x%lx max=0x%lx size=0x%lx entry=0x%lx", 1, 0, 
+        min_addr, max_addr, total_size, ehdr->e_entry);
+
+    // Allocate memory for program
+    size_t pages = (total_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint64_t prog_phys = alloc_pages(pages);
+    if (!prog_phys)
     {
-        log("Failed to allocate user program memory", 3, 0);
+        log("Failed to allocate program pages", 3, 0);
         kfree(elf_data);
         return -1;
     }
 
+    // Use kernel addresses (ring 0 for now)
+    uint64_t prog_virt = prog_phys + KERNEL_VIRT_OFFSET;
     
+    // Zero it
+    memset((void*)prog_virt, 0, total_size);
+
+    // Load segments
     for (int i = 0; i < ehdr->e_phnum; i++)
     {
         elf64_phdr_t *phdr = (elf64_phdr_t *)(elf_data + ehdr->e_phoff + i * ehdr->e_phentsize);
-
         if (phdr->p_type == PT_LOAD)
         {
             uint64_t offset = phdr->p_vaddr - min_addr;
-            
-            
-            uint8_t *dest = (uint8_t*)(prog_alloc.phys + KERNEL_VIRT_OFFSET + offset);
+            uint8_t *dest = (uint8_t*)(prog_virt + offset);
             uint8_t *src = elf_data + phdr->p_offset;
-
-            for (uint64_t j = 0; j < phdr->p_filesz; j++)
-            {
-                dest[j] = src[j];
-            }
+            memcpy(dest, src, phdr->p_filesz);
         }
     }
 
-    uint64_t elf_entry_point = ehdr->e_entry;
     kfree(elf_data);
 
+    // Create context
     elf_context_t *ctx = (elf_context_t *)kmalloc(sizeof(elf_context_t));
     if (!ctx)
     {
         log("Failed to allocate context", 3, 0);
-        free_user_memory(&prog_alloc);
+        free_pages(prog_phys, pages);
         return -1;
     }
 
-    ctx->api.prints = prints;
-    ctx->api.printc = printc;
-    ctx->api.ft_run = ft_run;
-    ctx->api.setcolor = setcolor;
-    ctx->api.plotchar = plotchar;
-    ctx->api.draw_text_at = draw_text_at;
-    ctx->api.log_internal = log_internal;
-    ctx->api.kmalloc = kmalloc;
-    ctx->api.kfree = kfree;
-    ctx->api.put_pixel = put_pixel;
-    ctx->api.read_line = read_line;
-    ctx->api.get_key = get_key;
-    ctx->api.wait_for_key = wait_for_key;
-    ctx->api.is_alt_pressed = is_alt_pressed;
-    ctx->api.is_shift_pressed = is_shift_pressed;
-    ctx->api.is_caps_lock_on = is_caps_lock_on;
-    ctx->api.is_ctrl_pressed = is_ctrl_pressed;
-    ctx->api.is_key_pressed = is_key_pressed;
-    ctx->api.f_open = fs_open;
-    ctx->api.f_read = fs_read;
-    ctx->api.f_write = fs_write;
-    ctx->api.f_close = fs_close;
-    ctx->api.f_create = fs_create;
-    ctx->api.f_rm = fs_delete;
-    ctx->api.f_seek = fs_seek;
-    ctx->api.f_format = fs_format;
-    ctx->api.f_init = fs_init;
-    ctx->api.f_mkdir = fs_mkdir;
-    ctx->api.f_rmdir = fs_rmdir;
-    ctx->api.f_chdir = fs_chdir;
-    ctx->api.f_get_cwd = fs_get_cwd;
-    ctx->api.f_list = fs_list;
-    ctx->api.f_print_stats = fs_print_stats;
-    ctx->api.f_unmount = fs_unmount;
-    ctx->api.sleep = sleep;
-    ctx->api.sched_yield = sched_yield;
-    ctx->api.task_create = task_create;
-    ctx->api.task_create_user = task_create_user;
-    ctx->api.strlen = strlen;
-    ctx->api.strcpy = strcpy;
-    ctx->api.strncpy = strncpy;
-    ctx->api.strcat = strcat;
-    ctx->api.strncat = strncat;
-    ctx->api.strcmp = strcmp;
-    ctx->api.strncmp = strncmp;
-    ctx->api.strchr = strchr;
-    ctx->api.strrchr = strrchr;
-    ctx->api.strspn = strspn;
-    ctx->api.strcspn = strcspn;
-    ctx->api.strstr = strstr;
-    ctx->api.strtok = strtok;
-    ctx->api.strtok_r = strtok_r;
-    ctx->api.memset = memset;
-    ctx->api.memcpy = memcpy;
-    ctx->api.memmove = memmove;
-    ctx->api.memcmp = memcmp;
-    ctx->api.memchr = memchr;
-    ctx->api.atoi = atoi;
-    ctx->api.itoa = itoa;
-    ctx->api.itoa_hex = itoa_hex;
-    ctx->api.vsnprintf = vsnprintf;
-    ctx->api.snprintf = snprintf;
-    ctx->api.toLower = toLower;
-    ctx->api.toUpper = toUpper;
-    ctx->api.get_pixel_at = get_pixel_at;
-    ctx->api.exec = elf_exec;
-    ctx->api.mouse_button = mouse_button;
-    ctx->api.mouse_moved = mouse_moved;
-    ctx->api.mouse_set_pos = mouse_set_pos;
-    ctx->api.mouse_x = mouse_x;
-    ctx->api.mouse_y = mouse_y;
-    ctx->api.clr = clr;
-    ctx->api.speaker_note = speaker_note;
-    ctx->api.speaker_pause = speaker_pause;
-    ctx->api.speaker_play = speaker_play;
-    ctx->api.rtc_calculate_uptime = rtc_calculate_uptime;
-    ctx->api.rtc_get_time = rtc_get_time;
-    ctx->api.rtc_boottime = rtc_boottime;
-    ctx->api.net_send_packet = e1000_send_packet;
-    ctx->api.net_receive_packet = e1000_receive_packet;
-    ctx->api.net_get_mac_address = e1000_get_mac_address;
-    ctx->api.net_link_up = e1000_link_up;
-    ctx->api.net_enable_interrupts = e1000_enable_interrupts;
-    ctx->api.net_disable_interrupts = e1000_disable_interrupts;
-    ctx->api.net_get_interrupt_status = e1000_get_interrupt_status;
-    ctx->api.net_handle_interrupt = e1000_handle_interrupt;
-    ctx->api.socket_create = socket_create;
-    ctx->api.socket_open = socket_open;
-    ctx->api.socket_read = socket_read;
-    ctx->api.socket_write = socket_write;
-    ctx->api.socket_delete = socket_delete;
-    ctx->api.socket_close = socket_close;
-    ctx->api.socket_available = socket_available;
-    ctx->api.socket_exists = socket_exists;
+    // Calculate entry point
+    uint64_t final_entry = prog_virt + ehdr->e_entry - min_addr;
+    log("Entry point: 0x%lx", 1, 0, final_entry);
+    
+    ctx->entry = (int (*)(int, char **))final_entry;
+    ctx->prog_virt = prog_virt;
+    ctx->prog_phys = prog_phys;
+    ctx->prog_size = total_size;
 
-    uint64_t final_entry = prog_alloc.virt + elf_entry_point - min_addr;
-    log("Calculated entry: virt=0x%lx + e_entry=0x%lx - min=0x%lx = 0x%lx", 1, 0, 
-    prog_alloc.virt, elf_entry_point, min_addr, final_entry);
-    ctx->entry = (int (*)(int, char **, kernel_api_t *))final_entry;
-    ctx->prog_alloc = prog_alloc;
+    // Copy name
+    strncpy(ctx->name, filename, 63);
+    ctx->name[63] = '\0';
 
-    int i = 0;
-    while (filename[i] && i < 63)
-    {
-        ctx->name[i] = filename[i];
-        i++;
-    }
-    ctx->name[i] = '\0';
-
+    // Copy argc/argv
     ctx->argc = argc;
     if (argc > 0 && argv)
     {
@@ -283,7 +181,7 @@ int elf_exec(const char *filename, int argc, char **argv)
         if (!ctx->argv)
         {
             log("Failed to allocate argv", 3, 0);
-            free_user_memory(&prog_alloc);
+            free_pages(prog_phys, pages);
             kfree(ctx);
             return -1;
         }
@@ -295,50 +193,41 @@ int elf_exec(const char *filename, int argc, char **argv)
                 size_t len = strlen(argv[j]) + 1;
                 ctx->argv[j] = (char *)kmalloc(len);
                 if (ctx->argv[j])
-                {
                     strcpy(ctx->argv[j], argv[j]);
-                }
                 else
                 {
-
-                    for (int k = 0; k < j; k++)
-                        kfree(ctx->argv[k]);
+                    for (int k = 0; k < j; k++) kfree(ctx->argv[k]);
                     kfree(ctx->argv);
-                    free_user_memory(&prog_alloc);
+                    free_pages(prog_phys, pages);
                     kfree(ctx);
                     return -1;
                 }
             }
             else
-            {
                 ctx->argv[j] = NULL;
-            }
         }
     }
     else
-    {
         ctx->argv = NULL;
-    }
 
     g_current_elf_context = ctx;
 
-    task_t *task = task_create_user(elf_task_wrapper, ctx->name);
+    // Create kernel task (ring 0 for now)
+    task_t *task = task_create(elf_task_wrapper, ctx->name);
     if (!task)
     {
         log("Failed to create task", 3, 0);
         if (ctx->argv)
         {
-            for (int j = 0; j < argc; j++)
-                kfree(ctx->argv[j]);
+            for (int j = 0; j < argc; j++) kfree(ctx->argv[j]);
             kfree(ctx->argv);
         }
-        free_user_memory(&prog_alloc);
+        free_pages(prog_phys, pages);
         kfree(ctx);
         g_current_elf_context = NULL;
         return -1;
     }
 
     log("Task created (PID %d)", 4, 0, task->pid);
-
     return 0;
 }
