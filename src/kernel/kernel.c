@@ -60,6 +60,10 @@ void init(void){
         log("No init program found.", 0, 0);
 }
 
+void idle(void){
+    for(;;)asm volatile("hlt");
+}
+
 void _start(void)
 {
     serial_init();
@@ -94,10 +98,12 @@ void _start(void)
     log("Running In Debug Mode.", 2, 1);
     print_mem_info(1);
     sfs_list();
+    task_create(idle, "Idle");
     task_create(init, "Init");
 #else
-    task_create(play_bootup_sequence, "Bootup Music");
+    task_create(idle, "Idle");
     task_create(init, "Init");
+    task_create(play_bootup_sequence, "Bootup Music");
 #endif
     asm volatile("sti");
     sched_start();

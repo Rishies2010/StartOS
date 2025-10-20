@@ -6,6 +6,6 @@
 
 int main(int argc, char **argv)
 {
-    for(;;);
+    for(;;)asm volatile("hlt");
     return 0;
 }
