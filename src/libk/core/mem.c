@@ -386,9 +386,11 @@ void map_page(page_table_t *pml4, uint64_t virt, uint64_t phys, uint64_t flags)
         memset(pdpt, 0, PAGE_SIZE);
         pml4->entries[pml4_idx] = pdpt_phys | PAGE_PRESENT | PAGE_WRITABLE | (flags & PAGE_USER);
     }
-
+    else if (flags & PAGE_USER)
+    {
+        pml4->entries[pml4_idx] |= PAGE_USER;
+    }
     page_table_t *pdpt = (page_table_t *)((pml4->entries[pml4_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
-
     if (!(pdpt->entries[pdpt_idx] & PAGE_PRESENT))
     {
         uint64_t pd_phys = alloc_page();
@@ -398,9 +400,11 @@ void map_page(page_table_t *pml4, uint64_t virt, uint64_t phys, uint64_t flags)
         memset(pd, 0, PAGE_SIZE);
         pdpt->entries[pdpt_idx] = pd_phys | PAGE_PRESENT | PAGE_WRITABLE | (flags & PAGE_USER);
     }
-
+    else if (flags & PAGE_USER)
+    {
+        pdpt->entries[pdpt_idx] |= PAGE_USER;
+    }
     page_table_t *pd = (page_table_t *)((pdpt->entries[pdpt_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
-
     if (!(pd->entries[pd_idx] & PAGE_PRESENT))
     {
         uint64_t pt_phys = alloc_page();
@@ -410,9 +414,22 @@ void map_page(page_table_t *pml4, uint64_t virt, uint64_t phys, uint64_t flags)
         memset(pt, 0, PAGE_SIZE);
         pd->entries[pd_idx] = pt_phys | PAGE_PRESENT | PAGE_WRITABLE | (flags & PAGE_USER);
     }
+    else if (flags & PAGE_USER)
+    {
+            if (pd->entries[pd_idx] & (1ULL << 7)) {
+                uint64_t pt_phys = alloc_page();
+                if (!pt_phys)
+                    return;
+                page_table_t *pt = (page_table_t *)(pt_phys + KERNEL_VIRT_OFFSET);
+                memset(pt, 0, PAGE_SIZE);
+                pd->entries[pd_idx] = pt_phys | PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
+            } else {
+                pd->entries[pd_idx] |= PAGE_USER;
+            }
+    }
 
     page_table_t *pt = (page_table_t *)((pd->entries[pd_idx] & 0xFFFFFFFFFFFFF000) + KERNEL_VIRT_OFFSET);
-    pt->entries[pt_idx] = phys | flags;
+    pt->entries[pt_idx] = (phys & 0x000FFFFFFFFFF000) | (flags & 0x8000000000000FFF);
 }
 
 void switch_page_directory(page_table_t *pml4)

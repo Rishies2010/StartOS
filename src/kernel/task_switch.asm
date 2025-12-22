@@ -3,6 +3,7 @@ section .text
 global task_switch
 
 task_switch:
+    mov [rdi + 0], ds
     mov [rdi + 8], r15
     mov [rdi + 16], r14
     mov [rdi + 24], r13
@@ -20,28 +21,24 @@ task_switch:
     mov [rdi + 120], rax
     mov rax, [rsp]
     mov [rdi + 144], rax
-    
+    mov ax, cs
+    mov [rdi + 152], rax
     pushfq
     pop rax
-    mov [rdi + 160], rax        ; save RFLAGS
-    
+    mov [rdi + 160], rax
     lea rax, [rsp + 8]
-    mov [rdi + 168], rax        ; save RSP
-    
+    mov [rdi + 168], rax
     mov ax, ss
-    mov [rdi + 176], rax        ; save SS
-    
-    mov ax, cs
-    mov [rdi + 152], rax        ; save CS
-    
-    mov ax, ds
-    mov [rdi + 0], rax          ; save DS
-
+    mov [rdi + 176], rax
     mov rax, [rsi + 152]
     test rax, 3
-    jnz .switch_to_user
-
-.switch_to_kernel:
+    jnz .user_mode
+    
+.kernel_mode:
+    mov ax, [rsi + 0]
+    mov ds, ax
+    mov es, ax
+    
     mov r15, [rsi + 8]
     mov r14, [rsi + 16]
     mov r13, [rsi + 24]
@@ -55,30 +52,25 @@ task_switch:
     mov rcx, [rsi + 104]
     mov rbx, [rsi + 112]
     mov rax, [rsi + 120]
-    
-    mov r15w, [rsi + 0]
-    mov ds, r15w
-    mov es, r15w
-    
     mov rsp, [rsi + 168]
-    
     push qword [rsi + 160]
     popfq
-    
     mov rdi, [rsi + 80]
-    mov r15, [rsi + 88]
+    push qword [rsi + 88]
     push qword [rsi + 144]
-    mov rsi, r15
-    ret
+    pop rax
+    pop rsi
+    jmp rax
 
-.switch_to_user:
-    mov rsp, [rsi + 168]    
+.user_mode:
     push qword [rsi + 176]      ; SS
-    push qword [rsi + 168]      ; RSP (user stack)
-    push qword [rsi + 160]      ; RFLAGS
+    push qword [rsi + 168]      ; RSP
+    push qword [rsi + 160]      ; RFLAGS  
     push qword [rsi + 152]      ; CS
     push qword [rsi + 144]      ; RIP
-    
+    mov ax, [rsi + 0]
+    mov ds, ax
+    mov es, ax
     mov r15, [rsi + 8]
     mov r14, [rsi + 16]
     mov r13, [rsi + 24]
@@ -92,14 +84,8 @@ task_switch:
     mov rcx, [rsi + 104]
     mov rbx, [rsi + 112]
     mov rax, [rsi + 120]
-    mov edi, [rsi + 176]
-    mov ds, di
-    mov es, di
-    mov fs, di
-    mov gs, di
-    
-    ; Restore rdi, rsi last
     mov rdi, [rsi + 80]
     mov rsi, [rsi + 88]
     
+    ; Jump to user mode
     iretq

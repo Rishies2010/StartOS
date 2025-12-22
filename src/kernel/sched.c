@@ -20,7 +20,7 @@ void task_exit(void)
     asm volatile("sti");
     log("Task %s exited.", 1, 0, current_task->name);
     sched_yield();
-    log("A Task Exit Function Returned.", 0, 1);
+    log("A Task exit function returned.", 0, 1);
 }
 
 static void task_entry_wrapper(void)
@@ -28,18 +28,15 @@ static void task_entry_wrapper(void)
     if (!current_task)
     {
         asm volatile("cli; hlt");
-        while (1)
-            ;
+        while (1);
     }
     asm volatile("sti");
 
     void (*entry)(void) = (void (*)(void))current_task->regs.rbx;
-
     if (!entry)
     {
         asm volatile("cli; hlt");
-        while (1)
-            ;
+        while (1);
     }
     entry();
     task_exit();
@@ -56,36 +53,29 @@ void sched_init(void)
 
 void sched_start(void)
 {
-    if (!current_task)
-    {
-        log("No tasks created before sched_start();", 3, 1);
-        return;
-    }
-    scheduler_enabled = 1;
+    if (!current_task) return;
     log("Scheduler enabled.", 4, 0);
+    scheduler_enabled = 1;
 }
 
-task_t *task_create(void (*entry)(void), const char *name)
+task_t *task_create_user(void (*entry)(void), const char *name)
 {
     spinlock_acquire(&sched_lock);
-
     task_t *task = (task_t *)kmalloc(sizeof(task_t));
     if (!task)
     {
         spinlock_release(&sched_lock);
         return NULL;
     }
-
     memset(task, 0, sizeof(task_t));
-
     task->pid = next_pid++;
     strncpy(task->name, name, 63);
     task->name[63] = '\0';
     task->state = TASK_READY;
     task->time_slice_remaining = TIME_SLICE;
     task->stack_size = TASK_STACK_SIZE;
-    task->is_kernel_task = 1;
-
+    task->is_kernel_task = 0;
+    
     task->kernel_stack = (uint64_t)kmalloc(TASK_STACK_SIZE);
     if (!task->kernel_stack)
     {
@@ -93,22 +83,45 @@ task_t *task_create(void (*entry)(void), const char *name)
         spinlock_release(&sched_lock);
         return NULL;
     }
-
     memset((void *)task->kernel_stack, 0, TASK_STACK_SIZE);
-    task->user_stack = 0;
+    
+    uint64_t user_stack_base = 0x700000000000;
+    page_table_t *pml4 = get_kernel_pml4();
+    size_t stack_pages = (TASK_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE;
+    
+    for (size_t i = 0; i < stack_pages; i++)
+    {
+        uint64_t phys = alloc_page();
+        if (!phys)
+        {
+            for (size_t j = 0; j < i; j++)
+            {
+                uint64_t p = virt_to_phys(pml4, user_stack_base + j * PAGE_SIZE);
+                if (p) free_page(p);
+                unmap_page(pml4, user_stack_base + j * PAGE_SIZE);
+            }
+            kfree((void*)task->kernel_stack);
+            kfree(task);
+            spinlock_release(&sched_lock);
+            return NULL;
+        }
+        map_page(pml4, user_stack_base + i * PAGE_SIZE, phys, PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER);
+    }
+    
+    __asm__ volatile("mov %%cr3, %%rax; mov %%rax, %%cr3" ::: "rax", "memory");
+    task->user_stack = user_stack_base;
+    
     memset(&task->regs, 0, sizeof(registers_t));
-
-    uint64_t stack_top = task->kernel_stack + TASK_STACK_SIZE;
-    stack_top &= ~0xFULL;
-    task->regs.rip = (uint64_t)task_entry_wrapper;
-    task->regs.rbx = (uint64_t)entry;
-    task->regs.rbp = stack_top;
-    task->regs.userrsp = stack_top;
+    uint64_t user_stack_top = user_stack_base + TASK_STACK_SIZE;
+    user_stack_top &= ~0xFULL;
+    
+    task->regs.rip = (uint64_t)entry;
+    task->regs.rbp = user_stack_top;
+    task->regs.userrsp = user_stack_top;
     task->regs.rflags = 0x202;
-    task->regs.cs = 0x08;
-    task->regs.ss = 0x10;
-    task->regs.ds = 0x10;
-
+    task->regs.cs = 0x1B;
+    task->regs.ss = 0x23;
+    task->regs.ds = 0x23;
     task->regs.rax = 0;
     task->regs.rcx = 0;
     task->regs.rdx = 0;
@@ -122,7 +135,7 @@ task_t *task_create(void (*entry)(void), const char *name)
     task->regs.r13 = 0;
     task->regs.r14 = 0;
     task->regs.r15 = 0;
-
+    
     if (!task_list_head)
     {
         task_list_head = task;
@@ -141,10 +154,85 @@ task_t *task_create(void (*entry)(void), const char *name)
         task_list_head->next = task;
         task->next = old_next;
     }
-
+    log("Created user task: %s (PID %d)", 1, 0, name, task->pid);
+    
     spinlock_release(&sched_lock);
+    return task;
+}
 
+task_t *task_create(void (*entry)(void), const char *name)
+{
+    spinlock_acquire(&sched_lock);
+    task_t *task = (task_t *)kmalloc(sizeof(task_t));
+    if (!task)
+    {
+        spinlock_release(&sched_lock);
+        return NULL;
+    }
+    memset(task, 0, sizeof(task_t));
+    task->pid = next_pid++;
+    strncpy(task->name, name, 63);
+    task->name[63] = '\0';
+    task->state = TASK_READY;
+    task->time_slice_remaining = TIME_SLICE;
+    task->stack_size = TASK_STACK_SIZE;
+    task->is_kernel_task = 1;
+    
+    task->kernel_stack = (uint64_t)kmalloc(TASK_STACK_SIZE);
+    if (!task->kernel_stack)
+    {
+        kfree(task);
+        spinlock_release(&sched_lock);
+        return NULL;
+    }
+    memset((void *)task->kernel_stack, 0, TASK_STACK_SIZE);
+    task->user_stack = 0;
+    
+    memset(&task->regs, 0, sizeof(registers_t));
+    uint64_t stack_top = task->kernel_stack + TASK_STACK_SIZE;
+    stack_top &= ~0xFULL;
+    
+    task->regs.rip = (uint64_t)task_entry_wrapper;
+    task->regs.rbx = (uint64_t)entry;
+    task->regs.rbp = stack_top;
+    task->regs.userrsp = stack_top;
+    task->regs.rflags = 0x202;
+    task->regs.cs = 0x08;
+    task->regs.ss = 0x10;
+    task->regs.ds = 0x10;
+    task->regs.rcx = 0;
+    task->regs.rdx = 0;
+    task->regs.rsi = 0;
+    task->regs.rdi = 0;
+    task->regs.r8 = 0;
+    task->regs.r9 = 0;
+    task->regs.r10 = 0;
+    task->regs.r11 = 0;
+    task->regs.r12 = 0;
+    task->regs.r13 = 0;
+    task->regs.r14 = 0;
+    task->regs.r15 = 0;
+    
+    if (!task_list_head)
+    {
+        task_list_head = task;
+        task->next = task;
+        task->state = TASK_RUNNING;
+        current_task = task;
+    }
+    else if (task_list_head->next == task_list_head)
+    {
+        task_list_head->next = task;
+        task->next = task_list_head;
+    }
+    else
+    {
+        task_t *old_next = task_list_head->next;
+        task_list_head->next = task;
+        task->next = old_next;
+    }
     log("Created kernel task: %s (PID %d)", 1, 0, name, task->pid);
+    spinlock_release(&sched_lock);
     return task;
 }
 
@@ -152,54 +240,51 @@ static task_t *get_next_task(void)
 {
     if (!current_task || !current_task->next)
         return NULL;
-
+    
     task_t *start = current_task->next;
     task_t *iter = start;
-
+    
     do
     {
         if (iter->state == TASK_READY || iter->state == TASK_RUNNING)
             return iter;
         iter = iter->next;
     } while (iter != start);
-
+    
     return current_task;
 }
 
 void sched_yield(void)
 {
-    if (!scheduler_enabled)
-        return;
-
+    if (!scheduler_enabled) return;
+    
     uint64_t rflags;
     asm volatile("pushfq; pop %0; cli" : "=r"(rflags));
-
+    
     if (!current_task)
     {
-        if (rflags & 0x200)
-            asm volatile("sti");
+        if (rflags & 0x200) asm volatile("sti");
         return;
     }
-
+    
     task_t *old_task = current_task;
     task_t *new_task = get_next_task();
-
+    
     if (new_task == old_task)
     {
-        if (rflags & 0x200)
-            asm volatile("sti");
+        if (rflags & 0x200) asm volatile("sti");
         return;
     }
-
+    
     if (old_task->state == TASK_RUNNING)
         old_task->state = TASK_READY;
-
+    
     old_task->time_slice_remaining = TIME_SLICE;
     new_task->state = TASK_RUNNING;
     new_task->time_slice_remaining = TIME_SLICE;
-
+    
     tss.rsp0 = new_task->kernel_stack + TASK_STACK_SIZE;
-
+    
     task_t *prev_task = current_task;
     current_task = new_task;
     task_switch(&prev_task->regs, &new_task->regs);
@@ -207,14 +292,11 @@ void sched_yield(void)
 
 void sched_tick(void)
 {
-    if (!scheduler_enabled || !current_task)
-        return;
-
+    if (!scheduler_enabled || !current_task) return;
+    
     if (current_task->time_slice_remaining > 0)
-    {
         current_task->time_slice_remaining--;
-    }
-
+    
     if (current_task->time_slice_remaining == 0)
         sched_yield();
 }

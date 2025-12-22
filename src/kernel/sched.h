@@ -32,6 +32,7 @@ typedef struct task
 void sched_init(void);
 void sched_start(void);
 task_t *task_create(void (*entry)(void), const char *name);
+task_t *task_create_user(void (*entry)(void), const char *name);
 void sched_yield(void);
 void sched_tick(void);
 task_t *sched_current_task(void);

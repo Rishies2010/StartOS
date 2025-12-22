@@ -58,9 +58,6 @@ void init(void){
     log("Starting init.", 1, 0);
     if(elf_exec("init", 0, NULL) != SFS_OK)
         log("No init program found.", 0, 0);
-    log("Running busytest.", 1, 0);
-    if(elf_exec("busy", 0, NULL) != SFS_OK)
-        log("No busy program found.", 0, 0);    
 }
 
 void idle(void){
