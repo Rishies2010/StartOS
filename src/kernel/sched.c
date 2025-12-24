@@ -48,6 +48,8 @@ void sched_init(void)
     task_list_head = NULL;
     current_task = NULL;
     scheduler_enabled = 0;
+    extern struct tss_struct tss;
+    tss.rsp0 = 0;
     log("Scheduler initialized.", 4, 0);
 }
 
@@ -236,6 +238,76 @@ task_t *task_create(void (*entry)(void), const char *name)
     return task;
 }
 
+static void reap_dead_tasks(void)
+{
+    if (!task_list_head) return;
+    
+    task_t *iter = task_list_head;
+    task_t *prev = NULL;
+    task_t *start = task_list_head;
+    int is_first = 1;
+    
+    do
+    {
+        task_t *next = iter->next;
+        
+        if (iter->state == TASK_DEAD && iter != current_task)
+        {
+            if (iter->kernel_stack)
+            {
+                kfree((void*)iter->kernel_stack);
+            }
+            
+            if (iter->user_stack && !iter->is_kernel_task)
+            {
+                page_table_t *pml4 = get_kernel_pml4();
+                size_t stack_pages = (TASK_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE;
+                for (size_t i = 0; i < stack_pages; i++)
+                {
+                    uint64_t phys = virt_to_phys(pml4, iter->user_stack + i * PAGE_SIZE);
+                    if (phys)
+                    {
+                        free_page(phys);
+                        unmap_page(pml4, iter->user_stack + i * PAGE_SIZE);
+                    }
+                }
+            }
+            
+            if (iter == task_list_head)
+            {
+                if (task_list_head->next == task_list_head)
+                {
+                    task_list_head = NULL;
+                    kfree(iter);
+                    return;
+                }
+                task_list_head = next;
+                
+                task_t *last = task_list_head;
+                while (last->next != iter)
+                    last = last->next;
+                last->next = task_list_head;
+                
+                kfree(iter);
+                iter = task_list_head;
+                start = task_list_head;
+                continue;
+            }
+            
+            if (prev)
+                prev->next = next;
+            
+            kfree(iter);
+            iter = next;
+            continue;
+        }
+        
+        prev = iter;
+        iter = next;
+        is_first = 0;
+    } while (iter != start);
+}
+
 static task_t *get_next_task(void)
 {
     if (!current_task || !current_task->next)
@@ -260,6 +332,8 @@ void sched_yield(void)
     
     uint64_t rflags;
     asm volatile("pushfq; pop %0; cli" : "=r"(rflags));
+    
+    reap_dead_tasks();
     
     if (!current_task)
     {
