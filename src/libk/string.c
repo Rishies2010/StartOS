@@ -5,6 +5,7 @@
 static char* strtok_save = NULL;
 
 size_t strlen(const char* str) {
+    if (!str) return 0;
     size_t len = 0;
     while (str[len]) {
         len++;
@@ -13,6 +14,7 @@ size_t strlen(const char* str) {
 }
 
 char* strcpy(char* dest, const char* src) {
+    if (!dest || !src) return dest;
     char* start = dest;
     while ((*dest++ = *src++));
     return start;
@@ -94,6 +96,7 @@ char* strrchr(const char* str, int c) {
 }
 
 void* memcpy(void* dest, const void* src, size_t size) {
+    if (!dest || !src || size == 0) return dest; 
     unsigned char* d = (unsigned char*)dest;
     const unsigned char* s = (const unsigned char*)src;
     while (size--) {
