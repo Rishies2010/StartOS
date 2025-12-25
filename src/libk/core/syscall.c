@@ -48,10 +48,6 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
         case SYSCALL_GETKEY:
             __asm__ __volatile__("sti");
             return (uint64_t)get_key();
-        case SYSCALL_PRINTC:
-            printc((char)arg1);
-            __asm__ __volatile__("sti");
-            return 0;
         case SYSCALL_PRINTS: {
             const char *str = (const char*)arg1;
             uint32_t len = arg2;
@@ -77,10 +73,6 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
             return 0;
         case SYSCALL_SPEAKER_OFF:
             speaker_pause();
-            __asm__ __volatile__("sti");
-            return 0;
-        case SYSCALL_CLEAR:
-            clr();
             __asm__ __volatile__("sti");
             return 0;
         case SYSCALL_OPEN: {

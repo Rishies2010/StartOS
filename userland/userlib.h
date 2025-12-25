@@ -25,16 +25,12 @@ static inline uint64_t syscall2(uint64_t num, uint64_t arg1, uint64_t arg2) {
 
 static inline void exit(int code) {
     (void)code;
-    syscall0(0);
+    syscall0(1);
     while(1);
 }
 
 static inline char getkey(void) {
-    return (char)syscall0(1);
-}
-
-static inline void printc(char c) {
-    syscall1(2, (uint64_t)c);
+    return (char)syscall0(2);
 }
 
 static inline void prints(const char *str) {
@@ -62,10 +58,6 @@ static inline void speaker_play(uint32_t hz) {
 
 static inline void speaker_stop(void) {
     syscall0(8);
-}
-
-static inline void clear_screen(void) {
-    syscall0(16);
 }
 
 #endif

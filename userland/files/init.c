@@ -1,12 +1,7 @@
 #include "../userlib.h"
 
 int main(void) {
-    clear_screen();
-    prints("Hello from userspace!\n");
-    prints("Syscalls working!\n");
+    prints("\nInit has no work to do.\nPausing...\n");
     
-    printc('A');
-    printc('\n');
-    
-    exit(0);
+    exit(1);
 }
