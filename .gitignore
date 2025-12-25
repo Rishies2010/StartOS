@@ -4,3 +4,4 @@ iso/
 build/
 *.iso
 sfs_man
+*.elf
