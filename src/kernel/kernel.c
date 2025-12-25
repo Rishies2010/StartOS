@@ -6,6 +6,7 @@
 #include "../libk/debug/log.h"
 #include "../libk/core/mem.h"
 #include "../libk/core/socket.h"
+#include "../libk/core/syscall.h"
 #include "../libk/string.h"
 #include "../libk/ports.h"
 #include "../cpu/gdt.h"
@@ -73,6 +74,7 @@ void _start(void)
     vga_init();
     init_gdt();
     init_idt();
+    init_syscalls();
     AcpiInit();
     LocalApicInit();
     IoApicInit();
