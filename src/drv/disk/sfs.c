@@ -41,9 +41,7 @@ static int find_entry(const char *name, uint8_t parent, uint8_t type)
         if (entry_table[i].type == type &&
             entry_table[i].parent_index == parent &&
             strcmp(entry_table[i].name, name) == 0)
-        {
-            return i;
-        }
+        return i;
     }
     return -1;
 }
@@ -518,12 +516,15 @@ sfs_error_t sfs_create(const char *filename, uint32_t size)
 
 sfs_error_t sfs_open(const char *filename, sfs_file_t *file)
 {
-    if (!initialized)
+    __asm__ volatile("cli"); 
+    if (!initialized) {
+        __asm__ volatile("sti"); 
         return SFS_ERR_NOT_INITIALIZED;
-
-    if (!filename || !file)
+    }
+    if (!filename || !file) {
+        __asm__ volatile("sti");
         return SFS_ERR_INVALID_PARAM;
-
+    }
     uint8_t parent;
     char name[SFS_MAX_FILENAME];
 
@@ -547,6 +548,7 @@ sfs_error_t sfs_open(const char *filename, sfs_file_t *file)
     file->is_open = 1;
 
     log("StartFS: Opened '%s' (%d bytes)", 1, 0, name, file->size);
+    __asm__ volatile("sti");
     return SFS_OK;
 }
 

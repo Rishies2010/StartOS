@@ -73,7 +73,7 @@ void log_internal(const char *file, int line, const char *fmt, int level, int vi
     if (level < 1 || level > 4)
     {
         sound_err();
-        snprintf(header, 256, " -> KERNEL PANIC !\n\n   - At : %s:%d.\n\n   - ERROR MESSAGE : ", file, line);
+        snprintf(header, 256, "\nInduced Kernel Panic\n\n    - At : %s\n    - Line : %d.\n\n    - Error Log : ", file, line);
     }
     else
         snprintf(header, 256, "[%s:%d]- ", file, line);

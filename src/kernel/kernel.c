@@ -84,7 +84,12 @@ void _start(void)
     enable_sse_and_fpu();
     detect_cpu_info(0);
     ata_init();
-    sfs_init(0);
+    if(sfs_init(0) != SFS_OK){
+        log("Unable to mount filesystem. Formatting the drive...", 2, 1);
+        if(sfs_format(0) != SFS_OK){
+            log("Error formatting the drive.", 3, 1);
+        }
+    }
     init_keyboard();
     mouse_init();
     init_smp();
