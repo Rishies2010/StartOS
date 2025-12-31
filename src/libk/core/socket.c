@@ -22,7 +22,7 @@ void socket_init(void)
 
     initialized = true;
 
-    log("Socket filesystem initialized (%d files, %dKB each)", 4, 0,
+    log("Sockets initialized (%d files, %dKB each)", 4, 0,
         SOCKET_MAX_FILES, SOCKET_FILE_SIZE / 1024);
 }
 

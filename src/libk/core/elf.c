@@ -71,7 +71,7 @@ int elf_exec(const char *filename, int argc, char **argv)
             kfree(elf_data);
             return -1;
         }
-        map_page(pml4, user_virt + i * PAGE_SIZE, phys, PAGE_PRESENT | PAGE_USER);
+        map_page(pml4, user_virt + i * PAGE_SIZE, phys, PAGE_PRESENT | PAGE_USER | PAGE_WRITABLE);
         uint64_t kern_addr = phys + KERNEL_VIRT_OFFSET;
         memset((void*)kern_addr, 0, PAGE_SIZE);
     }

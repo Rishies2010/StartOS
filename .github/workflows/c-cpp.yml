@@ -18,3 +18,10 @@ jobs:
 
     - name: Building with make...
       run: make
+
+    - name: Upload ISO
+      uses: actions/upload-artifact@v4
+      with:
+        name: StartOS.iso
+        path: StartOS.iso
+        if-no-files-found: error
