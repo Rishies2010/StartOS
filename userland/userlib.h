@@ -23,6 +23,12 @@ static inline uint64_t syscall2(uint64_t num, uint64_t arg1, uint64_t arg2) {
     return ret;
 }
 
+static inline uint64_t syscall3(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t arg3) {
+    uint64_t ret;
+    __asm__ volatile("syscall" : "=a"(ret) : "a"(num), "D"(arg1), "S"(arg2), "d"(arg3) : "rcx", "r11", "memory");
+    return ret;
+}
+
 static inline void exit(int code) {
     (void)code;
     syscall0(1);
@@ -58,6 +64,14 @@ static inline void speaker_play(uint32_t hz) {
 
 static inline void speaker_stop(void) {
     syscall0(8);
+}
+
+static inline void log(const char *msg, uint32_t level, uint32_t visibility) {
+    syscall3(16, (uint64_t)msg, level, visibility);
+}
+
+static inline void sleep(uint32_t ms) {
+    syscall1(17, ms);
 }
 
 #endif

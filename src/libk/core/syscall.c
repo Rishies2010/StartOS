@@ -6,6 +6,7 @@
 #include "../../drv/vga.h"
 #include "../../drv/disk/sfs.h"
 #include "../../kernel/sched.h"
+#include "../../drv/rtc.h"
 
 extern void syscall_entry(void);
 
@@ -117,6 +118,23 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
     
             return sfs_delete(filename);
         }
+        case SYSCALL_LOG: {
+            const char *msg = (const char*)arg1;
+            uint32_t level = (uint32_t)arg2;
+            uint32_t visibility = (uint32_t)arg3;
+            if (!msg || level > 4) return -1;
+            __asm__ __volatile__("sti");
+            log("%s", level, visibility, msg);
+            return 0;
+        }
+        
+        case SYSCALL_SLEEP: {
+            uint32_t ms = (uint32_t)arg1;
+            __asm__ __volatile__("sti");
+            sleep(ms);
+            return 0;
+        }
+
         default:
             log("Unknown syscall: %lu", 2, 0, num);
     
