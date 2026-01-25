@@ -244,7 +244,6 @@ static void reap_dead_tasks(void)
     task_t *iter = task_list_head;
     task_t *prev = NULL;
     task_t *start = task_list_head;
-    int is_first = 1;
     
     do
     {
@@ -303,7 +302,6 @@ static void reap_dead_tasks(void)
         
         prev = iter;
         iter = next;
-        is_first = 0;
     } while (iter != start);
 }
 

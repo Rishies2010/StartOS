@@ -6,6 +6,8 @@
 
 int elf_exec(const char *filename, int argc, char **argv)
 {
+    (void)argc;
+    (void)argv;
     sfs_file_t file;
     if (sfs_open(filename, &file) != SFS_OK)
         return -1;
