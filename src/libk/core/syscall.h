@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#define SYSCALL_EXEC        0
 #define SYSCALL_EXIT        1
 #define SYSCALL_GETKEY      2
 #define SYSCALL_PRINTS      3

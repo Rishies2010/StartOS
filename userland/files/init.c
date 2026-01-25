@@ -68,10 +68,30 @@ static int strlen(const char* s) {
 
 // ============ COMMANDS ============
 
+static void cmd_exec(int argc, char* argv[]) {
+    if (argc < 2) {
+        prints(COLOR_RED "Usage: exec <filename>\n" COLOR_RESET);
+        return;
+    }
+    
+    prints(COLOR_YELLOW "Executing: " COLOR_RESET);
+    prints(argv[1]);
+    prints("\n");
+    
+    int result = exec(argv[1]);
+    
+    if (result != 0) {
+        prints(COLOR_RED "Failed to execute: " COLOR_RESET);
+        prints(argv[1]);
+        prints("\n");
+    }
+}
+
 static void cmd_help(void) {
     prints(COLOR_CYAN "Available commands:\n" COLOR_RESET);
     prints("  help      - Show this help message\n");
     prints("  clear     - Clear the screen\n");
+    prints("  exec      - Execute a program file\n");
     prints("  echo      - Print arguments\n");
     prints("  version   - Show OS version\n");
     prints("  exit      - Exit shell\n");
@@ -197,6 +217,9 @@ static int execute_command(void) {
     // Command dispatch
     if (strcmp(argv[0], "help") == 0) {
         cmd_help();
+    }
+    else if (strcmp(argv[0], "exec") == 0) {
+        cmd_exec(argc, argv);  
     }
     else if (strcmp(argv[0], "clear") == 0) {
         cmd_clear();

@@ -1,4 +1,5 @@
 #include "syscall.h"
+#include "elf.h"
 #include "../debug/log.h"
 #include "../../drv/keyboard.h"
 #include "../../drv/mouse.h"
@@ -36,18 +37,19 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
     (void)arg5;
     
     switch(num) {
-        case SYSCALL_EXIT:
+        case SYSCALL_EXIT: {
             log("Task exiting.", 1, 0);
             task_t *current = sched_current_task();
             if (current) {
                 current->state = TASK_DEAD;
             }
-    
             sched_yield();
             return 0;
+        }
+        
         case SYSCALL_GETKEY:
-    
             return (uint64_t)get_key();
+        
         case SYSCALL_PRINTS: {
             const char *str = (const char*)arg1;
             uint32_t len = arg2;
@@ -55,25 +57,24 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
             for (uint32_t i = 0; i < len && str[i]; i++) {
                 printc(str[i]);
             }
-    
             return 0;
         }
+        
         case SYSCALL_MOUSE_X:
-    
             return mouse_x();
+        
         case SYSCALL_MOUSE_Y:
-    
             return mouse_y();
+        
         case SYSCALL_MOUSE_BTN:
-    
             return mouse_button();
+        
         case SYSCALL_SPEAKER:
             speaker_play((uint32_t)arg1);
-    
             return 0;
+        
         case SYSCALL_SPEAKER_OFF:
             speaker_pause();
-    
             return 0;
         case SYSCALL_OPEN: {
             const char *filename = (const char*)arg1;
@@ -118,26 +119,30 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
     
             return sfs_delete(filename);
         }
+        
         case SYSCALL_LOG: {
             const char *msg = (const char*)arg1;
             uint32_t level = (uint32_t)arg2;
             uint32_t visibility = (uint32_t)arg3;
             if (!msg || level > 4) return -1;
-            __asm__ __volatile__("sti");
             log("%s", level, visibility, msg);
             return 0;
         }
         
         case SYSCALL_SLEEP: {
             uint32_t ms = (uint32_t)arg1;
-            __asm__ __volatile__("sti");
             sleep(ms);
             return 0;
         }
-
+        
+        case SYSCALL_EXEC: {
+            const char *filename = (const char*)arg1;
+            if (!filename) return -1;
+            int result = elf_exec(filename, 0, NULL);
+            return result;
+        }
         default:
             log("Unknown syscall: %lu", 2, 0, num);
-    
             return -1;
     }
 }

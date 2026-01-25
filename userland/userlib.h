@@ -29,6 +29,10 @@ static inline uint64_t syscall3(uint64_t num, uint64_t arg1, uint64_t arg2, uint
     return ret;
 }
 
+static inline int exec(const char *filename) {
+    return (int)syscall1(0, (uint64_t)filename);
+}
+
 static inline void exit(int code) {
     (void)code;
     syscall0(1);
