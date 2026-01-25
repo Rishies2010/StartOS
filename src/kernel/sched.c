@@ -13,6 +13,8 @@ static uint64_t next_pid = 0;
 static spinlock_t sched_lock = {0};
 static volatile int scheduler_enabled = 0;
 
+extern void user_task_entry(void);
+
 void task_exit(void)
 {
     asm volatile("cli");
@@ -60,6 +62,10 @@ void sched_start(void)
     scheduler_enabled = 1;
 }
 
+// At the top, add extern
+extern void user_task_entry(void);
+
+// In task_create_user, change the register setup:
 task_t *task_create_user(void (*entry)(void), const char *name)
 {
     spinlock_acquire(&sched_lock);
@@ -116,27 +122,20 @@ task_t *task_create_user(void (*entry)(void), const char *name)
     memset(&task->regs, 0, sizeof(registers_t));
     uint64_t user_stack_top = user_stack_base + TASK_STACK_SIZE;
     user_stack_top &= ~0xFULL;
+    user_stack_top -= 8;  // ABI alignment
     
-    task->regs.rip = (uint64_t)entry;
-    task->regs.rbp = user_stack_top;
-    task->regs.userrsp = user_stack_top;
+    // Setup for user_task_entry trampoline
+    task->regs.rip = (uint64_t)user_task_entry;
+    task->regs.rdi = (uint64_t)entry;      // arg1: user entry point
+    task->regs.rsi = user_stack_top;       // arg2: user stack
+    task->regs.rbp = task->kernel_stack + TASK_STACK_SIZE - 16;
+    task->regs.userrsp = task->kernel_stack + TASK_STACK_SIZE - 16;
     task->regs.rflags = 0x202;
-    task->regs.cs = 0x1B;
-    task->regs.ss = 0x23;
-    task->regs.ds = 0x23;
-    task->regs.rax = 0;
-    task->regs.rcx = 0;
-    task->regs.rdx = 0;
-    task->regs.rsi = 0;
-    task->regs.rdi = 0;
-    task->regs.r8 = 0;
-    task->regs.r9 = 0;
-    task->regs.r10 = 0;
-    task->regs.r11 = 0;
-    task->regs.r12 = 0;
-    task->regs.r13 = 0;
-    task->regs.r14 = 0;
-    task->regs.r15 = 0;
+    task->regs.cs = 0x08;   // Kernel code (trampoline runs in kernel)
+    task->regs.ss = 0x10;   // Kernel stack
+    task->regs.ds = 0x10;
+    
+    // ... rest of existing code (adding to list, etc)
     
     if (!task_list_head)
     {

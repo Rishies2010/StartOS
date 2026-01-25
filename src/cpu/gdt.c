@@ -47,24 +47,18 @@ void init_gdt()
     gdt_ptr.limit = (sizeof(gdt_entry_t) * 7) - 1;
     gdt_ptr.base = (uint64_t)&gdt_entries;
 
-    gdt_set_gate(0, 0, 0, 0, 0);
-
-    gdt_set_gate(1, 0, 0xFFFFF, 0x9A, 0xAF);
-
-    gdt_set_gate(2, 0, 0xFFFFF, 0x92, 0xCF);
-
-    gdt_set_gate(3, 0, 0xFFFFF, 0xFA, 0xAF);
-
-    gdt_set_gate(4, 0, 0xFFFFF, 0xF2, 0xCF);
+    gdt_set_gate(0, 0, 0, 0, 0);                // 0x00 - Null
+    gdt_set_gate(1, 0, 0xFFFFF, 0x9A, 0xAF);    // 0x08 - Kernel Code
+    gdt_set_gate(2, 0, 0xFFFFF, 0x92, 0xCF);    // 0x10 - Kernel Data
+    gdt_set_gate(3, 0, 0xFFFFF, 0xF2, 0xCF);    // 0x18 - User Data (SWAPPED!)
+    gdt_set_gate(4, 0, 0xFFFFF, 0xFA, 0xAF);    // 0x20 - User Code (SWAPPED!)
 
     memset(&tss, 0, sizeof(tss_t));
     tss.iopb_offset = sizeof(tss_t);
-    gdt_set_tss(5, (uint64_t)&tss, sizeof(tss_t), 0x89, 0x00);
+    gdt_set_tss(5, (uint64_t)&tss, sizeof(tss_t), 0x89, 0x00);  // 0x28/0x30 - TSS
 
     load_gdt(&gdt_ptr);
-
     __asm__ volatile("ltr %0" : : "r"((uint16_t)(5 * 8)));
-
     log("GDT Installed.", 4, 0);
 }
 

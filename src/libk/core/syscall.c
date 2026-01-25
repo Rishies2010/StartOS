@@ -33,7 +33,6 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
 {
     (void)arg4;
     (void)arg5;
-    __asm__ __volatile__("cli");
     
     switch(num) {
         case SYSCALL_EXIT:
@@ -42,11 +41,11 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
             if (current) {
                 current->state = TASK_DEAD;
             }
-            __asm__ __volatile__("sti");
+    
             sched_yield();
             return 0;
         case SYSCALL_GETKEY:
-            __asm__ __volatile__("sti");
+    
             return (uint64_t)get_key();
         case SYSCALL_PRINTS: {
             const char *str = (const char*)arg1;
@@ -55,31 +54,31 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
             for (uint32_t i = 0; i < len && str[i]; i++) {
                 printc(str[i]);
             }
-            __asm__ __volatile__("sti");
+    
             return 0;
         }
         case SYSCALL_MOUSE_X:
-            __asm__ __volatile__("sti");
+    
             return mouse_x();
         case SYSCALL_MOUSE_Y:
-            __asm__ __volatile__("sti");
+    
             return mouse_y();
         case SYSCALL_MOUSE_BTN:
-            __asm__ __volatile__("sti");
+    
             return mouse_button();
         case SYSCALL_SPEAKER:
             speaker_play((uint32_t)arg1);
-            __asm__ __volatile__("sti");
+    
             return 0;
         case SYSCALL_SPEAKER_OFF:
             speaker_pause();
-            __asm__ __volatile__("sti");
+    
             return 0;
         case SYSCALL_OPEN: {
             const char *filename = (const char*)arg1;
             sfs_file_t *file = (sfs_file_t*)arg2;
             if (!filename || !file) return SFS_ERR_INVALID_PARAM;
-            __asm__ __volatile__("sti");
+    
             return sfs_open(filename, file);
         }
         case SYSCALL_READ: {
@@ -88,7 +87,7 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
             uint32_t size = (uint32_t)arg3;
             uint32_t *bytes_read = (uint32_t*)arg4;
             if (!file || !buffer) return SFS_ERR_INVALID_PARAM;
-            __asm__ __volatile__("sti");
+    
             return sfs_read(file, buffer, size, bytes_read);
         }
         case SYSCALL_WRITE: {
@@ -96,32 +95,31 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
             const void *buffer = (const void*)arg2;
             uint32_t size = (uint32_t)arg3;
             if (!file || !buffer) return SFS_ERR_INVALID_PARAM;
-            __asm__ __volatile__("sti");
+    
             return sfs_write(file, buffer, size);
         }
         case SYSCALL_CLOSE: {
             sfs_file_t *file = (sfs_file_t*)arg1;
             if (!file) return SFS_ERR_INVALID_PARAM;
-            __asm__ __volatile__("sti");
+    
             return sfs_close(file);
         }
         case SYSCALL_CREATE: {
             const char *filename = (const char*)arg1;
             uint32_t size = (uint32_t)arg2;
             if (!filename) return SFS_ERR_INVALID_PARAM;
-            __asm__ __volatile__("sti");
+    
             return sfs_create(filename, size);
         }
         case SYSCALL_DELETE: {
             const char *filename = (const char*)arg1;
             if (!filename) return SFS_ERR_INVALID_PARAM;
-            __asm__ __volatile__("sti");
+    
             return sfs_delete(filename);
         }
         default:
             log("Unknown syscall: %lu", 2, 0, num);
-            __asm__ __volatile__("sti");
+    
             return -1;
     }
-    __asm__ __volatile__("sti");
 }
