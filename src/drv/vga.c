@@ -8,7 +8,6 @@
 #include "vga.h"
 #include "term/flanterm.h"
 #include "term/flanterm_backends/fb.h"
-#include "../libk/gfx/font_8x8.h"
 #include "../libk/gfx/font_8x16.h"
 
 static volatile struct limine_framebuffer_request framebuffer_request = {
@@ -151,7 +150,7 @@ void vga_init(void)
         NULL, NULL,
         NULL, NULL,
         NULL, NULL,
-        (uint8_t *)font_8x16,
+        font_8x16,
         8, 16,
         0,
         0, 0,
@@ -172,11 +171,11 @@ void vga_init(void)
 
 void plotchar(char c, uint32_t x, uint32_t y, uint32_t fg)
 {
-    if ((uint8_t)c > 127)  // CHANGED: 8x8 font only has 128 chars
+    if ((uint8_t)c > 255)
         return;
 
-    const uint8_t *glyph = (const uint8_t *)font_8x8[(uint8_t)c];
-    for (int row = 0; row < 8; row++)  // CHANGED: 8 rows instead of 16
+    const uint8_t *glyph = font_8x16[(uint8_t)c];
+    for (int row = 0; row < 16; row++)
     {
         uint8_t line = glyph[row];
         for (int col = 0; col < 8; col++)
@@ -198,7 +197,7 @@ void draw_text_at(const char *str, uint32_t x, uint32_t y, uint32_t color)
     {
         if (str[i] == '\n')
         {
-            y += 8;  // CHANGED: 8 instead of 16
+            y += 16;
             x = start_x;
             continue;
         }
