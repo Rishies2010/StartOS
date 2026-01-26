@@ -218,7 +218,7 @@ static void AcpiParseFacp(AcpiFadt *facp)
 
 void AcpiShutdown()
 {
-    log("Shutting down...", 2, 1);
+    log("Shutting down...", 3, 1);
     if (!s_fadt || !s_s5_found)
     {
         asm volatile("outb %0, %1" : : "a"((uint8_t)0xFE), "Nd"((uint16_t)0x64));

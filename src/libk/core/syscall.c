@@ -141,6 +141,14 @@ uint64_t syscall_handler(uint64_t num, uint64_t arg1, uint64_t arg2, uint64_t ar
             int result = elf_exec(filename, 0, NULL);
             return result;
         }
+        
+        case SYSCALL_SHUTDOWN: {
+            shutdown();
+            for(;;){
+                __asm__ __volatile__("cli; hlt");
+            }
+        }
+
         default:
             log("Unknown syscall: %lu", 2, 0, num);
             return -1;

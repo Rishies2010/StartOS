@@ -1,5 +1,13 @@
 #ifndef IDT_H
 #define IDT_H
+#include <stdint.h>
+
+struct idt_ptr_struct
+{
+    uint16_t limit;
+    uint64_t base;
+} __attribute__((packed));
+typedef struct idt_ptr_struct idt_ptr_t;
 
 void init_idt();
 

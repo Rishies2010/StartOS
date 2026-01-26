@@ -25,51 +25,83 @@ typedef struct {
 static char command_buffer[MAX_COMMAND_LENGTH];
 static int buffer_pos = 0;
 
+// Safe string functions with null checks
+
+static int strlen(const char* s) {
+    if (!s) return 0;
+    int len = 0;
+    while (*s && len < 4096) {  // bounds check
+        s++;
+        len++;
+    }
+    return len;
+}
+
+static int strcmp(const char* s1, const char* s2) {
+    if (!s1 && !s2) return 0;
+    if (!s1) return -1;
+    if (!s2) return 1;
+    
+    int i = 0;
+    while (s1[i] && s2[i] && i < 4096) {  // bounds check
+        if (s1[i] != s2[i]) {
+            return (unsigned char)s1[i] - (unsigned char)s2[i];
+        }
+        i++;
+    }
+    return (unsigned char)s1[i] - (unsigned char)s2[i];
+}
+
+static void strcpy(char* dest, const char* src) {
+    if (!dest || !src) return;
+    
+    int i = 0;
+    while (src[i] && i < MAX_COMMAND_LENGTH - 1) {  // bounds check
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
+
+static void memset_char(char* ptr, char val, int size) {
+    if (!ptr || size <= 0) return;
+    for (int i = 0; i < size; i++) {
+        ptr[i] = val;
+    }
+}
+
 // Parse command into arguments
 static int parse_command(char* command, char* args[], int max_args) {
+    if (!command || !args || max_args <= 0) return 0;
+    
     int arg_count = 0;
     int in_arg = 0;
+    int i = 0;
     
-    while (*command && arg_count < max_args) {
-        if (*command == ' ' || *command == '\t') {
-            *command = '\0';
+    while (command[i] && arg_count < max_args && i < MAX_COMMAND_LENGTH) {
+        if (command[i] == ' ' || command[i] == '\t') {
+            command[i] = '\0';
             in_arg = 0;
         }
         else if (!in_arg) {
-            args[arg_count++] = command;
+            args[arg_count++] = &command[i];
             in_arg = 1;
         }
-        command++;
+        i++;
+    }
+    
+    // Null-terminate args array
+    if (arg_count < max_args) {
+        args[arg_count] = (char*)0;
     }
     
     return arg_count;
 }
 
-// String compare
-static int strcmp(const char* s1, const char* s2) {
-    while (*s1 && (*s1 == *s2)) {
-        s1++;
-        s2++;
-    }
-    return *(unsigned char*)s1 - *(unsigned char*)s2;
-}
-
-// String copy
-static void strcpy(char* dest, const char* src) {
-    while ((*dest++ = *src++));
-}
-
-// String length
-static int strlen(const char* s) {
-    int len = 0;
-    while (*s++) len++;
-    return len;
-}
-
 // ============ COMMANDS ============
 
 static void cmd_exec(int argc, char* argv[]) {
-    if (argc < 2) {
+    if (!argv || argc < 2 || !argv[1]) {
         prints(COLOR_RED "Usage: exec <filename>\n" COLOR_RESET);
         return;
     }
@@ -100,14 +132,17 @@ static void cmd_help(void) {
 }
 
 static void cmd_clear(void) {
-    // ANSI clear screen
     prints("\033[2J\033[H");
 }
 
 static void cmd_echo(int argc, char* argv[]) {
-    for (int i = 1; i < argc; i++) {
-        prints(argv[i]);
-        if (i < argc - 1) prints(" ");
+    if (!argv) return;
+    
+    for (int i = 1; i < argc && i < MAX_ARGS; i++) {
+        if (argv[i]) {
+            prints(argv[i]);
+            if (i < argc - 1) prints(" ");
+        }
     }
     prints("\n");
 }
@@ -169,31 +204,29 @@ static void show_prompt(void) {
 
 static void read_command(void) {
     buffer_pos = 0;
+    memset_char(command_buffer, 0, MAX_COMMAND_LENGTH);
     
     while (1) {
         char c = getkey();
         
         if (c == '\0') {
-            // No key pressed, yield and try again
             sleep(10);
             continue;
         }
         
         if (c == '\n' || c == '\r') {
-            // Enter pressed
             command_buffer[buffer_pos] = '\0';
             prints("\n");
             break;
         }
         else if (c == '\b' || c == 127) {
-            // Backspace
             if (buffer_pos > 0) {
                 buffer_pos--;
-                prints("\b \b");  // Erase character on screen
+                command_buffer[buffer_pos] = '\0';
+                prints("\b \b");
             }
         }
         else if (c >= 32 && c < 127) {
-            // Printable character
             if (buffer_pos < MAX_COMMAND_LENGTH - 1) {
                 command_buffer[buffer_pos++] = c;
                 char buf[2] = {c, '\0'};
@@ -205,16 +238,24 @@ static void read_command(void) {
 
 static int execute_command(void) {
     char cmd_copy[MAX_COMMAND_LENGTH];
+    char* argv[MAX_ARGS];
+    
+    // Initialize arrays
+    memset_char(cmd_copy, 0, MAX_COMMAND_LENGTH);
+    for (int i = 0; i < MAX_ARGS; i++) {
+        argv[i] = (char*)0;
+    }
+    
+    // Safe copy
     strcpy(cmd_copy, command_buffer);
     
-    char* argv[MAX_ARGS];
     int argc = parse_command(cmd_copy, argv, MAX_ARGS);
     
-    if (argc == 0) {
+    if (argc == 0 || !argv[0]) {
         return 1;  // Continue
     }
     
-    // Command dispatch
+    // Command dispatch with null checks
     if (strcmp(argv[0], "help") == 0) {
         cmd_help();
     }
@@ -232,7 +273,7 @@ static int execute_command(void) {
     }
     else if (strcmp(argv[0], "exit") == 0) {
         prints(COLOR_YELLOW "Exiting shell...\n" COLOR_RESET);
-        return 0;  // Exit
+        return 0;
     }
     else if (strcmp(argv[0], "beep") == 0) {
         cmd_beep();
@@ -240,14 +281,17 @@ static int execute_command(void) {
     else if (strcmp(argv[0], "test") == 0) {
         cmd_test();
     }
+    else if (strcmp(argv[0], "shutdown") == 0) {
+        shutdown();
+    }
     else {
         prints(COLOR_RED "Unknown command: " COLOR_RESET);
-        prints(argv[0]);
+        if (argv[0]) prints(argv[0]);
         prints("\n");
         prints("Type 'help' for available commands.\n");
     }
     
-    return 1;  // Continue
+    return 1;
 }
 
 static void show_banner(void) {
@@ -268,6 +312,9 @@ static void show_banner(void) {
 }
 
 int main(void) {
+    // Initialize buffer
+    memset_char(command_buffer, 0, MAX_COMMAND_LENGTH);
+    
     show_banner();
     
     while (1) {
@@ -275,7 +322,7 @@ int main(void) {
         read_command();
         
         if (!execute_command()) {
-            break;  // Exit requested
+            break;
         }
     }
     

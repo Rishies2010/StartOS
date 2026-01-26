@@ -1,4 +1,6 @@
-/* Copyright (C) 2022-2025 mintsuki and contributors.
+/* SPDX-License-Identifier: BSD-2-Clause */
+
+/* Copyright (C) 2022-2026 Mintsuki and contributors.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -42,6 +44,11 @@ extern "C" {
 
 #endif
 
+#define FLANTERM_FB_ROTATE_0 0
+#define FLANTERM_FB_ROTATE_90 1
+#define FLANTERM_FB_ROTATE_180 2
+#define FLANTERM_FB_ROTATE_270 3
+
 struct flanterm_context *flanterm_fb_init(
     /* If _malloc and _free are nulled, use the bump allocated instance (1 use only). */
     void *(*_malloc)(size_t size),
@@ -58,8 +65,12 @@ struct flanterm_context *flanterm_fb_init(
     void *font, size_t font_width, size_t font_height, size_t font_spacing,
     /* If scale_x and scale_y are 0, automatically scale font based on resolution. */
     size_t font_scale_x, size_t font_scale_y,
-    size_t margin
+    size_t margin,
+    /* One of FLANTERM_FB_ROTATE_* values. */
+    int rotation
 );
+
+void flanterm_fb_set_flush_callback(struct flanterm_context *ctx, void (*flush_callback)(volatile void *address, size_t length));
 
 #ifdef __cplusplus
 }

@@ -78,4 +78,8 @@ static inline void sleep(uint32_t ms) {
     syscall1(17, ms);
 }
 
+static inline void shutdown(void) {
+    syscall0(18);
+}
+
 #endif

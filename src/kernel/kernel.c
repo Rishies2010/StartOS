@@ -53,6 +53,7 @@ void play_bootup_sequence()
     for (int i = 0; i < 30000000; i++)
         asm volatile("nop");
     speaker_pause();
+    for(;;)__asm__ __volatile__("hlt");
 }
 
 void init(void){
@@ -62,7 +63,7 @@ void init(void){
 }
 
 void idle(void){
-    for(;;)asm volatile("hlt");
+    for(;;)sched_yield();
 }
 
 void _start(void)
@@ -71,9 +72,9 @@ void _start(void)
     init_pmm();
     init_vmm();
     init_kernel_heap();
-    vga_init();
     init_gdt();
     init_idt();
+    enable_sse_and_fpu();
     init_syscalls();
     AcpiInit();
     LocalApicInit();
@@ -81,7 +82,6 @@ void _start(void)
     sched_init();
     rtc_initialize();
     hpet_init(100);
-    enable_sse_and_fpu();
     detect_cpu_info(0);
     ata_init();
     if(sfs_init(0) != SFS_OK){
@@ -98,6 +98,7 @@ void _start(void)
     IoApicSetIrq(g_ioApicAddr, 0, 0x20, LocalApicGetId());
     IoApicSetIrq(g_ioApicAddr, 1, 0x21, LocalApicGetId());
     pci_initialize_system();
+    vga_init();
     e1000_init();
     socket_init();
 
@@ -108,8 +109,18 @@ void _start(void)
     task_create(idle, "Idle");
     task_create(init, "Init");
 #else
+    uint64_t cr3;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
+    page_table_t *boot_pml4 = (page_table_t*)(cr3 + KERNEL_VIRT_OFFSET);
+
+    log("Boot PML4 dump:", 1, 0);
+    for (int i = 0; i < 512; i++) {
+        if (boot_pml4->entries[i] & PAGE_PRESENT) {
+            log("  Entry[%d] = %p", 1, 0, i, boot_pml4->entries[i]);
+        }
+    }
     task_create(idle, "Idle");
-    task_create(init, "Init");
+    // task_create(init, "Init");
     task_create(play_bootup_sequence, "Bootup Music");
 #endif
     asm volatile("sti");

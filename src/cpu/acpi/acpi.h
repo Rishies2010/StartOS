@@ -12,3 +12,4 @@ extern uint8_t g_acpiCpuIds[MAX_CPU_COUNT];
 
 void AcpiInit();
 int AcpiRemapIrq(int irq);
+void AcpiShutdown();

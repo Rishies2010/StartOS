@@ -1,4 +1,6 @@
-/* Copyright (C) 2022-2025 mintsuki and contributors.
+/* SPDX-License-Identifier: BSD-2-Clause */
+
+/* Copyright (C) 2022-2026 Mintsuki and contributors.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -58,6 +60,7 @@ struct flanterm_context {
     bool reverse_video;
     bool dec_private;
     bool insert_mode;
+    bool csi_unhandled;
     uint64_t code_point;
     size_t unicode_remaining;
     uint8_t g_select;

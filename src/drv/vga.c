@@ -104,6 +104,7 @@ void vga_init(void)
         log("Unsupported BPP: %i", 3, 1, framebuffer_bpp);
         return;
     }
+    
     uint8_t red_shift = 0, green_shift = 0, blue_shift = 0;
     uint8_t red_size = 0, green_size = 0, blue_size = 0;
 
@@ -136,7 +137,8 @@ void vga_init(void)
     }
 
     ft_ctx = flanterm_fb_init(
-        kmalloc, flanterm_kfree_wrapper,
+        kmalloc,
+        flanterm_kfree_wrapper,
         (uint32_t *)framebuffer_addr,
         framebuffer_width,
         framebuffer_height,
@@ -148,15 +150,20 @@ void vga_init(void)
         NULL, NULL,
         NULL, NULL,
         NULL, NULL,
-        font_8x16, 8, 16, 0,
+        font_8x16,
+        8, 16,
+        0,
         0, 0,
-        0);
+        0,
+        0
+    );
 
     if (!ft_ctx)
     {
         log("Failed to initialize flanterm", 3, 0);
         return;
     }
+    
     flanterm = true;
     log("Framebuffer initialized: %ix%i, %i bpp", 4, 0,
         framebuffer_width, framebuffer_height, framebuffer_bpp);
@@ -190,13 +197,13 @@ void draw_text_at(const char *str, uint32_t x, uint32_t y, uint32_t color)
     {
         if (str[i] == '\n')
         {
-            y += 16;      
-            x = start_x;  
+            y += 16;
+            x = start_x;
             continue;
         }
 
         plotchar(str[i], x, y, color);
-        x += 8; 
+        x += 8;
     }
 }
 

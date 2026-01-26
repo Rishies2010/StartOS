@@ -19,7 +19,7 @@ typedef struct {
 } sfs_file_t;
 
 int main(void) {
-    prints("\nThis is a bare program for you to build upon.\nCheck userland/files/test.c for the source.\n");
-    exit(0);
+    log("\nThis is a bare program for you to build upon.\nCheck userland/files/test.c for the source.\n", 2, 1);
+    while(1);
     return 0;
 }

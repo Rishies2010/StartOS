@@ -5,7 +5,6 @@
 #include "idt.h"
 #include "../libk/string.h"
 #include "../libk/debug/log.h"
-#include <stdint.h>
 
 struct idt_entry_struct
 {
@@ -18,13 +17,6 @@ struct idt_entry_struct
     uint32_t reserved;
 } __attribute__((packed));
 typedef struct idt_entry_struct idt_entry_t;
-
-struct idt_ptr_struct
-{
-    uint16_t limit;
-    uint64_t base;
-} __attribute__((packed));
-typedef struct idt_ptr_struct idt_ptr_t;
 
 extern void isr0();
 extern void isr1();

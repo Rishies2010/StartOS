@@ -3,6 +3,9 @@
 #include <stdarg.h>
 #include "serial.h"
 #include "../../drv/vga.h"
+#include "../ports.h"
+#include "../../cpu/acpi/acpi.h"
+#include "../../cpu/idt.h"
 #include "../string.h"
 #include "../core/mem.h"
 #include "../../drv/local_apic.h"
@@ -141,4 +144,52 @@ void log_internal(const char *file, int line, const char *fmt, int level, int vi
         for (;;)
             __asm__ __volatile__("hlt");
     }
+}
+
+extern void load_idt(idt_ptr_t *);
+
+static inline void io_wait(void) {
+    outportb(0x80, 0);
+}
+
+__attribute__((noreturn))
+void triple_fault(void) {
+    struct {
+        uint16_t limit;
+        uint64_t base;
+    } __attribute__((packed)) idtr = { 0, 0 };
+
+    __asm__ __volatile__("cli");
+    load_idt(&idtr);
+    __asm__ __volatile__("ud2");
+
+    for (;;)
+        __asm__ __volatile__("hlt");
+}
+
+__attribute__((noreturn))
+void shutdown(void) {
+    AcpiShutdown(); //1
+
+    outportw(0x604, 0x2000);
+    outportw(0xB004, 0x2000);
+    outportw(0x4004, 0x3400);
+    io_wait(); //2
+
+    outportw(0x2000, 0x10);
+    outportw(0x1004, 0x2000);
+    io_wait(); //3
+
+    while (inportb(0x64) & 0x02);
+    outportb(0x64, 0xFE);
+    io_wait(); //4
+
+    triple_fault(); //5
+
+    __asm__ __volatile__("cli");
+    for (;;) {
+        __asm__ __volatile__("hlt");
+    } //6
+
+    __builtin_unreachable();
 }
