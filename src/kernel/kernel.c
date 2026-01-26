@@ -72,6 +72,7 @@ void _start(void)
     init_pmm();
     init_vmm();
     init_kernel_heap();
+    vga_init();
     init_gdt();
     init_idt();
     enable_sse_and_fpu();
@@ -98,7 +99,6 @@ void _start(void)
     IoApicSetIrq(g_ioApicAddr, 0, 0x20, LocalApicGetId());
     IoApicSetIrq(g_ioApicAddr, 1, 0x21, LocalApicGetId());
     pci_initialize_system();
-    vga_init();
     e1000_init();
     socket_init();
 
