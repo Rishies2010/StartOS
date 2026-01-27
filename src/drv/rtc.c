@@ -9,6 +9,10 @@
 static volatile uint64_t tick = 0;
 static rtc_time_t boot_time;
 
+uint64_t rtc_get_ticks(void) {
+    return tick;
+}
+
 static uint8_t read_cmos_register(uint8_t reg)
 {
     outportb(CMOS_ADDRESS, reg);

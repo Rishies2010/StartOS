@@ -41,10 +41,6 @@ void hpet_irq_handler(registers_t *regs)
 
 }
 
-uint64_t get_ticks(void){
-    return hpet_ticks;
-}
-
 void hpet_init(uint32_t frequency_hz)
 {
     hpet->general_config &= ~1ULL;

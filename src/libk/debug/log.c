@@ -10,7 +10,7 @@
 #include "../core/mem.h"
 #include "../../drv/local_apic.h"
 #include "../../drv/speaker.h"
-#include "../../drv/hpet.h"
+#include "../../drv/rtc.h"
 
 spinlock_t loglock __attribute__((section(".data"))) = {0};
 char *os_version = debug ? "0.90.0 DEBUG_ENABLED" : "0.90.0 Unstable";
@@ -81,8 +81,9 @@ void log_internal(const char *file, int line, const char *fmt, int level, int vi
     }
     else
     {
-        uint64_t ticks = get_ticks();
-        snprintf(header, 256, "[%llu][%s:%d]- ", ticks, file, line);
+        uint64_t ticks = rtc_get_ticks();
+        uint64_t ms = ticks;  // Approximate milliseconds
+        snprintf(header, 256, "[%llu ms][%s:%d]- ", ms, file, line);
     }
 
     char *message = kmalloc(1024);
@@ -149,6 +150,8 @@ void log_internal(const char *file, int line, const char *fmt, int level, int vi
             __asm__ __volatile__("hlt");
     }
 }
+
+
 
 extern void load_idt(idt_ptr_t *);
 
