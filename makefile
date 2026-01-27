@@ -54,7 +54,7 @@ qemu:
 	-cdrom StartOS.iso \
 	-audiodev pa,id=snd0 \
 	-machine pcspk-audiodev=snd0 \
-	-m 80M \
+	-m 128M \
 	-drive file=StartOS.vhd,if=ide,index=0 \
 	-boot d \
 	-smp 2 \

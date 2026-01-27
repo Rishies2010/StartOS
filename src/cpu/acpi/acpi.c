@@ -8,8 +8,6 @@
 #include "stdbool.h"
 #include "../../drv/vga.h"
 
-int g_acpiCpuCount;
-uint8_t g_acpiCpuIds[MAX_CPU_COUNT];
 
 typedef struct {
     uint32_t signature;
@@ -323,15 +321,7 @@ static void AcpiParseApic(AcpiMadt *madt) {
     while (p < end) {
         ApicHeader *header = (ApicHeader *)p;
 
-        if (header->type == APIC_TYPE_LOCAL_APIC) {
-            ApicLocalApic *s = (ApicLocalApic *)p;
-            if (s->flags & 0x01) {
-                if (g_acpiCpuCount < MAX_CPU_COUNT) {
-                    g_acpiCpuIds[g_acpiCpuCount++] = s->apicId;
-                }
-            }
-        }
-        else if (header->type == APIC_TYPE_IO_APIC) {
+        if (header->type == APIC_TYPE_IO_APIC) {
             ApicIoApic *s = (ApicIoApic *)p;
             g_ioApicAddr = (uint8_t *)(uintptr_t)s->ioApicAddress;
         }
@@ -342,19 +332,11 @@ static void AcpiParseApic(AcpiMadt *madt) {
             ApicLocalApicOverride *s = (ApicLocalApicOverride *)p;
             g_localApicAddr = (uint8_t *)(uintptr_t)s->localApicAddress;
         }
-        else if (header->type == APIC_TYPE_LOCAL_X2APIC) {
-            ApicLocalX2Apic *s = (ApicLocalX2Apic *)p;
-            if (s->flags & 0x01) {
-                if (g_acpiCpuCount < MAX_CPU_COUNT) {
-                    g_acpiCpuIds[g_acpiCpuCount++] = s->x2ApicId & 0xFF;
-                }
-            }
-        }
 
         p += header->length;
     }
 
-    log("ACPI: %d CPUs, %d IRQ overrides", 1, 0, g_acpiCpuCount, irq_overrides);
+    log("ACPI: %d IRQ overrides", 1, 0, irq_overrides);
 }
 
 static void AcpiParseDT(AcpiHeader *header) {

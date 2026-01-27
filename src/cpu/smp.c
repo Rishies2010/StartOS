@@ -17,7 +17,7 @@ static volatile struct limine_smp_request smp_request = {
 };
 
 volatile uint32_t g_activeCpuCount = 1;
-static uint8_t ap_stacks[MAX_CPU_COUNT][STACK_SIZE] __attribute__((aligned(16)));
+static uint8_t ap_stacks[8][STACK_SIZE] __attribute__((aligned(16)));
 
 void ap_entry(struct limine_smp_info *info) {
     asm volatile("mov %0, %%rsp" : : "r" (ap_stacks[info->processor_id] + STACK_SIZE) : "memory");
@@ -34,10 +34,11 @@ void init_smp() {
     struct limine_smp_response *smp = smp_request.response;
     if (smp == NULL || smp->cpu_count < 2) {
         clr();
-        log("\n\nThis system cannot run StartOS\n\n - This system does not meet the requirement of minimum 2 CPUs.\n\nConsider upgrading your CPU or computer.\nIncrease CPUs available if on a VM.\n ", 3, 1);
-        log(" Halting StartOS.", 2, 1);
-        __asm__ __volatile__("cli");
-        for(;;)__asm__ __volatile__("hlt");
+        log("\n\nThis system cannot run StartOS\n\n - This system does not meet the requirement of minimum 2 CPUs.\n\nConsider upgrading your CPU or computer.\nIncrease CPUs available if on a VM.\n ", 0, 1);
+    }
+    else if(smp->cpu_count > 8) {
+        clr();
+        log("\n\nThis system cannot run StartOS\n\n - This system does not meet the requirement of maximum 8 CPUs.\n\nConsider downgrading your CPU.\nDecrease CPUs available if on a VM.\n ", 0, 1);
     }
     log("Bootstrap Processor ID: %d, Total CPUs: %d", 1, 0,
         smp->bsp_lapic_id, smp->cpu_count);
