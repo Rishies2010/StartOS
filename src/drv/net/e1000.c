@@ -57,7 +57,7 @@ static void e1000_reset(void)
     e1000_write(E1000_REG_CTRL, ctrl | 0x04000000);
     while (e1000_read(E1000_REG_CTRL) & 0x04000000)
         ;
-    for (volatile int i = 0; i < 100000; i++)
+    for (volatile int i = 0; i < 100; i++)
         ;
 }
 
@@ -87,8 +87,7 @@ static void e1000_read_mac(void)
         dev.mac[5] = (mac_high >> 8) & 0xFF;
     }
 
-    log("MAC: %02x:%02x:%02x:%02x:%02x:%02x", 1, 0,
-        dev.mac[0], dev.mac[1], dev.mac[2], dev.mac[3], dev.mac[4], dev.mac[5]);
+
 }
 
 static void e1000_init_rx(void)
@@ -98,11 +97,10 @@ static void e1000_init_rx(void)
     dev.rx_ring = (e1000_rx_desc *)(ring_phys + KERNEL_VIRT_OFFSET);
     memset(dev.rx_ring, 0, NUM_RX_DESC * sizeof(e1000_rx_desc));
 
-    log("RX ring: phys=0x%llx virt=0x%llx", 1, 0, ring_phys, (uint64_t)dev.rx_ring);
-
+    uint64_t buffers_phys = alloc_pages(NUM_RX_DESC);
     for (int i = 0; i < NUM_RX_DESC; i++)
     {
-        uint64_t buf_phys = alloc_page();
+        uint64_t buf_phys = buffers_phys + (i * PAGE_SIZE);
         void *va = (void *)(buf_phys + KERNEL_VIRT_OFFSET);
         rx_buf_virt[i] = va;
         dev.rx_ring[i].addr = buf_phys;
@@ -123,8 +121,6 @@ static void e1000_init_rx(void)
                     E1000_RCTL_MPE | E1000_RCTL_BAM | E1000_RCTL_SECRC |
                     E1000_RCTL_RDMTS_HALF | (2 << 16) | (0 << 20);
     e1000_write(E1000_REG_RCTL, rctl);
-
-    log("RX initialized: %d descriptors", 1, 0, NUM_RX_DESC);
 }
 
 void e1000_init_tx(void)
@@ -134,11 +130,10 @@ void e1000_init_tx(void)
     dev.tx_ring = (e1000_tx_desc *)(ring_phys + KERNEL_VIRT_OFFSET);
     memset(dev.tx_ring, 0, NUM_TX_DESC * sizeof(e1000_tx_desc));
 
-    log("TX ring: phys=0x%llx virt=0x%llx", 1, 0, ring_phys, (uint64_t)dev.tx_ring);
-
+    uint64_t buffers_phys = alloc_pages(NUM_TX_DESC);
     for (int i = 0; i < NUM_TX_DESC; i++)
     {
-        uint64_t buf_phys = alloc_page();
+        uint64_t buf_phys = buffers_phys + (i * PAGE_SIZE);
         void *va = (void *)(buf_phys + KERNEL_VIRT_OFFSET);
         tx_buf_virt[i] = va;
         dev.tx_ring[i].addr = buf_phys;
@@ -159,8 +154,6 @@ void e1000_init_tx(void)
                     (0x10 << E1000_TCTL_CT) | (0x40 << E1000_TCTL_COLD);
     e1000_write(E1000_REG_TCTL, tctl);
     e1000_write(E1000_REG_TIPG, 0x0060200A);
-
-    log("TX initialized: %d descriptors", 1, 0, NUM_TX_DESC);
 }
 
 static void e1000_interrupt_handler_legacy(registers_t *regs)
@@ -180,8 +173,6 @@ void e1000_init(void)
 {
     memset(&dev, 0, sizeof(e1000_device));
 
-    log("Searching for Intel Ethernet controller...", 1, 0);
-
     pci_dev = pci_find_device(E1000_VENDOR_ID, E1000_DEVICE_ID);
     if (!pci_dev)
         pci_dev = pci_find_device(E1000_VENDOR_ID, E1000_DEVICE_ID_2);
@@ -192,7 +183,7 @@ void e1000_init(void)
         pci_dev = pci_find_device_by_class(PCI_CLASS_NETWORK, PCI_SUBCLASS_ETHERNET);
         if (pci_dev && pci_dev->vendor_id != E1000_VENDOR_ID)
         {
-            log("Found non-Intel network controller: %04x:%04x", 2, 1,
+            log("Non-Intel NIC found: %04x:%04x", 2, 1,
                 pci_dev->vendor_id, pci_dev->device_id);
             pci_dev = NULL;
         }
@@ -200,7 +191,7 @@ void e1000_init(void)
 
     if (!pci_dev)
     {
-        log("No compatible device found.", 3, 0);
+        log("No E1000 NIC found", 3, 1);
         return;
     }
 
@@ -212,45 +203,32 @@ void e1000_init(void)
     dev.mem_base = dev.bar0 & ~0xF;
     dev.irq = pci_dev->interrupt_line;
 
-    log("Found device %04x at %02x:%02x.%x BAR0=%08x", 1, 0,
-        dev.device_id, dev.bus, dev.slot, dev.func, dev.bar0);
-
     pci_enable_bus_mastering(pci_dev);
     pci_enable_memory_space(pci_dev);
 
     e1000_reset();
     e1000_write(E1000_REG_IMASK, 0);
-    for (volatile int i = 0; i < 1000000; i++)
-        ;
 
     dev.has_eeprom = e1000_detect_eeprom();
-    if (dev.has_eeprom)
-        log("EEPROM detected.", 1, 0);
-    else
-        log("Using registers for MAC.", 1, 0);
-
     e1000_read_mac();
     e1000_init_rx();
     e1000_init_tx();
-
-    for (volatile int i = 0; i < 1000000; i++)
-        ;
 
     e1000_write(E1000_REG_IMASK, 0x1F6DC);
     e1000_read(0xC0);
 
     if (pci_dev->msi_capable)
     {
-        log("Using MSI interrupts (vector 50)", 1, 0);
         pci_enable_msi(pci_dev, 50, e1000_interrupt_handler_msi, "E1000 MSI");
     }
     else
     {
-        log("Using legacy interrupts (IRQ %d)", 1, 0, dev.irq);
         register_interrupt_handler(32 + dev.irq, e1000_interrupt_handler_legacy, "E1000 Legacy");
     }
 
-    log("E1000 initialization complete!", 4, 0);
+    log("E1000: %02x:%02x:%02x:%02x:%02x:%02x @ %02x:%02x.%x IRQ %d", 1, 0,
+        dev.mac[0], dev.mac[1], dev.mac[2], dev.mac[3], dev.mac[4], dev.mac[5],
+        dev.bus, dev.slot, dev.func, dev.irq);
 }
 
 int e1000_send_packet(void *data, size_t len)
@@ -378,13 +356,5 @@ uint32_t e1000_get_interrupt_status(void)
 void e1000_handle_interrupt(void)
 {
     uint32_t status = e1000_get_interrupt_status();
-
-    if (status & 0x04)
-        log("Link status changed - %s", 1, 0, e1000_link_up() ? "UP" : "DOWN");
-    if (status & 0x10)
-        log("Good threshold.", 1, 0);
-    if (status & 0x80)
-        log("Receive packet.", 1, 0);
-    if (status & 0x01)
-        log("Transmit packet.", 1, 0);
+    (void)status;
 }

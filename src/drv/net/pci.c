@@ -259,7 +259,6 @@ void pci_setup_device(pci_device_t *dev) {
             if (dev->subclass == 0x01 || dev->subclass == 0x06) {
                 pci_enable_bus_mastering(dev);
                 pci_enable_memory_space(dev);
-                log("Storage controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
             }
             break;
             
@@ -267,17 +266,12 @@ void pci_setup_device(pci_device_t *dev) {
             if (dev->subclass == 0x00) {
                 pci_enable_bus_mastering(dev);
                 pci_enable_memory_space(dev);
-                if (dev->msi_capable) {
-                    log("Network controller supports MSI", 1, 0);
-                }
-                log("Network controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
             }
             break;
             
         case 0x03:
             if (dev->subclass == 0x00) {
                 pci_enable_memory_space(dev);
-                log("VGA controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
             }
             break;
             
@@ -285,18 +279,13 @@ void pci_setup_device(pci_device_t *dev) {
             if (dev->subclass == 0x03) {
                 pci_enable_memory_space(dev);
                 pci_enable_bus_mastering(dev);
-                log("USB controller initialized: %04x:%04x", 1, 0, dev->vendor_id, dev->device_id);
             }
             break;
     }
 }
 
 void pci_initialize_system(void) {
-    log("Initializing PCI subsystem...", 1, 0);
-    
     pci_init();
-    
-    log("Scanning complete, configuring devices...", 1, 0);
     
     pci_device_t *current = device_list;
     while (current) {
@@ -304,6 +293,5 @@ void pci_initialize_system(void) {
         current = current->next;
     }
     
-    log("PCI initialization complete. %d devices configured.", 4, 0, device_count);
-    pci_dump_devices();
+    log("PCI: %d devices", 1, 0, device_count);
 }

@@ -83,7 +83,6 @@ void _start(void)
     sched_init();
     rtc_initialize();
     hpet_init(100);
-    detect_cpu_info(0);
     ata_init();
     if(sfs_init(0) != SFS_OK){
         log("Unable to mount filesystem. Formatting the drive...", 2, 1);
@@ -104,25 +103,14 @@ void _start(void)
 
 #if debug
     log("Running In Debug Mode.", 2, 1);
+    detect_cpu_info(0);
     print_mem_info(1);
     sfs_list();
-    task_create(idle, "Idle");
-    task_create(init, "Init");
 #else
-    uint64_t cr3;
-    __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
-    page_table_t *boot_pml4 = (page_table_t*)(cr3 + KERNEL_VIRT_OFFSET);
-
-    log("Boot PML4 dump:", 1, 0);
-    for (int i = 0; i < 512; i++) {
-        if (boot_pml4->entries[i] & PAGE_PRESENT) {
-            log("  Entry[%d] = %p", 1, 0, i, boot_pml4->entries[i]);
-        }
-    }
-    task_create(idle, "Idle");
-    // task_create(init, "Init");
     task_create(play_bootup_sequence, "Bootup Music");
 #endif
+    task_create(idle, "Idle");
+    task_create(init, "Init");
     asm volatile("sti");
     sched_start();
     for (;;)
