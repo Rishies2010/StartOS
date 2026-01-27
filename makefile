@@ -54,7 +54,7 @@ qemu:
 	-cdrom StartOS.iso \
 	-audiodev pa,id=snd0 \
 	-machine pcspk-audiodev=snd0 \
-	-m 128M \
+	-m 80M \
 	-drive file=StartOS.vhd,if=ide,index=0 \
 	-boot d \
 	-smp 2 \
@@ -63,6 +63,7 @@ qemu:
 	-device e1000,netdev=net0 \
 	-device virtio-gpu-pci \
 	-display gtk,gl=on
+
 stop:
 	VBoxManage controlvm "StartOS" poweroff
 

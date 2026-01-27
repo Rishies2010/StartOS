@@ -160,6 +160,19 @@ void init_pmm(void)
         }
     }
     spinlock_init(&pmm_lock);
+    
+    uint64_t total_mem = get_total_memory();
+    total_mem += 1024*1024; // account for the minor difference
+    if (total_mem < (80 * 1024 * 1024)) {
+        serial_write_string("\x1b[38;2;255;50;50m\nInduced Kernel Panic\n\n    - At : src/libk/core/mem.c\n    - Line : ???\n\n    - Error Log : Minimum 80MB RAM required (found ");
+        char mem_str[32];
+        itoa(total_mem / (1024 * 1024), mem_str);
+        serial_write_string(mem_str);
+        serial_write_string(" MB)\n\x1b[0m");
+        __asm__ __volatile__("cli");
+        for (;;) __asm__ __volatile__("hlt");
+    }
+    
     serial_write_string("[src/libk/core/mem.c:???]- PMM Initialized successfully\n");
 }
 
