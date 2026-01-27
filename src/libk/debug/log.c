@@ -10,6 +10,7 @@
 #include "../core/mem.h"
 #include "../../drv/local_apic.h"
 #include "../../drv/speaker.h"
+#include "../../drv/hpet.h"
 
 spinlock_t loglock __attribute__((section(".data"))) = {0};
 char *os_version = debug ? "0.90.0 DEBUG_ENABLED" : "0.90.0 Unstable";
@@ -79,7 +80,10 @@ void log_internal(const char *file, int line, const char *fmt, int level, int vi
         snprintf(header, 256, "\nInduced Kernel Panic\n\n    - At : %s\n    - Line : %d.\n\n    - Error Log : ", file, line);
     }
     else
-        snprintf(header, 256, "[%s:%d]- ", file, line);
+    {
+        uint64_t ticks = get_ticks();
+        snprintf(header, 256, "[%llu][%s:%d]- ", ticks, file, line);
+    }
 
     char *message = kmalloc(1024);
     if (!message)
@@ -148,10 +152,6 @@ void log_internal(const char *file, int line, const char *fmt, int level, int vi
 
 extern void load_idt(idt_ptr_t *);
 
-static inline void io_wait(void) {
-    outportb(0x80, 0);
-}
-
 __attribute__((noreturn))
 void triple_fault(void) {
     struct {
@@ -171,25 +171,12 @@ __attribute__((noreturn))
 void shutdown(void) {
     AcpiShutdown(); //1
 
-    outportw(0x604, 0x2000);
-    outportw(0xB004, 0x2000);
-    outportw(0x4004, 0x3400);
-    io_wait(); //2
-
-    outportw(0x2000, 0x10);
-    outportw(0x1004, 0x2000);
-    io_wait(); //3
-
-    while (inportb(0x64) & 0x02);
-    outportb(0x64, 0xFE);
-    io_wait(); //4
-
-    triple_fault(); //5
+    triple_fault(); //2
 
     __asm__ __volatile__("cli");
     for (;;) {
         __asm__ __volatile__("hlt");
-    } //6
+    } //3: Last resort
 
     __builtin_unreachable();
 }
