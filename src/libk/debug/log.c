@@ -82,7 +82,7 @@ void log_internal(const char *file, int line, const char *fmt, int level, int vi
     else
     {
         uint64_t ticks = rtc_get_ticks();
-        uint64_t ms = ticks;  // Approximate milliseconds
+        uint64_t ms = (ticks * 1000) / 1024;
         snprintf(header, 256, "[%llu ms][%s:%d]- ", ms, file, line);
     }
 

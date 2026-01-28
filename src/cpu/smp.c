@@ -20,10 +20,10 @@ volatile uint32_t g_activeCpuCount = 1;
 static uint8_t ap_stacks[8][STACK_SIZE] __attribute__((aligned(16)));
 
 void ap_entry(struct limine_smp_info *info) {
+    enable_sse_and_fpu();
     asm volatile("mov %0, %%rsp" : : "r" (ap_stacks[info->processor_id] + STACK_SIZE) : "memory");
     init_gdt();
     init_idt();
-    enable_sse_and_fpu();
     LocalApicInit();
     __atomic_add_fetch(&g_activeCpuCount, 1, __ATOMIC_SEQ_CST);
     ap_main();

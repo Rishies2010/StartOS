@@ -71,11 +71,11 @@ void _start(void)
     serial_init();
     init_pmm();
     init_vmm();
+    enable_sse_and_fpu();
     init_kernel_heap();
     vga_init();
     init_gdt();
     init_idt();
-    enable_sse_and_fpu();
     init_syscalls();
     AcpiInit();
     LocalApicInit();

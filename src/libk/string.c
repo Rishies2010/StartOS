@@ -389,26 +389,39 @@ static int format_int(char* buf, size_t buf_size, long long value, int base, int
 int vsnprintf(char* str, size_t size, const char* format, va_list args) {
     size_t written = 0;
     const char* p = format;
-    
+
     if (size == 0) return 0;
-    
+
     while (*p && written < size - 1) {
         if (*p != '%') {
             str[written++] = *p++;
             continue;
         }
-        
+
         p++;
+
         int zero_pad = 0;
         while (*p == '0' || *p == '-') {
             if (*p == '0') zero_pad = 1;
             p++;
         }
+
         int width = 0;
         while (*p >= '0' && *p <= '9') {
             width = width * 10 + (*p - '0');
             p++;
         }
+
+        int precision = -1;
+        if (*p == '.') {
+            p++;
+            precision = 0;
+            while (*p >= '0' && *p <= '9') {
+                precision = precision * 10 + (*p - '0');
+                p++;
+            }
+        }
+
         int is_long = 0;
         int is_long_long = 0;
         if (*p == 'l') {
@@ -419,87 +432,65 @@ int vsnprintf(char* str, size_t size, const char* format, va_list args) {
                 p++;
             }
         }
+
         switch (*p) {
             case 's': {
                 const char* arg = va_arg(args, const char*);
                 if (!arg) arg = "(null)";
-                while (*arg && written < size - 1) {
+                while (*arg && written < size - 1)
                     str[written++] = *arg++;
-                }
                 break;
             }
+
             case 'c': {
                 int c = va_arg(args, int);
-                if (written < size - 1) {
+                if (written < size - 1)
                     str[written++] = (char)c;
-                }
                 break;
             }
+
             case 'd':
             case 'i': {
                 long long value;
-                if (is_long_long) {
-                    value = va_arg(args, long long);
-                } else if (is_long) {
-                    value = va_arg(args, long);
-                } else {
-                    value = va_arg(args, int);
-                }
-                char temp_buf[32];
-                int len = format_int(temp_buf, sizeof(temp_buf), value, 10, 0, width, zero_pad);
-                for (int i = 0; i < len && written < size - 1; i++) {
-                    str[written++] = temp_buf[i];
-                }
+                if (is_long_long) value = va_arg(args, long long);
+                else if (is_long) value = va_arg(args, long);
+                else value = va_arg(args, int);
+
+                char buf[32];
+                int len = format_int(buf, sizeof(buf), value, 10, 0, width, zero_pad);
+                for (int i = 0; i < len && written < size - 1; i++)
+                    str[written++] = buf[i];
                 break;
             }
+
             case 'u': {
                 unsigned long long value;
-                if (is_long_long) {
-                    value = va_arg(args, unsigned long long);
-                } else if (is_long) {
-                    value = va_arg(args, unsigned long);
-                } else {
-                    value = va_arg(args, unsigned int);
-                }
-                char temp_buf[32];
-                int len = format_int(temp_buf, sizeof(temp_buf), value, 10, 0, width, zero_pad);
-                for (int i = 0; i < len && written < size - 1; i++) {
-                    str[written++] = temp_buf[i];
-                }
+                if (is_long_long) value = va_arg(args, unsigned long long);
+                else if (is_long) value = va_arg(args, unsigned long);
+                else value = va_arg(args, unsigned int);
+
+                char buf[32];
+                int len = format_int(buf, sizeof(buf), value, 10, 0, width, zero_pad);
+                for (int i = 0; i < len && written < size - 1; i++)
+                    str[written++] = buf[i];
                 break;
             }
-            case 'x': {
-                unsigned long long value;
-                if (is_long_long) {
-                    value = va_arg(args, unsigned long long);
-                } else if (is_long) {
-                    value = va_arg(args, unsigned long);
-                } else {
-                    value = va_arg(args, unsigned int);
-                }
-                char temp_buf[32];
-                int len = format_int(temp_buf, sizeof(temp_buf), value, 16, 0, width, zero_pad);
-                for (int i = 0; i < len && written < size - 1; i++) {
-                    str[written++] = temp_buf[i];
-                }
-                break;
-            }
+
+            case 'x':
             case 'X': {
                 unsigned long long value;
-                if (is_long_long) {
-                    value = va_arg(args, unsigned long long);
-                } else if (is_long) {
-                    value = va_arg(args, unsigned long);
-                } else {
-                    value = va_arg(args, unsigned int);
-                }
-                char temp_buf[32];
-                int len = format_int(temp_buf, sizeof(temp_buf), value, 16, 1, width, zero_pad);
-                for (int i = 0; i < len && written < size - 1; i++) {
-                    str[written++] = temp_buf[i];
-                }
+                if (is_long_long) value = va_arg(args, unsigned long long);
+                else if (is_long) value = va_arg(args, unsigned long);
+                else value = va_arg(args, unsigned int);
+
+                char buf[32];
+                int upper = (*p == 'X');
+                int len = format_int(buf, sizeof(buf), value, 16, upper, width, zero_pad);
+                for (int i = 0; i < len && written < size - 1; i++)
+                    str[written++] = buf[i];
                 break;
             }
+
             case 'p': {
                 void* ptr = va_arg(args, void*);
                 unsigned long long addr = (unsigned long long)ptr;
@@ -507,18 +498,48 @@ int vsnprintf(char* str, size_t size, const char* format, va_list args) {
                     str[written++] = '0';
                     str[written++] = 'x';
                 }
-                char temp_buf[32];
-                int len = format_int(temp_buf, sizeof(temp_buf), addr, 16, 0, 0, 0);
-                for (int i = 0; i < len && written < size - 1; i++) {
-                    str[written++] = temp_buf[i];
+                char buf[32];
+                int len = format_int(buf, sizeof(buf), addr, 16, 0, 0, 0);
+                for (int i = 0; i < len && written < size - 1; i++)
+                    str[written++] = buf[i];
+                break;
+            }
+
+            case 'f': {
+                double val = va_arg(args, double);
+                if (precision < 0) precision = 6;
+
+                if (val < 0) {
+                    if (written < size - 1)
+                        str[written++] = '-';
+                    val = -val;
+                }
+
+                long long ipart = (long long)val;
+                double frac = val - (double)ipart;
+
+                char buf[32];
+                int len = format_int(buf, sizeof(buf), ipart, 10, 0, 0, 0);
+                for (int i = 0; i < len && written < size - 1; i++)
+                    str[written++] = buf[i];
+
+                if (precision > 0 && written < size - 1) {
+                    str[written++] = '.';
+                    for (int i = 0; i < precision && written < size - 1; i++) {
+                        frac *= 10.0;
+                        int digit = (int)frac;
+                        str[written++] = '0' + digit;
+                        frac -= digit;
+                    }
                 }
                 break;
             }
+
             case '%':
-                if (written < size - 1) {
+                if (written < size - 1)
                     str[written++] = '%';
-                }
                 break;
+
             default:
                 if (written < size - 2) {
                     str[written++] = '%';
@@ -526,12 +547,14 @@ int vsnprintf(char* str, size_t size, const char* format, va_list args) {
                 }
                 break;
         }
+
         p++;
     }
-    
+
     str[written] = '\0';
     return written;
 }
+
 
 int snprintf(char* str, size_t size, const char* format, ...) {
     va_list args;
