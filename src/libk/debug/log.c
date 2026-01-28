@@ -23,6 +23,29 @@ void sound_err()
     speaker_pause();
 }
 
+static void format_time(uint64_t ms, char *out, size_t size)
+{
+    if (ms < 1000) {
+        snprintf(out, size, "%llu ms", ms);
+        return;
+    }
+
+    uint64_t s = ms / 1000;
+    if (s < 60) {
+        snprintf(out, size, "%llu s", s);
+        return;
+    }
+
+    uint64_t m = s / 60;
+    if (m < 60) {
+        snprintf(out, size, "%llu min", m);
+        return;
+    }
+
+    uint64_t h = m / 60;
+    snprintf(out, size, "%llu h", h);
+}
+
 void log_internal(const char *file, int line, const char *fmt, int level, int visibility, ...)
 {
     char *logline = kmalloc(1280);
@@ -83,7 +106,11 @@ void log_internal(const char *file, int line, const char *fmt, int level, int vi
     {
         uint64_t ticks = rtc_get_ticks();
         uint64_t ms = (ticks * 1000) / 1024;
-        snprintf(header, 256, "[%llu ms][%s:%d]- ", ms, file, line);
+
+        char timebuf[32];
+        format_time(ms, timebuf, sizeof(timebuf));
+
+        snprintf(header, 256, "[%s][%s:%d]- ", timebuf, file, line);
     }
 
     char *message = kmalloc(1024);
